@@ -43,6 +43,8 @@ function setupAppSheets() {
         'Settings',
         'DefaultValues',
         'RecordAccessPolicy',
+        'AccessPolicy',
+        'AccessRegionSource',
         'OwnerUserField',
         'AdditionalActions',
         'Menu',
@@ -76,6 +78,8 @@ function setupAppSheets() {
         Settings: 320,
         DefaultValues: 260,
         RecordAccessPolicy: 160,
+        AccessPolicy: 140,
+        AccessRegionSource: 260,
         OwnerUserField: 150,
         AdditionalActions: 220,
         Menu: 400,
@@ -114,12 +118,12 @@ function setupAppSheets() {
     },
     {
       name: CONFIG.SHEETS.DESIGNATIONS,
-      headers: ['DesignationID', 'Name', 'HierarchyLevel', 'Status', 'AccessRegion', 'DashboardScoreCutoff', 'Description'],
+      headers: ['DesignationID', 'Name', 'ParentDesignationID', 'Status', 'AccessRegion', 'DashboardScoreCutoff', 'Description'],
       autoIdFormula: null,
       columnWidths: {
         DesignationID: 120,
         Name: 180,
-        HierarchyLevel: 120,
+        ParentDesignationID: 140,
         Status: 100,
         AccessRegion: 160,
         DashboardScoreCutoff: 170,
@@ -128,7 +132,7 @@ function setupAppSheets() {
     },
     {
       name: CONFIG.SHEETS.USERS,
-      headers: ['UserID', 'Name', 'Email', 'PasswordHash', 'DesignationID', 'Roles', 'AccessRegion', 'Status', 'Avatar', 'ApiKey'],
+      headers: ['UserID', 'Name', 'Email', 'PasswordHash', 'DesignationID', 'Roles', 'Status', 'Avatar', 'ApiKey'],
       autoIdFormula: null,
       columnWidths: {
         UserID: 100,
@@ -137,7 +141,6 @@ function setupAppSheets() {
         PasswordHash: 260,
         DesignationID: 120,
         Roles: 180,
-        AccessRegion: 120,
         Status: 100,
         Avatar: 200,
         ApiKey: 220
@@ -440,49 +443,6 @@ function setupAppSheets() {
   } catch (e) { }
 }
 
-/**
- * Run this on existing APP sheets to fix Resources boolean validation
- * for text-based TSV paste (TRUE/FALSE).
- */
-
-/**
- * Run on existing APP files to add Access Region structures without rebuilding.
- */
-function upgradeAppSheetsForAccessRegions() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const users = ss.getSheetByName(CONFIG.SHEETS.USERS);
-  if (!users) throw new Error('Users sheet not found');
-
-  const userHeaders = getSheetHeaders(users);
-  if (userHeaders.indexOf('AccessRegion') === -1) {
-    const statusIndex = userHeaders.indexOf('Status');
-    const insertAt = statusIndex === -1 ? userHeaders.length + 1 : (statusIndex + 1);
-    users.insertColumnBefore(insertAt);
-    users.getRange(1, insertAt).setValue('AccessRegion');
-    users.setColumnWidth(insertAt, 120);
-    users.getRange(2, insertAt, Math.max(users.getMaxRows() - 1, 1), 1).clearDataValidations();
-  }
-
-  let accessRegionSheet = ss.getSheetByName(CONFIG.SHEETS.ACCESS_REGIONS);
-  if (!accessRegionSheet) {
-    accessRegionSheet = ss.insertSheet(CONFIG.SHEETS.ACCESS_REGIONS);
-    accessRegionSheet.getRange(1, 1, 1, 3).setValues([['Code', 'Name', 'Parent']]);
-    accessRegionSheet.getRange(1, 1, 1, 3)
-      .setFontWeight('bold')
-      .setBackground(CONFIG.BRAND_COLOR)
-      .setFontColor('#ffffff')
-      .setHorizontalAlignment('center')
-      .setVerticalAlignment('middle')
-      .setFontSize(10);
-    accessRegionSheet.setRowHeight(1, 32);
-    accessRegionSheet.setFrozenRows(1);
-    accessRegionSheet.setColumnWidth(1, 120);
-    accessRegionSheet.setColumnWidth(2, 200);
-    accessRegionSheet.setColumnWidth(3, 120);
-    accessRegionSheet.getRange(1, 1, 1, 3).protect().setDescription('AccessRegions Headers - Do Not Edit').setWarningOnly(true);
-  }
-
-  SpreadsheetApp.getUi().alert('Upgrade complete: Users.AccessRegion and AccessRegions sheet are ready.');
-}
 
 // Local helpers removed — now using shared setup_* from setupSheetUtils.gs
+

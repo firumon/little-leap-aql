@@ -9,19 +9,20 @@
  */
 
 let __accessRegionContextCache = null;
+let __universeNameToCodeMemoryCache = null;
+
+function clearAccessRegionsCache() {
+  __accessRegionContextCache = null;
+  __universeNameToCodeMemoryCache = null;
+  try {
+    var ssId = getAppSpreadsheet().getId();
+    removeChunkedCache('AQL_UNIVERSE_NAME_TO_REGION_' + ssId);
+  } catch (e) { /* non-fatal */ }
+}
 
 function getAccessRegionContext() {
   if (__accessRegionContextCache) {
     return __accessRegionContextCache;
-  }
-
-  // Try CacheService first
-  var cachedJson = getChunkedCache('AQL_ACCESS_REGIONS_V1_' + getAppSpreadsheet().getId());
-  if (cachedJson) {
-    try {
-      __accessRegionContextCache = JSON.parse(cachedJson);
-      return __accessRegionContextCache;
-    } catch (e) { /* fall through */ }
   }
 
   const sheet = getAppSpreadsheet().getSheetByName(CONFIG.SHEETS.ACCESS_REGIONS);
@@ -67,23 +68,9 @@ function getAccessRegionContext() {
     childMap: childMap
   };
 
-  // Persist to CacheService
-  try {
-    var json = JSON.stringify(__accessRegionContextCache);
-    putChunkedCache('AQL_ACCESS_REGIONS_V1_' + getAppSpreadsheet().getId(), json, CACHE_TTL_SEC);
-  } catch (e) { /* non-fatal */ }
-
   return __accessRegionContextCache;
 }
 
-function clearAccessRegionCache() {
-  __accessRegionContextCache = null;
-  try {
-    var scopedACCE = 'AQL_ACCESS_REGIONS_V1_' + getAppSpreadsheet().getId();
-    CacheService.getScriptCache().remove(scopedACCE);
-    removeChunkedCache(scopedACCE);
-  } catch (e) { /* non-fatal */ }
-}
 
 function normalizeAccessRegionCode(value) {
   return (value || '').toString().trim().toUpperCase();
@@ -95,6 +82,15 @@ function isValidAccessRegionCodeFormat(code) {
 
 function resolveUserAccessRegionCode(userRow) {
   if (!userRow || typeof userRow !== 'object') return '';
+
+  if (userRow.DesignationID && typeof getDesignationById === 'function') {
+    const desig = getDesignationById(userRow.DesignationID);
+    const desigRegion = desig && desig.accessRegion ? normalizeAccessRegionCode(desig.accessRegion) : '';
+    if (desigRegion) return desigRegion;
+  }
+
+  // During transition, a designation set to Universe falls back to the user region.
+  // LEGACY: delete in next release.
   return normalizeAccessRegionCode(userRow.AccessRegion || '');
 }
 
@@ -105,9 +101,9 @@ function buildUserAccessRegionScope(userRow) {
     return {
       assignedCode: '',
       isUniverse: true,
-      accessibleCodes: [],
-      accessibleRegions: [],
-      ancestorCodes: []
+      children: [],
+      parents: [],
+      regionNames: {}
     };
   }
 
@@ -122,23 +118,24 @@ function buildUserAccessRegionScope(userRow) {
     deduped.push(code);
   });
 
-  const accessibleRegions = deduped.map(function(code) {
-    const node = context.byCode[code];
-    return {
-      code: code,
-      name: node ? node.name : '',
-      parent: node ? node.parent : ''
-    };
-  });
+  const ancestors = getAncestorRegionCodes(assignedCode, context);
+  const children = deduped.filter(function (code) { return code !== assignedCode; });
+  const parents = ancestors.filter(function (code) { return code !== assignedCode; });
 
-  const ancestorCodes = getAncestorRegionCodes(assignedCode, context);
+  const regionNames = {};
+  const allCodes = [assignedCode].concat(children).concat(parents);
+  allCodes.forEach(function(code) {
+    if (code && context.byCode && context.byCode[code] && context.byCode[code].name) {
+      regionNames[code] = context.byCode[code].name;
+    }
+  });
 
   return {
     assignedCode: assignedCode,
     isUniverse: false,
-    accessibleCodes: deduped,
-    accessibleRegions: accessibleRegions,
-    ancestorCodes: ancestorCodes
+    children: children,
+    parents: parents,
+    regionNames: regionNames
   };
 }
 
@@ -170,7 +167,7 @@ function expandAccessRegionCodes(rootCode, contextInput) {
 
 function buildAuthAccessRegionScope(auth) {
   if (!auth) {
-    return { assignedCode: '', isUniverse: true, accessibleCodes: [], accessibleRegions: [] };
+    return { assignedCode: '', isUniverse: true, children: [], parents: [], regionNames: {} };
   }
 
   if (auth.accessRegionScope && typeof auth.accessRegionScope === 'object') {
@@ -182,37 +179,126 @@ function buildAuthAccessRegionScope(auth) {
   return scope;
 }
 
-function canAuthAccessRegionCode(auth, targetCode) {
-  const code = normalizeAccessRegionCode(targetCode);
-  if (!code) return true;
 
-  const scope = buildAuthAccessRegionScope(auth);
-  if (scope.isUniverse) return true;
-  return scope.accessibleCodes.indexOf(code) !== -1;
+function resolveRegionAccessFlags(resourceConfig) {
+  let policy = resourceConfig && resourceConfig.accessPolicy;
+  if (!isValidAccessPolicyString(policy)) {
+    const scope = resourceConfig && resourceConfig.scope;
+    policy = getDefaultAccessPolicyForScope(scope || 'master');
+  }
+  const r = parseInt(policy.charAt(0), 10) || 0;
+  return { same: (r & 1) === 1, down: (r & 2) === 2, up: (r & 4) === 4 };
 }
 
-function validateAccessRegionCodeExists(code) {
-  const normalized = normalizeAccessRegionCode(code);
-  if (!normalized) return true;
-  if (!isValidAccessRegionCodeFormat(normalized)) {
-    throw new Error('Invalid AccessRegion format: ' + normalized + ' (expected AAA999)');
-  }
+function buildUserRegions(scope, resourceNames) {
+  if (!scope || scope.isUniverse) return {};
 
-  const context = getAccessRegionContext();
-  if (!context.exists) return true;
-  if (!context.byCode[normalized]) {
-    throw new Error('Invalid AccessRegion: ' + normalized);
-  }
-  return true;
+  const names = Array.isArray(resourceNames) ? resourceNames : [];
+  const allowed = {};
+
+  names.forEach(function (name) {
+    if (!name) return;
+    let config = null;
+    try {
+      config = getResourceConfig(name);
+    } catch (e) { /* ignore */ }
+
+    const flags = resolveRegionAccessFlags(config);
+    const map = {};
+
+    if (flags.same && scope.assignedCode) {
+      map[scope.assignedCode] = true;
+    }
+    if (flags.down && Array.isArray(scope.children)) {
+      scope.children.forEach(function (code) {
+        if (code) map[code] = true;
+      });
+    }
+    if (flags.up && Array.isArray(scope.parents)) {
+      scope.parents.forEach(function (code) {
+        if (code) map[code] = true;
+      });
+    }
+
+    allowed[name] = map;
+  });
+
+  return allowed;
 }
 
-function buildUserAccessRegionPayload(userRow) {
+function buildUserNameToRegionCodeMap(scope) {
+  if (!scope || scope.isUniverse) {
+    if (__universeNameToCodeMemoryCache) {
+      return __universeNameToCodeMemoryCache;
+    }
+
+    try {
+      var ssId = getAppSpreadsheet().getId();
+      var cachedJson = getChunkedCache('AQL_UNIVERSE_NAME_TO_REGION_' + ssId);
+      if (cachedJson) {
+        var parsed = JSON.parse(cachedJson);
+        if (parsed && typeof parsed === 'object') {
+          __universeNameToCodeMemoryCache = parsed;
+          return parsed;
+        }
+      }
+    } catch (e) { /* fall through to build from sheet */ }
+
+    const context = getAccessRegionContext();
+    const universeMap = {};
+    if (context && Array.isArray(context.rows)) {
+      context.rows.forEach(function (r) {
+        if (r && r.code && r.name) {
+          const lower = r.name.toString().trim().toLowerCase();
+          if (lower && universeMap[lower] === undefined) {
+            universeMap[lower] = r.code;
+          }
+        }
+      });
+    }
+
+    __universeNameToCodeMemoryCache = universeMap;
+    try {
+      var ssId = getAppSpreadsheet().getId();
+      putChunkedCache('AQL_UNIVERSE_NAME_TO_REGION_' + ssId, JSON.stringify(universeMap), CACHE_TTL_SEC);
+    } catch (e) { /* non-fatal */ }
+
+    return universeMap;
+  }
+
+  const order = [];
+  if (scope.assignedCode) order.push(scope.assignedCode);
+  if (Array.isArray(scope.children)) {
+    scope.children.forEach(function (c) { if (c) order.push(c); });
+  }
+  if (Array.isArray(scope.parents)) {
+    scope.parents.forEach(function (p) { if (p) order.push(p); });
+  }
+
+  const names = scope.regionNames || {};
+  const nameToCode = {};
+  for (let i = 0; i < order.length; i++) {
+    const code = order[i];
+    const name = names[code];
+    if (name) {
+      const lowerName = name.toString().trim().toLowerCase();
+      if (lowerName && nameToCode[lowerName] === undefined) {
+        nameToCode[lowerName] = code;
+      }
+    }
+  }
+
+  return nameToCode;
+}
+
+function buildUserAccessRegionPayload(userRow, regions) {
   const scope = buildUserAccessRegionScope(userRow || {});
   return {
     code: scope.assignedCode,
     isUniverse: scope.isUniverse,
-    accessibleCodes: scope.accessibleCodes,
-    accessibleRegions: scope.accessibleRegions
+    children: scope.children || [],
+    parents: scope.parents || [],
+    regions: regions || {}
   };
 }
 
@@ -235,4 +321,16 @@ function getAncestorRegionCodes(regionCode, contextInput) {
   }
 
   return out;
+}
+
+function getDefaultAccessPolicyForScope(scope) {
+  const s = (scope || '').toString().trim().toLowerCase();
+  if (s === 'operation') return '37111';
+  if (s === 'accounts') return '37010';
+  if (s === 'view' || s === 'report') return '71111';
+  return '77111'; // master and fallback
+}
+
+function isValidAccessPolicyString(policy) {
+  return /^[0-7]{5}$/.test((policy || '').toString().trim());
 }

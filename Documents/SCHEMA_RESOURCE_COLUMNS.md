@@ -17,7 +17,7 @@ This document is the canonical meaning reference for `APP.Resources` columns.
 - validation/defaults
   - `RequiredHeaders`, `UniqueHeaders`, `UniqueCompositeHeaders`, `DefaultValues`
 - access and actions
-  - `RecordAccessPolicy`, `OwnerUserField`, `AdditionalActions`
+  - `RecordAccessPolicy`, `AccessPolicy`, `AccessRegionSource`, `OwnerUserField`, `AdditionalActions`
 - UI/runtime metadata
   - `Menu`, `UIFields`, `IncludeInAuthorizationPayload`, `Functional`, `PreAction`, `PostAction`, `Reports`, `ListViews`, `CustomUIName`, `Settings`, `Dashboard`, `Options`
 - cross-resource linking
@@ -177,6 +177,38 @@ The picker appends the stored value in parentheses, so `{"SKU": {"resource":"SKU
 1. **Normalization** — builds one `effectiveRelations` map per resource: baseline heuristics first (`ParentResource`, `<Singular>Code` headers, `ParentCode` → self), then explicit `Relations` entries merged on top. **Explicit metadata wins.** Entries pointing at an unknown/unauthorized resource are dropped.
 2. **Topology** — `parents`, `children`, `linkRefs`, and `refs` are built *exclusively* from that normalized map, so heuristic and explicit relations behave identically downstream (`useRecord` `$parent`/`$children`/`$<singular>` getters, `useFormFields` pickers).
 
+## AccessPolicy Column Schema & Usage
+The `AccessPolicy` column in `APP.Resources` holds a 5-digit octal string (`ROPDU`), configuring record access rules:
+* **Digits (left to right)**:
+  - `R`: Region directions bitmask (`1` = SAME, `2` = DOWN, `4` = UP). Max `7`.
+  - `O`: Owner permissions bitmask (`1` = Execute, `2` = Update, `4` = Delete).
+  - `P`: Peer permissions bitmask.
+  - `D`: Downline (subordinate) permissions bitmask.
+  - `U`: Upline (manager) permissions bitmask.
+* **Format**: 5-digit text string (e.g. `'77111'`). Blank inherits hardcoded scope default (`master`: `77111`, `operation`: `37111`, `accounts`: `37010`, `view`/`report`: `71111`).
+* **Exposed on Metadata**: `accessPolicy` string (or empty string when inheriting).
+
+## AccessRegionSource Column Schema & Usage
+The `AccessRegionSource` column in `APP.Resources` configures how a record's access region is determined:
+* **Purpose**: Identifies the record's own region column (`self`), and fallback walk rules (`subject`) when the region is empty on write.
+* **Format**: JSON object with `self` and `subject`:
+```json
+{
+  "self": { "column": "AccessRegion", "resolve": false },
+  "subject": [
+    { "column": "OutletCode", "resource": "Outlets", "empty": "next" },
+    { "user": true }
+  ]
+}
+```
+* **Keys**:
+  - `self.column`: Column name where this resource's region code or place name lives.
+  - `self.resolve`: `true` if the column holds a region name (resolved against user's accessible regions); `false` if it holds a code.
+  - `subject`: Ordered array of fallback lookup rules.
+    - `{ user: true }`: Fallback to user's assigned designation region.
+    - `{ column, resource?, empty?, fail? }`: Walk related subject record.
+* **Exposed on Metadata**: `accessRegionSource` (parsed JSON object or `null` if blank).
+
 ## Settings Column Schema & Usage
 The `Settings` column in `APP.Resources` defines configurable setting descriptors for the resource.
 
@@ -260,8 +292,8 @@ Every audited sheet across `master`, `operation`, and `accounts` scopes includes
 ## Sync Protection Rule
 When `syncAppResourcesFromCode` executes, it protects designated metadata columns in `APP.Resources` from being overwritten by code defaults if the sheet cell already contains data.
 
-* **Protected Columns (12 total)**:
-  `FileID`, `CodePrefix`, `CodeSequenceLength`, `LastDataUpdatedAt`, `RecordAccessPolicy`, `Menu`, `Reports`, `ListViews`, `CustomUIName`, `Settings`, `Dashboard`, `Options`.
+* **Protected Columns (14 total)**:
+  `FileID`, `CodePrefix`, `CodeSequenceLength`, `LastDataUpdatedAt`, `RecordAccessPolicy`, `AccessPolicy`, `AccessRegionSource`, `Menu`, `Reports`, `ListViews`, `CustomUIName`, `Settings`, `Dashboard`, `Options`.
 * **Protection Logic**:
   - If a column is in the protected list and the cell in Google Sheets is not blank (note: `0` and `false` are considered valid data and are protected), `syncAppResourcesFromCode` preserves the sheet value and skips overwriting.
   - If the sheet cell is empty or blank, or if the column is not in the protected list, code-level config is written to the sheet.

@@ -225,19 +225,24 @@ function handleLogin(email, password) {
   // Critical: a stale ApiKey column would reject the token just issued.
   syncUsersCachedCell(users, emailRow, 'ApiKey', token);
   const roleIds = resolveUserRoleIds(row);
+  const accessRegionScope = buildUserAccessRegionScope(row);
+  const authorizedResources = getLoginAuthorizedResources(roleIds);
+  const authorizedResourceNames = authorizedResources.map(function(r) { return r && r.name ? r.name : ''; }).filter(Boolean);
+  const regions = buildUserRegions(accessRegionScope, authorizedResourceNames);
 
   seedSessionProofState(token, {
     rowNumber: emailRow,
     user: sanitizeUserRowForSession(row),
     roleIds: roleIds,
-    accessRegionScope: buildUserAccessRegionScope(row)
+    accessRegionScope: accessRegionScope,
+    regions: regions
   });
 
   return {
     success: true,
     token,
-    user: buildAuthUserPayload(row, roleIds),
-    resources: getLoginAuthorizedResources(roleIds),
+    user: buildAuthUserPayload(row, roleIds, regions),
+    resources: authorizedResources,
     appConfig: getLoginAppConfig(),
     appOptions: getAppOptions()
   };
@@ -264,6 +269,7 @@ function seedSessionProofState(token, authContext) {
     user: authContext.user,
     roleIds: authContext.roleIds,
     accessRegionScope: authContext.accessRegionScope,
+    regions: authContext.regions,
     rowNumber: authContext.rowNumber
   });
 }
@@ -289,11 +295,21 @@ function resolveUserAuthFromSheet(token) {
 
   const rawUser = users.rowsByNumber[rowNumber] || getRowAsObject(users.sheet, rowNumber, users.headers);
   const user = sanitizeUserRowForSession(rawUser);
+  const roleIds = resolveUserRoleIds(user);
+  const accessRegionScope = buildUserAccessRegionScope(user);
+  let authorizedResourceNames = [];
+  try {
+    const authorizedResources = getLoginAuthorizedResources(roleIds);
+    authorizedResourceNames = authorizedResources.map(function(r) { return r && r.name ? r.name : ''; }).filter(Boolean);
+  } catch (e) { /* ignore */ }
+  const regions = buildUserRegions(accessRegionScope, authorizedResourceNames);
+
   return {
     rowNumber: rowNumber,
     user: user,
-    roleIds: resolveUserRoleIds(user),
-    accessRegionScope: buildUserAccessRegionScope(user)
+    roleIds: roleIds,
+    accessRegionScope: accessRegionScope,
+    regions: regions
   };
 }
 
@@ -310,7 +326,8 @@ function validateToken(token) {
       rowNumber: state.rowNumber,
       user: state.user,
       roleIds: state.roleIds,
-      accessRegionScope: state.accessRegionScope
+      accessRegionScope: state.accessRegionScope,
+      regions: state.regions
     };
   }
 
@@ -340,8 +357,9 @@ function ensureAuthSheetContext(auth) {
 function handleGetProfile(auth) {
   return {
     success: true,
-    user: buildAuthUserPayload(auth.user, auth.roleIds),
-    appConfig: getLoginAppConfig()
+    user: buildAuthUserPayload(auth.user, auth.roleIds, auth.regions),
+    appConfig: getLoginAppConfig(),
+    accessRegions: getAccessRegionContext().rows
   };
 }
 
@@ -365,13 +383,11 @@ function getLoginAppConfig() {
 
 function handleGetAuthorizedResources(auth, payload) {
   const includeHeaders = !(payload && payload.includeHeaders === false);
-  const scope = payload && payload.scope ? payload.scope : '';
   return {
     success: true,
     resources: safeGetRoleResourceAccess(auth.roleIds, {
       includeHeaders: includeHeaders,
       includeUiConfig: true,
-      scope: scope,
       sortByMenuOrder: true
     })
   };
@@ -381,18 +397,30 @@ function getLoginAuthorizedResources(roleIds) {
   return safeGetRoleResourceAccess(roleIds, {
     includeHeaders: true,
     includeUiConfig: true,
-    scope: '',
     sortByMenuOrder: true
   });
 }
 
-function buildAuthUserPayload(userRow, roleIds) {
+function buildAuthUserPayload(userRow, roleIds, regions) {
+  let userRegions = regions;
+  // LEGACY: delete in next release.
+  if (!userRegions && userRow) {
+    const scope = buildUserAccessRegionScope(userRow);
+    const resolvedRoleIds = roleIds || resolveUserRoleIds(userRow);
+    let resourceNames = [];
+    try {
+      const authorizedResources = getLoginAuthorizedResources(resolvedRoleIds);
+      resourceNames = authorizedResources.map(function(r) { return r && r.name ? r.name : ''; }).filter(Boolean);
+    } catch (e) { /* ignore */ }
+    userRegions = buildUserRegions(scope, resourceNames);
+  }
+
   return {
     id: userRow.UserID,
     name: userRow.Name,
     email: userRow.Email,
     avatar: userRow.Avatar || '',
-    accessRegion: buildUserAccessRegionPayload(userRow),
+    accessRegion: buildUserAccessRegionPayload(userRow, userRegions),
     designation: getDesignationById(userRow.DesignationID),
     roles: getRoleNamesByIds(roleIds || resolveUserRoleIds(userRow)),
     role: getPrimaryRoleName(userRow)
@@ -429,8 +457,7 @@ function safeGetRoleResourceAccess(roleId, options) {
   try {
     const resources = getRoleResourceAccess(roleId, {
       includeHeaders: opts.includeHeaders === true,
-      includeUiConfig: opts.includeUiConfig !== false,
-      scope: opts.scope || ''
+      includeUiConfig: opts.includeUiConfig !== false
     });
     return opts.sortByMenuOrder === false ? resources : sortAuthorizedResources(resources);
   } catch (err) {
@@ -581,15 +608,6 @@ function getRoleNameById(roleId) {
 function getDesignationsCache() {
   if (_designations_cache) return _designations_cache;
 
-  // Try CacheService
-  var cachedJson = getChunkedCache('AQL_DESIGNATIONS_CACHE_V1_' + getAppSpreadsheet().getId());
-  if (cachedJson) {
-    try {
-      _designations_cache = JSON.parse(cachedJson);
-      return _designations_cache;
-    } catch (e) { /* fall through */ }
-  }
-
   var sheet = getAppSpreadsheet().getSheetByName(CONFIG.SHEETS.DESIGNATIONS);
   var byId = {};
   if (sheet) {
@@ -606,9 +624,10 @@ function getDesignationsCache() {
         byId[id] = {
           id: id,
           name: (row[idx.Name] || '').toString().trim(),
-          hierarchyLevel: idx.HierarchyLevel === undefined
-            ? null
-            : Number(row[idx.HierarchyLevel] || 0) || null,
+          // LEGACY: delete in next release.
+          parentDesignationId: idx.ParentDesignationID === undefined
+            ? ''
+            : (row[idx.ParentDesignationID] || '').toString().trim(),
           accessRegion: idx.AccessRegion === undefined
             ? ''
             : (row[idx.AccessRegion] || '').toString().trim(),
@@ -622,34 +641,20 @@ function getDesignationsCache() {
 
   _designations_cache = { byId: byId };
 
-  // Persist to CacheService
-  try {
-    var json = JSON.stringify(_designations_cache);
-    putChunkedCache('AQL_DESIGNATIONS_CACHE_V1_' + getAppSpreadsheet().getId(), json, CACHE_TTL_SEC);
-  } catch (e) { /* non-fatal */ }
-
   return _designations_cache;
 }
 
-function clearDesignationsCache() {
-  _designations_cache = null;
-  try {
-    var scopedDESI = 'AQL_DESIGNATIONS_CACHE_V1_' + getAppSpreadsheet().getId();
-    CacheService.getScriptCache().remove(scopedDESI);
-    removeChunkedCache(scopedDESI);
-  } catch (e) { /* non-fatal */ }
-}
 
 function getDesignationById(designationId) {
   const normalizedId = (designationId || '').toString().trim();
   if (!normalizedId) {
-    return { id: '', name: '', hierarchyLevel: null, accessRegion: '', dashboardScoreCutoff: 0 };
+    return { id: '', name: '', parentDesignationId: '', accessRegion: '', dashboardScoreCutoff: 0 };
   }
 
   var cache = getDesignationsCache();
   var designation = cache.byId[normalizedId];
   if (!designation) {
-    return { id: normalizedId, name: '', hierarchyLevel: null, accessRegion: '', dashboardScoreCutoff: 0 };
+    return { id: normalizedId, name: '', parentDesignationId: '', accessRegion: '', dashboardScoreCutoff: 0 };
   }
 
   return designation;

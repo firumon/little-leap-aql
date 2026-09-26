@@ -190,6 +190,7 @@ function verifySessionProof(token, sessionKey) {
       user: authContext.user,
       roleIds: authContext.roleIds,
       accessRegionScope: authContext.accessRegionScope,
+      regions: authContext.regions,
       rowNumber: authContext.rowNumber
     };
   }
@@ -215,6 +216,7 @@ function verifySessionProof(token, sessionKey) {
       user: state.user,
       roleIds: state.roleIds,
       accessRegionScope: state.accessRegionScope,
+      regions: state.regions,
       sessionGeneration: clientGen
     }
   };
@@ -223,6 +225,7 @@ function verifySessionProof(token, sessionKey) {
 const SESSION_AUTH_LEVEL_KEYS = {
   roleIds: true,
   accessRegionScope: true,
+  regions: true,
   rowNumber: true
 };
 
@@ -236,19 +239,25 @@ function updateSessionAuth(token, patch) {
   const state = readSessionProofState(token);
   if (!state || !state.user) return null;
 
-  let regionChanged = false;
+  let regionOrDesigChanged = false;
   Object.keys(patch).forEach(function (key) {
     if (SESSION_AUTH_LEVEL_KEYS[key]) {
       state[key] = patch[key];
       return;
     }
     state.user[key] = patch[key];
-    if (key === 'AccessRegion') regionChanged = true;
+    if (key === 'AccessRegion' || key === 'DesignationID') regionOrDesigChanged = true;
     if (key === 'Roles') state.roleIds = resolveUserRoleIds(state.user);
   });
 
-  if (regionChanged) {
+  if (regionOrDesigChanged) {
     state.accessRegionScope = buildUserAccessRegionScope(state.user);
+    let authorizedResourceNames = [];
+    try {
+      const authorizedResources = getLoginAuthorizedResources(state.roleIds || []);
+      authorizedResourceNames = authorizedResources.map(function(r) { return r && r.name ? r.name : ''; }).filter(Boolean);
+    } catch (e) { /* ignore */ }
+    state.regions = buildUserRegions(state.accessRegionScope, authorizedResourceNames);
   }
 
   delete state.user.PasswordHash;

@@ -179,6 +179,7 @@ function writeStockMovements(movements, auth) {
   var codeSeqLength = resource.config.codeSequenceLength || 6;
 
   var rowsToWrite = [];
+  var batchContext = { configs: {}, rows: {}, nameToCodeMap: null };
   // Newest audit timestamp across the batch; drives the StockMovements cursor.
   var maxMovementTimestamp = 0;
   for (var i = 0; i < movements.length; i++) {
@@ -195,7 +196,7 @@ function writeStockMovements(movements, auth) {
     row[idx.ReferenceCode] = mov.ReferenceCode;
     row[idx.Status] = 'Active';
 
-    applyAccessRegionOnWrite(row, idx, auth);
+    applyAccessRegionOnWrite(row, idx, auth, resource.config, batchContext);
     var movementTimestamp = applyAuditFields(row, idx, auth, resource.config, true);
     if (movementTimestamp > maxMovementTimestamp) maxMovementTimestamp = movementTimestamp;
     rowsToWrite.push(row);

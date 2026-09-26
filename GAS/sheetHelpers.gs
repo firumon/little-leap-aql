@@ -823,9 +823,8 @@ function clearAllAppCaches() {
   if (typeof clearResourceConfigCache === 'function') clearResourceConfigCache();
   if (typeof clearRolePermissionsCache === 'function') clearRolePermissionsCache();
   if (typeof clearRolesCache === 'function') clearRolesCache();
-  if (typeof clearAccessRegionCache === 'function') clearAccessRegionCache();
-  if (typeof clearDesignationsCache === 'function') clearDesignationsCache();
   if (typeof clearUsersCache === 'function') clearUsersCache();
+  if (typeof clearAccessRegionsCache === 'function') clearAccessRegionsCache();
 
   return metadataSummary;
 }
@@ -852,8 +851,6 @@ function regenerateAllAppCaches() {
   warmCache('APP.Resources', 'getResourceConfigMap');
   warmCache('APP.RolePermissions', 'getRolePermissionsContext');
   warmCache('APP.Roles', 'getRolesCache');
-  warmCache('APP.AccessRegions', 'getAccessRegionContext');
-  warmCache('APP.Designations', 'getDesignationsCache');
 
   var headerSummary = warmResourceHeaderCaches();
 

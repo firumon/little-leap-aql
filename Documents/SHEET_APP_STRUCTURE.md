@@ -23,7 +23,7 @@ This document describes the APP spreadsheet as the control plane for authenticat
 
 ### Designations
 - hierarchy/authority model
-- columns: `DesignationID`, `Name`, `HierarchyLevel`, `Status`, `AccessRegion`, `DashboardScoreCutoff`, `Description`
+- columns: `DesignationID`, `Name`, `ParentDesignationID`, `Status`, `AccessRegion`, `DashboardScoreCutoff`, `Description`
 - `AccessRegion` holds the region scope at designation level. Access region was previously
   held at role level; the column exists and is written by the menu, but nothing reads it yet
 - `DashboardScoreCutoff` is a number. A dashboard item scoring below it is not shown to this
@@ -38,7 +38,7 @@ This document describes the APP spreadsheet as the control plane for authenticat
 
 ### Resources
 - runtime metadata registry for backend and frontend
-- includes resource configuration columns such as `Settings` (custom resource setting definitions), `Dashboard` (widget analytics declarations), and `Options` (resource-specific option lists, sitting immediately after `ListViews` and before `CustomUIName`)
+- includes resource configuration columns such as `AccessPolicy` (5-digit octal ROPDU scope permissions), `AccessRegionSource` (JSON object of region inheritance paths), `Settings` (custom resource setting definitions), `Dashboard` (widget analytics declarations), and `Options` (resource-specific option lists, sitting immediately after `ListViews` and before `CustomUIName`)
 - column meanings are owned by [SCHEMA_RESOURCE_COLUMNS.md](F:/LITTLE%20LEAP/AQL/Documents/SCHEMA_RESOURCE_COLUMNS.md)
 
 ### Config

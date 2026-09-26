@@ -61,6 +61,7 @@ function applyBatchStockMovementsToWarehouseStorages(records, auth) {
   var idx = getHeaderIndexMap(headers);
   var updatedRows = {};
   var newRows = [];
+  var batchContext = { configs: {}, rows: {}, nameToCodeMap: null };
   var now = Date.now();
   var userId = auth && auth.user ? (auth.user.UserID || '') : '';
 
@@ -94,7 +95,7 @@ function applyBatchStockMovementsToWarehouseStorages(records, auth) {
       if (idx.StorageName !== undefined) newRow[idx.StorageName] = entry.storageName;
       if (idx.SKU !== undefined) newRow[idx.SKU] = entry.sku;
       if (idx.Quantity !== undefined) newRow[idx.Quantity] = entry.qtyChange;
-      applyAccessRegionOnWrite(newRow, idx, auth);
+      applyAccessRegionOnWrite(newRow, idx, auth, config, batchContext);
       applyAuditFields(newRow, idx, auth, config, true);
       if (idx.UpdatedAt !== undefined) newRow[idx.UpdatedAt] = now;
       if (idx.Revision !== undefined) newRow[idx.Revision] = 1;

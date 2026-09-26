@@ -623,7 +623,7 @@ function prepareActionTargetCreate(auth, target, targetKey, sheetCtx, providedVa
   var rowData = buildNewResourceRow(sheetCtx.headers, idx, providedValues, sheetCtx.schema);
   rowData[idx.Code] = code;
 
-  applyAccessRegionOnWrite(rowData, idx, auth);
+  applyAccessRegionOnWrite(rowData, idx, auth, config);
   var createTimestamp = applyAuditFields(rowData, idx, auth, config, true);
   if (createTimestamp > sheetCtx.maxTimestamp) sheetCtx.maxTimestamp = createTimestamp;
   validateRequiredFields(rowData, idx, sheetCtx.schema.requiredHeaders, sheetCtx.resourceName);

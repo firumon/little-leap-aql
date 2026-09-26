@@ -335,7 +335,7 @@ function handleResourceCreateRecord(auth, payload) {
   const rowData = buildNewResourceRow(headers, idx, providedValues, schema);
   rowData[idx.Code] = code;
 
-  applyAccessRegionOnWrite(rowData, idx, auth);
+  applyAccessRegionOnWrite(rowData, idx, auth, resource.config);
   const recordTimestamp = applyAuditFields(rowData, idx, auth, resource.config, true);
   validateRequiredFields(rowData, idx, schema.requiredHeaders, resourceName);
   validateMasterUniqueness(values, idx, rowData, schema, -1, resourceName);
@@ -696,8 +696,18 @@ function buildResourceRowsResponse(auth, resourceName, resource, rows, lastUpdat
     ? headersInput
     : getSheetHeadersByMeta(resource.config.fileId, resource.config.sheetName, resource.sheet);
   const idx = getHeaderIndexMap(headers);
+  var nameToCodeMap = null;
+  const scope = buildAuthAccessRegionScope(auth);
+  if (resource && resource.config && resource.config.accessRegionSource && resource.config.accessRegionSource.self && resource.config.accessRegionSource.self.resolve) {
+    if (auth && auth._nameToRegionCodeMap) {
+      nameToCodeMap = auth._nameToRegionCodeMap;
+    } else {
+      nameToCodeMap = buildUserNameToRegionCodeMap(scope);
+      if (auth) auth._nameToRegionCodeMap = nameToCodeMap;
+    }
+  }
   const filteredRows = rows.filter(function (row) {
-    return canAccessRowByPolicy(auth, resource.config, row, idx);
+    return canAccessRowByPolicy(auth, resource.config, row, idx, nameToCodeMap, scope);
   });
 
   // Derive the true data cursor from the rows we just read: max(UpdatedAt).
@@ -766,66 +776,17 @@ function enforceRecordLevelAccess(auth, resourceConfig, headers, rowValues) {
   }
 }
 
-function canAccessRowByPolicy(auth, resourceConfig, rowValues, idx) {
-  const policy = resourceConfig && resourceConfig.recordAccessPolicy
-    ? resourceConfig.recordAccessPolicy
-    : 'ALL';
-  const regionCheckRequired = requiresAccessRegionCheck(auth, idx);
-
-  if (policy === 'ALL' && !regionCheckRequired) {
+function canAccessRowByPolicy(auth, resourceConfig, rowValues, idx, nameToCodeMap, scope) {
+  if (!requiresAccessRegionCheck(auth, idx, resourceConfig, scope)) {
     return true;
   }
-
-  if (regionCheckRequired && !canAccessRowByAccessRegion(auth, rowValues, idx, resourceConfig)) {
-    return false;
-  }
-
-  if (policy === 'ALL') return true;
-  if (!auth || !auth.user) return false;
-
-  const ownerField = resourceConfig.ownerUserField || 'CreatedBy';
-  const ownerIdx = idx[ownerField];
-  if (ownerIdx === undefined) return true;
-
-  const ownerUserId = (rowValues[ownerIdx] || '').toString().trim();
-  const currentUserId = (auth.user.UserID || '').toString().trim();
-
-  if (!ownerUserId) return true;
-  if (ownerUserId === currentUserId) return true;
-  if (policy === 'OWNER') return false;
-
-  const currentDesignation = getDesignationById(auth.user.DesignationID);
-  const ownerUser = getUserById(ownerUserId);
-  const ownerDesignation = getDesignationById(ownerUser ? ownerUser.DesignationID : '');
-  const currentLevel = Number(currentDesignation.hierarchyLevel || 0);
-  const ownerLevel = Number(ownerDesignation.hierarchyLevel || 0);
-
-  if (!currentLevel || !ownerLevel) {
-    return false;
-  }
-
-  if (policy === 'OWNER_GROUP') {
-    return currentLevel === ownerLevel;
-  }
-
-  if (policy === 'OWNER_AND_UPLINE') {
-    return currentLevel <= ownerLevel;
-  }
-
-  return true;
+  return canAccessRowByAccessRegion(auth, rowValues, idx, resourceConfig, nameToCodeMap, scope);
 }
 
-function getUserById(userId) {
-  if (!userId) return null;
-  const users = getUsersContext();
-  return users.userById[(userId || '').toString().trim()] || null;
-}
-
-function requiresAccessRegionCheck(auth, idx) {
-  const regionHeader = resolveAccessRegionHeader(idx);
+function requiresAccessRegionCheck(auth, idx, resourceConfig, scope) {
+  const regionHeader = resolveAccessRegionHeader(idx, resourceConfig);
   if (!regionHeader) return false;
-
-  const scope = buildAuthAccessRegionScope(auth);
+  if (!scope) scope = buildAuthAccessRegionScope(auth);
   return !scope.isUniverse;
 }
 
@@ -933,46 +894,203 @@ function mergeMasterRow(existingRow, idx, providedValues, schema) {
   return row;
 }
 
-function canAccessRowByAccessRegion(auth, rowValues, idx, resourceConfig) {
-  const regionHeader = resolveAccessRegionHeader(idx);
+function canAccessRowByAccessRegion(auth, rowValues, idx, resourceConfig, nameToCodeMap, scope) {
+  const regionHeader = resolveAccessRegionHeader(idx, resourceConfig);
   if (!regionHeader) return true;
 
-  const regionCode = normalizeAccessRegionCode(rowValues[idx[regionHeader]]);
-  if (!regionCode) {
-    // Universe records are readable across all regions.
-    return true;
+  const rawVal = (rowValues[idx[regionHeader]] || '').toString().trim();
+  const selfRule = resourceConfig && resourceConfig.accessRegionSource && resourceConfig.accessRegionSource.self;
+  let regionCode = '';
+
+  if (selfRule && selfRule.resolve === true) {
+    if (!rawVal) return true;
+    const lower = rawVal.toLowerCase();
+    const map = nameToCodeMap || (auth && auth._nameToRegionCodeMap) || (function() {
+      if (!scope) scope = buildAuthAccessRegionScope(auth);
+      const m = buildUserNameToRegionCodeMap(scope);
+      if (auth) auth._nameToRegionCodeMap = m;
+      return m;
+    })();
+    regionCode = map[lower] || '';
+    if (!regionCode) return false;
+  } else {
+    regionCode = normalizeAccessRegionCode(rawVal);
+    if (!regionCode) return true;
   }
 
-  const scope = buildAuthAccessRegionScope(auth);
+  if (!scope) scope = buildAuthAccessRegionScope(auth);
   if (scope.isUniverse) return true;
 
-  const isMaster = resourceConfig && resourceConfig.scope === 'master';
-  const accessibleCodes = scope.accessibleCodes || [];
+  const resName = resourceConfig && resourceConfig.name ? resourceConfig.name : '';
+  // LEGACY: delete in next release.
+  if (!auth.regions) {
+    auth.regions = {};
+  }
+  // Covers resources added to APP.Resources after login.
+  if (!auth.regions[resName]) {
+    const computed = buildUserRegions(scope, [resName]);
+    auth.regions[resName] = computed[resName] || {};
+  }
 
-  if (isMaster) {
-    const ancestorCodes = scope.ancestorCodes || [];
-    return ancestorCodes.indexOf(regionCode) !== -1 || accessibleCodes.indexOf(regionCode) !== -1;
-  } else {
-    return accessibleCodes.indexOf(regionCode) !== -1;
+  const allowedRegions = auth.regions[resName] || {};
+  return !!allowedRegions[regionCode];
+}
+
+function applyAccessRegionOnWrite(row, idx, auth, resourceConfig, batchContext) {
+  const self = resourceConfig && resourceConfig.accessRegionSource && resourceConfig.accessRegionSource.self;
+  if (self && self.resolve === true) return;
+
+  const targetCol = (self && self.column) ? self.column : 'AccessRegion';
+
+  if (!idx || typeof idx !== 'object' || idx[targetCol] === undefined) return;
+  const colIndex = idx[targetCol];
+
+  const existingVal = (row[colIndex] !== undefined && row[colIndex] !== null) ? row[colIndex].toString().trim() : '';
+  if (existingVal !== '') return;
+
+  const resolvedCode = resolveAccessRegionOnWriteFallback(row, idx, auth, resourceConfig, batchContext);
+  if (resolvedCode) {
+    row[colIndex] = resolvedCode;
   }
 }
 
-function applyAccessRegionOnWrite(row, idx, auth) {
-  const regionHeader = resolveAccessRegionHeader(idx);
-  if (!regionHeader) return;
-
-  const colIndex = idx[regionHeader];
+function resolveAccessRegionOnWriteFallback(row, idx, auth, resourceConfig, batchContext) {
   const scope = buildAuthAccessRegionScope(auth);
-  const effectiveCode = scope.assignedCode ? normalizeAccessRegionCode(scope.assignedCode) : '';
+  const userRegion = scope.assignedCode ? normalizeAccessRegionCode(scope.assignedCode) : '';
+  const rule = resourceConfig && resourceConfig.accessRegionSource;
 
-  if (effectiveCode) {
-    validateAccessRegionCodeExists(effectiveCode);
+  if (!rule || !Array.isArray(rule.subject) || !rule.subject.length) {
+    return userRegion;
   }
-  row[colIndex] = effectiveCode;
+
+  const batch = batchContext || {};
+  if (!batch.configs) batch.configs = {};
+  if (!batch.rows) batch.rows = {};
+  if (!batch.nameToCodeMap) batch.nameToCodeMap = buildUserNameToRegionCodeMap(scope);
+
+  const subjects = rule.subject;
+  let reserve = '';
+  let i = 0;
+
+  while (i < subjects.length) {
+    const entry = subjects[i];
+    if (!entry) {
+      i++;
+      continue;
+    }
+
+    if (entry.user === true) {
+      return userRegion;
+    }
+
+    const colName = (entry.column || '').toString().trim();
+    const cellVal = (idx[colName] !== undefined && row[idx[colName]] !== undefined && row[idx[colName]] !== null)
+      ? row[idx[colName]].toString().trim()
+      : '';
+
+    if (!cellVal) {
+      if (entry.empty === 'next') {
+        i++;
+        continue;
+      }
+      break;
+    }
+
+    let targetResourceName = (entry.resource || '').toString().trim();
+    if (!targetResourceName && resourceConfig && resourceConfig.relations) {
+      const rel = resourceConfig.relations[colName];
+      if (typeof rel === 'string') {
+        targetResourceName = rel.trim();
+      } else if (rel && typeof rel === 'object' && rel.resource) {
+        targetResourceName = (rel.resource || '').toString().trim();
+      }
+    }
+
+    let successCode = '';
+    if (targetResourceName) {
+      try {
+        if (!batch.configs[targetResourceName]) {
+          batch.configs[targetResourceName] = getResourceConfig(targetResourceName);
+        }
+        const targetConfig = batch.configs[targetResourceName];
+
+        if (!batch.rows[targetResourceName]) {
+          const res = openResourceSheet(targetResourceName);
+          const vals = res.sheet.getDataRange().getValues();
+          const hdrs = vals[0] || [];
+          const hIdx = getHeaderIndexMap(hdrs);
+          const rowMap = {};
+          if (hIdx.Code !== undefined) {
+            for (let r = 1; r < vals.length; r++) {
+              const c = (vals[r][hIdx.Code] || '').toString().trim();
+              if (c && rowMap[c] === undefined) {
+                rowMap[c] = vals[r];
+              }
+            }
+          }
+          batch.rows[targetResourceName] = { headers: hdrs, idx: hIdx, byCode: rowMap };
+        }
+
+        const targetData = batch.rows[targetResourceName];
+        const subjectRow = targetData.byCode[cellVal];
+
+        if (subjectRow) {
+          const targetSelfCol = (targetConfig && targetConfig.accessRegionSource && targetConfig.accessRegionSource.self && targetConfig.accessRegionSource.self.column)
+            ? targetConfig.accessRegionSource.self.column
+            : 'AccessRegion';
+
+          if (targetData.idx[targetSelfCol] !== undefined) {
+            const rawTargetVal = (subjectRow[targetData.idx[targetSelfCol]] || '').toString().trim();
+            const shouldResolve = !!(targetConfig && targetConfig.accessRegionSource && targetConfig.accessRegionSource.self && targetConfig.accessRegionSource.self.resolve);
+
+            if (shouldResolve) {
+              if (rawTargetVal) {
+                const mapped = batch.nameToCodeMap[rawTargetVal.toLowerCase()];
+                if (mapped) successCode = mapped;
+              }
+            } else {
+              const norm = normalizeAccessRegionCode(rawTargetVal);
+              if (norm) successCode = norm;
+            }
+          }
+        }
+      } catch (err) {
+        // D47: never block the write
+      }
+    }
+
+    if (successCode) {
+      return successCode;
+    }
+
+    if (entry.fail === 'user') {
+      reserve = userRegion;
+      i++;
+    } else if (typeof entry.fail === 'string' && entry.fail !== '') {
+      let jumpIndex = -1;
+      for (let j = 0; j < subjects.length; j++) {
+        if (subjects[j] && subjects[j].column === entry.fail) {
+          jumpIndex = j;
+          break;
+        }
+      }
+      if (jumpIndex !== -1) {
+        i = jumpIndex;
+      } else {
+        i++;
+      }
+    } else {
+      i++;
+    }
+  }
+
+  return reserve;
 }
 
-function resolveAccessRegionHeader(idx) {
+function resolveAccessRegionHeader(idx, resourceConfig) {
   if (!idx || typeof idx !== 'object') return '';
+  const selfCol = resourceConfig && resourceConfig.accessRegionSource && resourceConfig.accessRegionSource.self && resourceConfig.accessRegionSource.self.column;
+  if (selfCol && idx[selfCol] !== undefined) return selfCol;
   if (idx.AccessRegion !== undefined) return 'AccessRegion';
   return '';
 }
@@ -1515,6 +1633,7 @@ function handleCompositeSave(auth, payload) {
 
   // Phase 1: Validate everything
   var validationErrors = [];
+  var compositeBatchContext = { configs: {}, rows: {}, nameToCodeMap: null };
   var parentResource = openResourceSheet(parentResourceName);
   var parentSchema = buildMasterSchemaFromResourceConfig(parentResource.config);
 
@@ -1581,7 +1700,7 @@ function handleCompositeSave(auth, payload) {
     }
     parentRowData = buildNewResourceRow(parentHeaders, parentIdx, parentProvidedValues, parentSchema);
     parentRowData[parentIdx.Code] = parentCode;
-    applyAccessRegionOnWrite(parentRowData, parentIdx, auth);
+    applyAccessRegionOnWrite(parentRowData, parentIdx, auth, parentResource.config, compositeBatchContext);
     parentTimestamp = applyAuditFields(parentRowData, parentIdx, auth, parentResource.config, true);
   }
 
@@ -1689,7 +1808,7 @@ function handleCompositeSave(auth, payload) {
             : generateNextCode(childCurrentValues, childIdx, childCodePrefix, childSeqLength));
           var newChildRow = buildNewResourceRow(childHeaders, childIdx, childProvidedValues, childSchema);
           newChildRow[childIdx.Code] = newChildCode;
-          applyAccessRegionOnWrite(newChildRow, childIdx, auth);
+          applyAccessRegionOnWrite(newChildRow, childIdx, auth, childResource.config, compositeBatchContext);
           var newChildTs = applyAuditFields(newChildRow, childIdx, auth, childResource.config, true);
           if (newChildTs > childOps.maxTimestamp) childOps.maxTimestamp = newChildTs;
           validateRequiredFields(newChildRow, childIdx, childSchema.requiredHeaders, childResourceName);
@@ -2046,6 +2165,7 @@ function handleResourceBulkUpsertRecords(auth, payload) {
   // once (e.g., allocation split), subsequent occurrences force a new INSERT
   // with an auto-generated Code instead of double-writing the same sheet row.
   var seenCodesInBatch = {};
+  var bulkBatchContext = { configs: {}, rows: {}, nameToCodeMap: null };
 
   records.forEach(function (recordData, index) {
     try {
@@ -2067,7 +2187,7 @@ function handleResourceBulkUpsertRecords(auth, payload) {
             : generateNextCode(currentValues, idx, codePrefix, seqLength));
         rowData = buildNewResourceRow(headers, idx, providedValues, schema);
         rowData[idx.Code] = newCode;
-        applyAccessRegionOnWrite(rowData, idx, auth);
+        applyAccessRegionOnWrite(rowData, idx, auth, resource.config, bulkBatchContext);
         var createdAtTs = applyAuditFields(rowData, idx, auth, resource.config, true);
         if (createdAtTs > maxRecordTimestamp) maxRecordTimestamp = createdAtTs;
         validateRequiredFields(rowData, idx, schema.requiredHeaders, targetResourceName);

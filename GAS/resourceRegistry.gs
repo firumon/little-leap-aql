@@ -13,24 +13,12 @@ var _role_permissions_context_cache = null;
 var _role_permission_memo = {};
 var _role_action_permission_memo = {};
 
-// Execution-scoped memos for the role->resource catalog. The catalog is a pure
-// function of (roleIds, options) plus the permissions context and the config
-// map, all of which are frozen for the life of one execution. Without these,
-// enforceMasterPermission rebuilt the entire catalog once per resource, turning
-// every poll and multi-get into an O(resources x permissionRows x resources)
-// loop. Both are cleared by clearRolePermissionsCache/clearResourceConfigCache.
+// Execution-scoped memos for the role->resource catalog.
 var _role_resource_access_cache = {};
 var _readable_resource_set_cache = {};
 
-// The role catalog is a pure function of the permissions grid, config map, role ids
-// and options. Its key space is one entry per (role combination x options), which the
-// clear paths cannot enumerate - so a generation token namespaces every entry and
-// dropping the token retires all of them at once.
-//
-// Deliberately NOT PropertiesService: inside a library that resolves to the LIBRARY's
-// properties, shared across tenants, and a failed setProperty would silently skip
-// invalidation and serve stale permissions. The token lives in the same cache as the
-// catalogs it guards, so losing it can only ever cause a rebuild, never a stale read.
+// Generation token namespaces every role catalog cache entry to drop them at once.
+// Not PropertiesService: a failed setProperty would skip invalidation and serve stale permissions.
 var _catalog_generation = null;
 
 function buildCatalogGenerationKey() {
@@ -173,6 +161,7 @@ function getResourceConfigMap() {
       uniqueCompositeHeaders: parseCompositeHeaders(readOptionalCell(row, registry.idx.UniqueCompositeHeaders, '')),
       defaultValues: parseJsonCell(readOptionalCell(row, registry.idx.DefaultValues, '{}'), {}),
       recordAccessPolicy: normalizeRecordAccessPolicy(readOptionalCell(row, registry.idx.RecordAccessPolicy, 'all')),
+      accessPolicy: (readOptionalCell(row, registry.idx.AccessPolicy, '') || '').toString().trim().replace(/^'/, ''),
       ownerUserField: (readOptionalCell(row, registry.idx.OwnerUserField, 'CreatedBy') || '').toString().trim() || 'CreatedBy',
       menus: menuArr.map(function(m) {
         // Canonical outbound key is `group`; tolerate legacy sheet/menu shapes on read.
@@ -234,7 +223,8 @@ function getResourceConfigMap() {
       customUIName: (readOptionalCell(row, registry.idx.CustomUIName, '') || '').toString().trim(),
       listViews: listViewsMeta.views,
       listViewsMode: listViewsMeta.mode,
-      relations: parseRelationsCell(readOptionalCell(row, registry.idx.Relations, ''))
+      relations: parseRelationsCell(readOptionalCell(row, registry.idx.Relations, '')),
+      accessRegionSource: parseJsonCell(readOptionalCell(row, registry.idx.AccessRegionSource, ''), null)
     };
   }
 
@@ -1010,11 +1000,9 @@ function getRoleResourceAccess(roleId, options) {
   const roleIds = normalizeRoleIds(roleId);
   if (!roleIds.length) return [];
 
-  // Memo key must cover every input that changes the shape of the result.
-  const memoKey = roleIds.join('|') + '::'
+  const memoKey = roleIds.slice().sort().join('|') + '::'
     + (options && options.includeHeaders === true ? '1' : '0')
-    + (options && options.includeUiConfig === false ? '0' : '1')
-    + '::' + (options && options.scope ? normalizeResourceScope(options.scope) : '');
+    + (options && options.includeUiConfig === false ? '0' : '1');
   if (_role_resource_access_cache[memoKey]) return _role_resource_access_cache[memoKey];
 
   // A hit skips the config map parse, permissions walk and header resolution.
@@ -1032,7 +1020,6 @@ function getRoleResourceAccess(roleId, options) {
 
   const includeHeaders = options && options.includeHeaders === true;
   const includeUiConfig = !(options && options.includeUiConfig === false);
-  const scopeFilter = options && options.scope ? normalizeResourceScope(options.scope) : '';
   const permissionsContext = getRolePermissionsContext();
   const wildcardTargets = getAllConfiguredResourceNames();
   const resourceMap = {};
@@ -1067,7 +1054,6 @@ function getRoleResourceAccess(roleId, options) {
         const entry = buildAuthorizedResourceEntry(resourceName, {
           includeHeaders: includeHeaders,
           includeUiConfig: includeUiConfig,
-          scopeFilter: scopeFilter,
           skippedSink: skippedResources
         });
         if (!entry) continue;
@@ -1083,7 +1069,9 @@ function getRoleResourceAccess(roleId, options) {
       const permissionSet = buildPermissionSetFromActions(actionList, {
         resourceActions: includeUiConfig ? possibleActionsMap[resourceName] : []
       });
-      const hasAnyPermission = permissionSet.canRead || permissionSet.canWrite || permissionSet.canUpdate || permissionSet.canDelete;
+      // A row can grant only workflow actions, so CRUD is not the whole test.
+      const hasAnyPermission = permissionSet.canRead || permissionSet.canWrite || permissionSet.canUpdate || permissionSet.canDelete
+        || (permissionSet.actions && permissionSet.actions.length > 0);
       if (!hasAnyPermission) continue;
 
       resourceMap[resourceName].permissions.canRead = resourceMap[resourceName].permissions.canRead || permissionSet.canRead;
@@ -1150,25 +1138,13 @@ function prewarmResourceHeaders(resourceNames) {
   }
 }
 
-/**
- * Names a role is allowed to read, as a hash for O(1) membership tests.
- *
- * NOTE ON SEMANTICS: this deliberately mirrors the existing
- * enforceMasterPermission behaviour, which grants read on *presence* in the
- * catalog rather than on permissions.canRead. getRoleResourceAccess inserts an
- * entry into its map before evaluating actions and never removes it, so a
- * permission row with an empty Actions cell currently yields read access.
- * Tightening that is an authorization change, not a performance one — it is
- * tracked separately and must not be folded in here.
- *
- * @param {string[]} roleIds
- * @return {Object} map of resourceName -> true
- */
+// Names a role can read, as a hash. A role row with an empty Actions cell still
+// grants read: this is by design, so the resource loads with no actions.
 function getReadableResourceNameSet(roleIds) {
   const ids = normalizeRoleIds(roleIds);
   if (!ids.length) return {};
 
-  const key = ids.join('|');
+  const key = ids.slice().sort().join('|');
   if (_readable_resource_set_cache[key]) return _readable_resource_set_cache[key];
 
   const set = {};
@@ -1196,7 +1172,6 @@ function buildAuthorizedResourceEntry(resourceName, options) {
   }
 
   if (!config.isActive) return null;
-  if (opts.scopeFilter && config.scope !== opts.scopeFilter) return null;
   if (!config.includeInAuthorizationPayload) return null;
 
   const entry = {
@@ -1204,6 +1179,8 @@ function buildAuthorizedResourceEntry(resourceName, options) {
     scope: config.scope,
     parentResource: config.parentResource || '',
     relations: config.relations || {},
+    accessPolicy: config.accessPolicy || '',
+    accessRegionSource: (config.accessRegionSource && typeof config.accessRegionSource === 'object') ? config.accessRegionSource : parseJsonCell(config.accessRegionSource, null),
     sheetName: config.sheetName,
     codePrefix: config.codePrefix,
     codeSequenceLength: config.codeSequenceLength,
@@ -1256,7 +1233,7 @@ function toBooleanCell(value) {
 
 function getRolePermissionForResource(roleId, resourceName) {
   const normalizedRoleIds = normalizeRoleIds(roleId);
-  const memoKey = normalizedRoleIds.join('|') + '::' + (resourceName || '');
+  const memoKey = normalizedRoleIds.slice().sort().join('|') + '::' + (resourceName || '');
   if (_role_permission_memo[memoKey]) return _role_permission_memo[memoKey];
   const normalizedResourceName = (resourceName || '').toString().trim();
   const emptyPermissions = {
@@ -1316,7 +1293,7 @@ function hasRoleActionPermission(roleId, resourceName, actionName) {
   const roleIds = normalizeRoleIds(roleId);
   if (!roleIds.length) return false;
 
-  const memoKey = roleIds.join('|') + '::' + (resourceName || '') + '::' + normalizedAction;
+  const memoKey = roleIds.slice().sort().join('|') + '::' + (resourceName || '') + '::' + normalizedAction;
   if (_role_action_permission_memo[memoKey] === undefined) {
     _role_action_permission_memo[memoKey] = computeRoleActionPermission(roleIds, resourceName, normalizedAction);
   }

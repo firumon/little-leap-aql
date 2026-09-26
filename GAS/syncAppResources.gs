@@ -2319,7 +2319,7 @@ function initAppResourcesCodeConfig() {
 function syncAppResourcesFromCode(silent) {
     const protectedColumns = [
         'FileID', 'CodePrefix', 'CodeSequenceLength', 'LastDataUpdatedAt',
-        'RecordAccessPolicy', 'Menu', 'Reports', 'ListViews', 'CustomUIName',
+        'RecordAccessPolicy', 'AccessPolicy', 'AccessRegionSource', 'Menu', 'Reports', 'ListViews', 'CustomUIName',
         'Settings', 'Dashboard', 'Options'
     ];
     initAppResourcesCodeConfig();

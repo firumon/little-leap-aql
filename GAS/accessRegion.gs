@@ -126,7 +126,7 @@ function buildUserAccessRegionScope(userRow) {
   const allCodes = [assignedCode].concat(children).concat(parents);
   allCodes.forEach(function(code) {
     if (code && context.byCode && context.byCode[code] && context.byCode[code].name) {
-      regionNames[code] = context.byCode[code].name;
+      regionNames[context.byCode[code].name.toLowerCase()] = code;
     }
   });
 
@@ -266,29 +266,7 @@ function buildUserNameToRegionCodeMap(scope) {
     return universeMap;
   }
 
-  const order = [];
-  if (scope.assignedCode) order.push(scope.assignedCode);
-  if (Array.isArray(scope.children)) {
-    scope.children.forEach(function (c) { if (c) order.push(c); });
-  }
-  if (Array.isArray(scope.parents)) {
-    scope.parents.forEach(function (p) { if (p) order.push(p); });
-  }
-
-  const names = scope.regionNames || {};
-  const nameToCode = {};
-  for (let i = 0; i < order.length; i++) {
-    const code = order[i];
-    const name = names[code];
-    if (name) {
-      const lowerName = name.toString().trim().toLowerCase();
-      if (lowerName && nameToCode[lowerName] === undefined) {
-        nameToCode[lowerName] = code;
-      }
-    }
-  }
-
-  return nameToCode;
+  return scope.regionNames || {};
 }
 
 function buildUserAccessRegionPayload(userRow, regions) {
@@ -298,7 +276,8 @@ function buildUserAccessRegionPayload(userRow, regions) {
     isUniverse: scope.isUniverse,
     children: scope.children || [],
     parents: scope.parents || [],
-    regions: regions || {}
+    regions: regions || {},
+    regionNames: scope.regionNames || {}
   };
 }
 

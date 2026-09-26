@@ -6,6 +6,7 @@ import {
   resourceGetRequest,
   resourceUpdateRequest
 } from '../resourceRequests'
+import { computeRegion } from '../useRegionCompute'
 
 // Turns node state into GAS request envelopes. A `strategy.build` override
 // replaces `defaultBuild` and must append `additionalActionRequests()` itself.
@@ -47,19 +48,29 @@ export function usePageStateBuild ({ state, registry }) {
     return data
   }
 
+  function stampRegion (res, data) {
+    const regionCode = computeRegion(res, data)
+    if (regionCode && !data.AccessRegion) data.AccessRegion = regionCode
+    return data
+  }
+
   function requestForNode (node) {
     const resource = node.resource
     if (node.many) {
-      const records = node.records.map(wireData)
+      const records = node.records.map((r) => stampRegion(resource, wireData(r)))
       return records.length ? resourceBulkRequest(resource, records) : null
     }
     if (node.children.length) {
       // Rows are plain data in state; the GAS wire format is put on here.
       const children = node.children.map(c => ({
         resource: c.resource,
-        records: c.records.map((row) => ({ _action: row._action || 'create', data: wireData(row) }))
+        records: c.records.map((row) => ({
+          _action: row._action || 'create',
+          data: stampRegion(c.resource, wireData(row))
+        }))
       }))
       const data = wireData(node.record)
+      stampRegion(resource, data)
       return node.code
         ? compositeSaveRequest({ resource, code: node.code, data, children })
         : compositeSaveRequest({ resource, data, children })
@@ -69,6 +80,7 @@ export function usePageStateBuild ({ state, registry }) {
     // not turn into an update with no columns in it.
     const data = wireData(node.record)
     if (!Object.keys(data).length) return null
+    stampRegion(resource, data)
     return node.code
       ? resourceUpdateRequest(resource, node.code, data)
       : resourceCreateRequest(resource, data)

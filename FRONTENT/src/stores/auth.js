@@ -66,7 +66,7 @@ export const useAuthStore = defineStore('auth', () => {
       .map((entry) => entry.trim())
       .filter(Boolean)
   })
-  const userAccessRegion = computed(() => user.value?.accessRegion || { code: '', isUniverse: true, children: [], parents: [], regions: {} })
+  const userAccessRegion = computed(() => user.value?.accessRegion || { code: '', isUniverse: true, children: [], parents: [], regions: {}, regionNames: {} })
   const authorizedResources = computed(() => resources.value)
   const appConfigMap = computed(() => appConfig.value || {})
   const appOptionsMap = computed(() => appOptions.value || {})

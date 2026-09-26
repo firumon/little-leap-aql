@@ -62,7 +62,7 @@ Shape built by `buildAuthUserPayload()` at `GAS/auth.gs:205`:
   "name":         "string",
   "email":        "string",
   "avatar":       "string",
-  "accessRegion": { "code": "string", "isUniverse": true, "children": [], "parents": [], "regions": {} },
+  "accessRegion": { "code": "string", "isUniverse": true, "children": [], "parents": [], "regions": {}, "regionNames": {} },
   "designation":  { "id": "string", "name": "string", "parentDesignationId": "string", "accessRegion": "string", "dashboardScoreCutoff": "number" },
   "roles":        [{ "id": "string", "name": "string" }],
   "role":         "string"
@@ -75,7 +75,7 @@ Shape built by `buildAuthUserPayload()` at `GAS/auth.gs:205`:
 | `name` | `APP.Users.Name` | `GAS/auth.gs:208` |
 | `email` | `APP.Users.Email` | `GAS/auth.gs:209` |
 | `avatar` | `APP.Users.Avatar` | `GAS/auth.gs:210` |
-| `accessRegion` | `APP.Users.AccessRegion` + `APP.AccessRegions` (via `APP.Designations.AccessRegion`) | `GAS/auth.gs:211` → `buildUserAccessRegionPayload()` in `GAS/accessRegion.gs`. Carries `code`, `isUniverse`, `children`, `parents`, `regions`. Canonical specification: [ACCESS_REGION_AND_POLICY_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ACCESS_REGION_AND_POLICY_SYSTEM.md#71-login--profile-payload) |
+| `accessRegion` | `APP.Users.AccessRegion` + `APP.AccessRegions` (via `APP.Designations.AccessRegion`) | `GAS/auth.gs:211` → `buildUserAccessRegionPayload()` in `GAS/accessRegion.gs`. Carries `code`, `isUniverse`, `children`, `parents`, `regions`, `regionNames`. Canonical specification: [ACCESS_REGION_AND_POLICY_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ACCESS_REGION_AND_POLICY_SYSTEM.md#71-login--profile-payload) |
 | `designation` | `APP.Designations` via `APP.Users.DesignationID` | `GAS/auth.gs:212` → `getDesignationById()` in `GAS/auth.gs`. Carries `id`, `name`, `parentDesignationId`, `accessRegion`, `dashboardScoreCutoff`. Read in the app through `stores/auth.js` as `userDesignation`, `userDesignationAccessRegion` and `dashboardScoreCutoff` |
 | `roles` | `APP.Roles` via `APP.Users.Roles` (CSV of RoleIDs) | `GAS/auth.gs:213` → `getRoleNamesByIds()` in `GAS/auth.gs` |
 | `role` | `APP.Users.Role` (legacy primary role field) | `GAS/auth.gs:214` → `getPrimaryRoleName()` in `GAS/auth.gs` |

@@ -74,9 +74,9 @@ per view, exported from the resource's composable and applied as a function-valu
 PropsListPendingApproval: (props) => awaitingApprovalPreset(props.items)
 ```
 
-**Personal queue scoping vs. upline record access policies.** A personal work queue (such
+**Personal queue scoping vs. upline access policies.** A personal work queue (such
 as `"My Drafts"`) must filter rows down to the active `userId` (`user.value?.id`). While
-`RecordAccessPolicy: OWNER_AND_UPLINE` permits managers to read subordinates' rows, drafts
+upline access policies permit managers to read subordinates' rows, drafts
 are editable only by their author. Without explicit `userId` scoping, a manager's draft
 queue becomes cluttered with un-editable drafts from other people.
 

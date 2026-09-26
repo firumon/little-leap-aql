@@ -17,7 +17,7 @@ This document is the canonical meaning reference for `APP.Resources` columns.
 - validation/defaults
   - `RequiredHeaders`, `UniqueHeaders`, `UniqueCompositeHeaders`, `DefaultValues`
 - access and actions
-  - `RecordAccessPolicy`, `AccessPolicy`, `AccessRegionSource`, `OwnerUserField`, `AdditionalActions`
+  - `AccessPolicy`, `AccessRegionSource`, `OwnerUserField`, `AdditionalActions`
 - UI/runtime metadata
   - `Menu`, `UIFields`, `IncludeInAuthorizationPayload`, `Functional`, `PreAction`, `PostAction`, `Reports`, `ListViews`, `CustomUIName`, `Settings`, `Dashboard`, `Options`
 - cross-resource linking
@@ -273,8 +273,8 @@ Every audited sheet across `master`, `operation`, and `accounts` scopes includes
 ## Sync Protection Rule
 When `syncAppResourcesFromCode` executes, it protects designated metadata columns in `APP.Resources` from being overwritten by code defaults if the sheet cell already contains data.
 
-* **Protected Columns (14 total)**:
-  `FileID`, `CodePrefix`, `CodeSequenceLength`, `LastDataUpdatedAt`, `RecordAccessPolicy`, `AccessPolicy`, `AccessRegionSource`, `Menu`, `Reports`, `ListViews`, `CustomUIName`, `Settings`, `Dashboard`, `Options`.
+* **Protected Columns (13 total)**:
+  `FileID`, `CodePrefix`, `CodeSequenceLength`, `LastDataUpdatedAt`, `AccessPolicy`, `AccessRegionSource`, `Menu`, `Reports`, `ListViews`, `CustomUIName`, `Settings`, `Dashboard`, `Options`.
 * **Protection Logic**:
   - If a column is in the protected list and the cell in Google Sheets is not blank (note: `0` and `false` are considered valid data and are protected), `syncAppResourcesFromCode` preserves the sheet value and skips overwriting.
   - If the sheet cell is empty or blank, or if the column is not in the protected list, code-level config is written to the sheet.

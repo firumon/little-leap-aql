@@ -118,8 +118,9 @@ Each of these digits uses:
 
 > [!NOTE]
 > **Current Codebase Implementation Status**:
-> The `O`, `P`, `D`, `U` digits and the `RecordAccessPolicy` column (`ALL`, `OWNER`, `OWNER_AND_UPLINE`) are saved and kept in the sheet metadata.
-> In the current backend engine, row read and write filtering in [`GAS/resourceApi.gs`](file:///f:/LITTLE%20LEAP/AQL/GAS/resourceApi.gs#L779-L784) checks **only** `AccessRegion` and Digit 1 (`R`). Owner and upline row filters are not yet checked by the backend loop.
+> The `O`, `P`, `D`, `U` digits of `AccessPolicy` are preserved in the 5-digit octal string for future upline/owner action privileges.
+> The legacy `RecordAccessPolicy` column (`ALL`, `OWNER`, `OWNER_AND_UPLINE`) has been retired from `APP.Resources` in favor of `AccessPolicy` and `AccessRegionSource`.
+> In the current backend engine, row read and write filtering in [`GAS/resourceApi.gs`](file:///f:/LITTLE%20LEAP/AQL/GAS/resourceApi.gs#L779-L784) checks `AccessRegion` and Digit 1 (`R`).
 
 ### 3.3 Default Policies by Scope
 When the `AccessPolicy` cell in `APP.Resources` is blank, the resource takes its default policy based on its `Scope`:
@@ -385,7 +386,7 @@ Here is the exact truth comparing the codebase against older docs and dialogs:
 | **R Bit Weights** | `accessPolicyManager.html` shows Up as `+2` and Down as `+4`. | [`GAS/accessRegion.gs:190`](file:///f:/LITTLE%20LEAP/AQL/GAS/accessRegion.gs#L190): `down: (r & 2) === 2`, `up: (r & 4) === 4`. | Code is truth. Bit 1 (`+2`) is Down; Bit 2 (`+4`) is Up. |
 | **ROPDU Letters** | `SHEET_TOOLBAR_MENU_GUIDE.md` had: "R: Read, O: Others read, P: Parent modify, D: Descendant modify, U: Universe modify". | Code and `accessPolicyManager.html`: `R`: Region, `O`: Owner, `P`: Peer, `D`: Downline, `U`: Upline. | Documentation error in old guide. Corrected and linked here. |
 | **Designation Region** | `SHEET_APP_STRUCTURE.md` said: "the column exists... but nothing reads it yet". | [`GAS/accessRegion.gs:87-89`](file:///f:/LITTLE%20LEAP/AQL/GAS/accessRegion.gs#L87-L89): `resolveUserAccessRegionCode()` explicitly reads `desig.accessRegion`. | Active and fully working in code. Old doc was outdated. |
-| **OPDU Row Filtering** | Some docs suggested row-level filtering by owner and upline on all operations. | [`GAS/resourceApi.gs:779-784`](file:///f:/LITTLE%20LEAP/AQL/GAS/resourceApi.gs#L779-L784): `canAccessRowByPolicy()` delegates only to `canAccessRowByAccessRegion()`. | `OPDU` and `RecordAccessPolicy` are stored metadata. Only region is enforced at row level today. |
+| **OPDU Row Filtering** | Some docs suggested row-level filtering by owner and upline on all operations. | [`GAS/resourceApi.gs:779-784`](file:///f:/LITTLE%20LEAP/AQL/GAS/resourceApi.gs#L779-L784): `canAccessRowByPolicy()` delegates only to `canAccessRowByAccessRegion()`. | Only region is enforced at row level today. Legacy `RecordAccessPolicy` column retired. |
 | **AccessRegion on Write** | Older code had hardcoded `isRegionHeader('AccessRegion')` dropping incoming values. | `isRegionHeader` is removed. Incoming region in payloads is honored by `applyAccessRegionOnWrite()` (`existingVal !== ''`), skipping GAS fallback derivations. Fallback walk runs only when incoming region is blank. | Aligned with frontend-first architecture. |
 | **Place Name Resolution** | None / Unclear. | If `self.resolve === true`, place name is mapped to region code on read using `nameToCodeMap`, and write-time stamping is skipped. | Fully implemented in `resourceApi.gs`. |
 

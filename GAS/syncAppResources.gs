@@ -25,7 +25,7 @@ function initAppResourcesCodeConfig() {
         UniqueHeaders: 'Name',
         UniqueCompositeHeaders: '',
         DefaultValues: '{"Status":"Active"}',
-        RecordAccessPolicy: 'ALL',
+        AccessRegionSource: '',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: '',
         Menu: JSON.stringify([{"group":["Product"],"order":1,"label":"Manage","icon":"inventory_2","route":"/master/products","pageTitle":"Products","pageDescription":"Manage product master records (parent models)","show":true,"menuAccess":{"require":"canWrite"}}]),
@@ -60,7 +60,7 @@ function initAppResourcesCodeConfig() {
         UniqueHeaders: 'Code',
         UniqueCompositeHeaders: '',
         DefaultValues: '{"Status":"Active","Barcode":""}',
-        RecordAccessPolicy: 'ALL',
+        AccessRegionSource: '',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: '',
         Menu: JSON.stringify([{"group":["Product"],"order":2,"label":"SKUs","icon":"style","route":"/master/skus","pageTitle":"SKUs","pageDescription":"Manage sellable SKUs (child variants of a product)","show":true}]),
@@ -102,7 +102,7 @@ function initAppResourcesCodeConfig() {
              UniqueHeaders: 'Code',
              UniqueCompositeHeaders: '',
              DefaultValues: '{"Status":"Active"}',
-             RecordAccessPolicy: 'ALL',
+        AccessRegionSource: '',
              OwnerUserField: 'CreatedBy',
              AdditionalActions: '',
              Menu: JSON.stringify([{"group":["Product"],"order":3,"label":"UOMs","icon":"straighten","route":"/master/uoms","pageTitle":"Units of Measure","pageDescription":"Manage units of measure","show":true}]),
@@ -134,7 +134,7 @@ function initAppResourcesCodeConfig() {
       UniqueHeaders: 'Code',
       UniqueCompositeHeaders: '',
       DefaultValues: '{"Status":"Active","Decimals":2,"RoundingInterval":0.01,"BaseCurrency":"FALSE","ConversionFactor":1}',
-      RecordAccessPolicy: 'ALL',
+        AccessRegionSource: '',
       OwnerUserField: 'CreatedBy',
       AdditionalActions: '',
       Menu: JSON.stringify([{"group":["Masters"],"order":1,"label":"Currencies","icon":"attach_money","route":"/master/currencies","pageTitle":"Currencies","pageDescription":"Manage currency master records","show":true}]),
@@ -170,7 +170,7 @@ function initAppResourcesCodeConfig() {
       UniqueHeaders: 'Name',
       UniqueCompositeHeaders: '',
       DefaultValues: '{"Status":"Active","IsDefault":"FALSE","TaxInclusive":"FALSE","DiscountTaxPolicy":"POST_TAX"}',
-      RecordAccessPolicy: 'ALL',
+        AccessRegionSource: '',
       OwnerUserField: 'CreatedBy',
       AdditionalActions: '',
       Menu: JSON.stringify([{"group":["Product"],"order":5,"label":"Price Lists","icon":"sell","route":"/master/price-lists","pageTitle":"Price Lists","pageDescription":"Manage product price lists","show":true}]),
@@ -209,7 +209,7 @@ function initAppResourcesCodeConfig() {
       UniqueHeaders: '',
       UniqueCompositeHeaders: 'PriceListCode,SKUCode',
       DefaultValues: '{"Status":"Active","Price":0,"RSP":0}',
-      RecordAccessPolicy: 'ALL',
+        AccessRegionSource: '',
       OwnerUserField: 'CreatedBy',
       AdditionalActions: '',
       Menu: JSON.stringify([]),
@@ -245,7 +245,7 @@ function initAppResourcesCodeConfig() {
         UniqueHeaders: 'Name',
         UniqueCompositeHeaders: '',
         DefaultValues: '{"Status":"Active","TaxRegistrationNumber":"","TaxRegistrationName":""}',
-        RecordAccessPolicy: 'ALL',
+        AccessRegionSource: '',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: '',
         Menu: JSON.stringify([{"group":["Procurement"],"order":1,"label":"Suppliers","icon":"business","route":"/master/suppliers","pageTitle":"Suppliers","pageDescription":"Manage supplier master records","show":true}]),
@@ -283,7 +283,7 @@ function initAppResourcesCodeConfig() {
         UniqueHeaders: 'Name',
         UniqueCompositeHeaders: '',
         DefaultValues: '{"Status":"Active","Country":"UAE","Type":"Main","TaxRegistrationNumber":"","TaxRegistrationName":""}',
-        RecordAccessPolicy: 'ALL',
+        AccessRegionSource: '',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: JSON.stringify([
             {"action":"ViewStock","label":"View Stock","icon":"inventory","color":"primary","kind":"navigate","confirm":false,"navigate":{"target":"record","pageSlug":"stock"}}
@@ -329,7 +329,7 @@ function initAppResourcesCodeConfig() {
         UniqueHeaders: 'Name',
         UniqueCompositeHeaders: '',
         DefaultValues: '{"Status":"Active","Country":"UAE","TaxRegistrationNumber":"","TaxRegistrationName":""}',
-        RecordAccessPolicy: 'ALL',
+        AccessRegionSource: '{"self":{"column":"Country","resolve":true},"subject":[{"user":true}]}',
         OwnerUserField: 'CreatedBy',
         // The four operational entry points an outlet's View page offers, as FAB items.
         //
@@ -422,7 +422,7 @@ function initAppResourcesCodeConfig() {
         UniqueHeaders: '',
         UniqueCompositeHeaders: 'OutletCode',
         DefaultValues: '{"Status":"Active","MaxStockValueLimit":0,"VisitFrequencyDays":14,"CreditLimit":0,"InvoiceDueDays":30}',
-        RecordAccessPolicy: 'ALL',
+        AccessRegionSource: '{"subject":[{"column":"OutletCode","resource":"Outlets","empty":"next","fail":"user"},{"user":true}]}',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: '',
         Menu: JSON.stringify([{"group":["Outlet Operations"],"order":2,"label":"Operating Rules","icon":"rule","route":"/master/outlet-operating-rules","pageTitle":"Outlet Operating Rules","pageDescription":"Manage outlet operating rules","show":true}]),
@@ -460,7 +460,7 @@ function initAppResourcesCodeConfig() {
         UniqueHeaders: 'Code',
         UniqueCompositeHeaders: '',
         DefaultValues: '{"Status":"Active","PercentageTransaction":0,"FlatUnit":0,"CalculationOrder":1}',
-        RecordAccessPolicy: 'ALL',
+        AccessRegionSource: '',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: '',
         Menu: JSON.stringify([{"group":["Masters"],"order":2,"label":"Taxes","icon":"percent","route":"/master/taxes","pageTitle":"Taxes","pageDescription":"Manage master tax categories and child sub-taxes","show":true}]),
@@ -499,7 +499,7 @@ function initAppResourcesCodeConfig() {
         UniqueHeaders: '',
         UniqueCompositeHeaders: '',
         DefaultValues: '{"Status":"Active","Progress":"Draft"}',
-        RecordAccessPolicy: 'ALL',
+        AccessRegionSource: '{"self":{"column":"Country","resolve":true},"subject":[{"user":true}]}',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: JSON.stringify([
             {"action": "Approve", "label": "Approve Lead", "title": "Approve Lead", "subtitle": "{Name}", "icon": "verified", "color": "positive", "kind": "mutate", "confirm": false, "column": "Progress", "columnValue": "Approved", "columnValueOptions": [], "fields": [{"name": "Comment", "label": "Approval Comment", "type": "textarea", "required": true}], "visibleWhen": {"column": "Progress", "op": "eq", "value": "Processing"}},
@@ -580,7 +580,7 @@ function initAppResourcesCodeConfig() {
         UniqueHeaders: '',
         UniqueCompositeHeaders: '',
         DefaultValues: '{"Status":"Active","Progress":"INITIATED"}',
-        RecordAccessPolicy: 'OWNER_AND_UPLINE',
+        AccessRegionSource: '',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: '',
         Menu: JSON.stringify([{"group":["Procurement"],"order":0,"label":"Procurements","icon":"shopping_cart","route":"/operation/procurements","pageTitle":"Procurements","pageDescription":"Central tracked procurement request","show":false}]),
@@ -618,7 +618,7 @@ function initAppResourcesCodeConfig() {
         UniqueHeaders: '',
         UniqueCompositeHeaders: '',
         DefaultValues: '{"Status":"Active","Progress":"Draft"}',
-        RecordAccessPolicy: 'OWNER_AND_UPLINE',
+        AccessRegionSource: '{"subject":[{"column":"WarehouseCode","resource":"Warehouses","empty":"next","fail":"user"},{"column":"ProcurementCode","resource":"Procurements","empty":"next","fail":"user"},{"user":true}]}',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: JSON.stringify([
             {"action":"Approve","label":"Approve","icon":"check_circle","color":"primary","kind":"mutate","confirm":false,"column":"Progress","columnValue":"Approved","columnValueOptions":[],"fields":[],"visibleWhen":{"column":"Progress","op":"eq","value":"Pending Approval"}},
@@ -683,7 +683,7 @@ function initAppResourcesCodeConfig() {
         UniqueHeaders: 'Code',
         UniqueCompositeHeaders: '',
         DefaultValues: '{"Quantity":0,"EstimatedRate":0}',
-        RecordAccessPolicy: 'OWNER_AND_UPLINE',
+        AccessRegionSource: '',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: '',
         Menu: JSON.stringify([]),
@@ -720,7 +720,7 @@ function initAppResourcesCodeConfig() {
         UniqueHeaders: '',
         UniqueCompositeHeaders: '',
         DefaultValues: '{"Status":"Active","Progress":"DRAFT"}',
-        RecordAccessPolicy: 'OWNER_AND_UPLINE',
+        AccessRegionSource: '{"subject":[{"column":"ProcurementCode","resource":"Procurements","empty":"next","fail":"user"},{"user":true}]}',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: JSON.stringify([
             {"action":"AssignSupplier","label":"Assign Supplier","icon":"group_add","color":"primary","kind":"navigate","confirm":false,"navigate":{"target":"record","pageSlug":"assign-supplier"},"visibleWhen":{"column":"Progress","op":"nin","value":["CLOSED","CANCELLED"]}},
@@ -782,7 +782,7 @@ function initAppResourcesCodeConfig() {
         UniqueHeaders: '',
         UniqueCompositeHeaders: 'RFQCode+SupplierCode',
         DefaultValues: '{"Status":"Active","Progress":"ASSIGNED"}',
-        RecordAccessPolicy: 'OWNER_AND_UPLINE',
+        AccessRegionSource: '{"subject":[{"column":"RFQCode","resource":"RFQs","empty":"next","fail":"user"},{"user":true}]}',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: '',
         Menu: JSON.stringify([]),
@@ -820,7 +820,7 @@ function initAppResourcesCodeConfig() {
         UniqueHeaders: '',
         UniqueCompositeHeaders: '',
         DefaultValues: '{"Status":"Active","Progress":"RECEIVED","TotalAmount":0,"Currency":"AED","ExtraChargesBreakup":"{\\"tax\\":0,\\"freight\\":0,\\"commission\\":0,\\"handling\\":0,\\"other\\":0}","AllowPartialPO":"TRUE"}',
-        RecordAccessPolicy: 'OWNER_AND_UPLINE',
+        AccessRegionSource: '{"subject":[{"column":"RFQCode","resource":"RFQs","empty":"next","fail":"user"},{"user":true}]}',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: JSON.stringify([
             {"action":"Reject","label":"Reject","icon":"block","color":"negative","kind":"mutate","confirm":false,"column":"Progress","columnValue":"REJECTED","columnValueOptions":[],"fields":[{"name":"Comment","label":"Rejection Comment","type":"textarea","required":true}],"visibleWhen":{"column":"Progress","op":"eq","value":"RECEIVED"}}
@@ -890,7 +890,7 @@ function initAppResourcesCodeConfig() {
         UniqueHeaders: '',
         UniqueCompositeHeaders: 'SupplierQuotationCode+PurchaseRequisitionItemCode',
         DefaultValues: '{"Status":"Active"}',
-        RecordAccessPolicy: 'OWNER_AND_UPLINE',
+        AccessRegionSource: '',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: '',
         Menu: JSON.stringify([]),
@@ -932,7 +932,7 @@ function initAppResourcesCodeConfig() {
         UniqueHeaders: '',
         UniqueCompositeHeaders: '',
         DefaultValues: '{"Status":"Active","Progress":"CREATED","Currency":"AED","SubtotalAmount":0,"TotalAmount":0,"ExtraChargesBreakup":"{\\"tax\\":0,\\"freight\\":0,\\"commission\\":0,\\"handling\\":0,\\"other\\":0}"}',
-        RecordAccessPolicy: 'OWNER_AND_UPLINE',
+        AccessRegionSource: '{"subject":[{"column":"ShipToWarehouseCode","resource":"Warehouses","empty":"next","fail":"user"},{"column":"SupplierQuotationCode","resource":"SupplierQuotations","empty":"next","fail":"user"},{"column":"ProcurementCode","resource":"Procurements","empty":"next","fail":"user"},{"user":true}]}',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: JSON.stringify([
             {"action":"Send","label":"Send","icon":"send","color":"primary","kind":"mutate","confirm":false,"column":"Progress","columnValue":"SENT","columnValueOptions":[],"fields":[{"name":"Comment","label":"Comment","type":"textarea","required":false}],"visibleWhen":{"column":"Progress","op":"eq","value":"CREATED"}},
@@ -1002,7 +1002,7 @@ function initAppResourcesCodeConfig() {
         UniqueHeaders: '',
         UniqueCompositeHeaders: 'PurchaseOrderCode+SupplierQuotationItemCode',
         DefaultValues: '{"Status":"Active"}',
-        RecordAccessPolicy: 'OWNER_AND_UPLINE',
+        AccessRegionSource: '',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: '',
         Menu: JSON.stringify([]),
@@ -1045,7 +1045,7 @@ function initAppResourcesCodeConfig() {
         UniqueHeaders: '',
         UniqueCompositeHeaders: '',
         DefaultValues: '{"Status":"Active","Progress":"DRAFT"}',
-        RecordAccessPolicy: 'OWNER_AND_UPLINE',
+        AccessRegionSource: '{"subject":[{"column":"PurchaseOrderCode","resource":"PurchaseOrders","empty":"next","fail":"user"},{"user":true}]}',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: JSON.stringify([
             {"action":"Confirm","label":"Confirm","icon":"task_alt","color":"positive","kind":"mutate","confirm":false,"column":"Progress","columnValue":"CONFIRMED","columnValueOptions":[],"fields":[{"name":"Comment","label":"Confirmation Comment","type":"textarea","required":false}],"visibleWhen":{"column":"Progress","op":"eq","value":"DRAFT"}},
@@ -1101,7 +1101,7 @@ function initAppResourcesCodeConfig() {
         UniqueHeaders: '',
         UniqueCompositeHeaders: 'POReceivingCode+PurchaseOrderItemCode',
         DefaultValues: '{"Status":"Active","ReceivedQty":0,"DamagedQty":0,"RejectedQty":0}',
-        RecordAccessPolicy: 'OWNER_AND_UPLINE',
+        AccessRegionSource: '',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: '',
         Menu: JSON.stringify([]),
@@ -1142,7 +1142,7 @@ function initAppResourcesCodeConfig() {
         UniqueHeaders: '',
         UniqueCompositeHeaders: '',
         DefaultValues: '{"Status":"Active"}',
-        RecordAccessPolicy: 'OWNER_AND_UPLINE',
+        AccessRegionSource: '{"subject":[{"column":"PurchaseOrderCode","resource":"PurchaseOrders","empty":"next","fail":"user"},{"user":true}]}',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: JSON.stringify([
             {"action":"Invalidate","label":"Invalidate","icon":"block","color":"negative","kind":"mutate","confirm":true,"column":"Status","columnValue":"Inactive","columnValueOptions":[],"fields":[],"visibleWhen":{"column":"Status","op":"eq","value":"Active"}}
@@ -1183,7 +1183,7 @@ function initAppResourcesCodeConfig() {
         UniqueHeaders: '',
         UniqueCompositeHeaders: 'GoodsReceiptCode+POReceivingItemCode',
         DefaultValues: '{"Status":"Active"}',
-        RecordAccessPolicy: 'OWNER_AND_UPLINE',
+        AccessRegionSource: '',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: '',
         Menu: JSON.stringify([]),
@@ -1218,7 +1218,7 @@ function initAppResourcesCodeConfig() {
         UniqueHeaders: '',
         UniqueCompositeHeaders: '',
         DefaultValues: '{"Status":"Active","QtyChange":0}',
-        RecordAccessPolicy: 'ALL',
+        AccessRegionSource: '{"subject":[{"column":"WarehouseCode","resource":"Warehouses","empty":"next","fail":"user"},{"user":true}]}',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: JSON.stringify([
             { "action": "grn", "label": "GRN Posting", "kind": "mutate", "confirm": false, "column": "ReferenceType", "columnValue": "GRN" },
@@ -1268,7 +1268,7 @@ function initAppResourcesCodeConfig() {
         UniqueHeaders: '',
         UniqueCompositeHeaders: '',
         DefaultValues: '{"Quantity":0}',
-        RecordAccessPolicy: 'ALL',
+        AccessRegionSource: '',
         OwnerUserField: 'UpdatedBy',
         AdditionalActions: '',
         Menu: JSON.stringify([]),
@@ -1295,7 +1295,7 @@ function initAppResourcesCodeConfig() {
         Scope: 'operation', IsActive: 'TRUE', SheetName: CONFIG.OPERATION_SHEETS.OUTLET_VISITS,
         CodePrefix: 'OV', CodeSequenceLength: 6, LastDataUpdatedAt: 0, Audit: 'TRUE',
         RequiredHeaders: 'OutletCode,Date,Progress,Status', UniqueHeaders: '', UniqueCompositeHeaders: '',
-        DefaultValues: '{"Status":"Active","Progress":"PLANNED"}', RecordAccessPolicy: 'OWNER_AND_UPLINE', OwnerUserField: 'CreatedBy',
+        DefaultValues: '{"Status":"Active","Progress":"PLANNED"}',        AccessRegionSource: '{"subject":[{"column":"OutletCode","resource":"Outlets","empty":"next","fail":"user"},{"user":true}]}', OwnerUserField: 'CreatedBy',
         AdditionalActions: JSON.stringify([
             { "action": "QuickVisit", "label": "Quick Visit", "title": "Quick Visit", "subtitle": "", "icon": "bolt", "color": "primary", "kind": "mutate", "resourceLevel": true, "confirm": false, "column": "Progress", "columnValue": "COMPLETED", "columnValueOptions": [], "fields": [{ "name": "OutletCode", "label": "Outlet", "type": "select", "source": { "resource": "Outlets", "field": "Code", "label": "Name" }, "required": true }, { "name": "Date", "value": "$today" }, { "name": "ProgressCompletedComment", "label": "Visit Notes", "type": "textarea", "required": true }, { "name": "ProgressPlannedComment", "value": "Quick visit recorded by ${$userName} on ${$dateTime}" }, { "name": "ProgressPlannedAt", "value": "$dateTime" }, { "name": "ProgressPlannedBy", "value": "$userName" }], "targets": [{ "resource": "OutletVisits", "mode": "create", "key": "nextVisit", "label": "Next Planned Visit", "when": { "field": "Date", "op": "notEmpty" }, "fields": [{ "name": "OutletCode", "from": "$record.OutletCode" }, { "name": "Progress", "value": "PLANNED" }, { "name": "Status", "value": "Active" }, { "name": "ProgressPlannedAt", "value": "$dateTime" }, { "name": "ProgressPlannedBy", "value": "$userName" }, { "name": "Date", "label": "Next Visit Date", "type": "date" }, { "name": "ProgressPlannedComment", "label": "Next Visit Planned Comment", "type": "textarea", "value": "Planned after a quick visit on ${$today}", "required": false }] }] },
             { "action": "Complete", "label": "Complete", "subtitle": "{$outlet.Name}", "icon": "task_alt", "color": "positive", "kind": "mutate", "confirm": false, "column": "Progress", "columnValue": "COMPLETED", "columnValueOptions": [], "fields": [{ "name": "Comment", "label": "Completion Comment", "type": "textarea", "required": false }], "targets": [{ "resource": "OutletVisits", "mode": "create", "key": "nextVisit", "label": "Next Planned Visit (optional)", "when": { "field": "Date", "op": "notEmpty" }, "fields": [{ "name": "OutletCode", "from": "$record.OutletCode" }, { "name": "Progress", "value": "PLANNED" }, { "name": "Status", "value": "Active" }, { "name": "ProgressPlannedAt", "value": "$dateTime" }, { "name": "ProgressPlannedBy", "value": "$userName" }, { "name": "Date", "label": "Next Visit Date", "type": "date", "value": "$date:30", "required": false }, { "name": "ProgressPlannedComment", "label": "Next Visit Planned Comment", "type": "textarea", "required": false }] }], "visibleWhen": { "column": "Progress", "op": "eq", "value": "PLANNED" } },
@@ -1357,7 +1357,7 @@ function initAppResourcesCodeConfig() {
         Scope: 'operation', IsActive: 'TRUE', SheetName: CONFIG.OPERATION_SHEETS.OUTLET_RESTOCKS,
         CodePrefix: 'ORS', CodeSequenceLength: 6, LastDataUpdatedAt: 0, Audit: 'TRUE',
         RequiredHeaders: 'Date,OutletCode,RequestedUser,Progress,Status', UniqueHeaders: '', UniqueCompositeHeaders: '',
-        DefaultValues: '{"Status":"Active","Progress":"DRAFT"}', RecordAccessPolicy: 'OWNER_AND_UPLINE', OwnerUserField: 'CreatedBy',
+        DefaultValues: '{"Status":"Active","Progress":"DRAFT"}',        AccessRegionSource: '{"subject":[{"column":"OutletCode","resource":"Outlets","empty":"next","fail":"user"},{"user":true}]}', OwnerUserField: 'CreatedBy',
         AdditionalActions: JSON.stringify([
             { "action": "Submit", "label": "Submit for Approval", "icon": "send", "color": "primary", "kind": "mutate", "confirm": false, "column": "Progress", "columnValue": "PENDING_APPROVAL", "fields": [{ "name": "ProgressSubmittedComment", "label": "Submission Note", "type": "textarea", "required": false }], "visibleWhen": { "column": "Progress", "op": "eq", "value": "DRAFT" } },
             { "action": "Resubmit", "label": "Resubmit Request", "icon": "replay", "color": "primary", "kind": "mutate", "confirm": false, "column": "Progress", "columnValue": "PENDING_APPROVAL", "fields": [{ "name": "ProgressSubmittedComment", "label": "Resubmission Comment (Describe Changes)", "type": "textarea", "required": true }], "visibleWhen": { "column": "Progress", "op": "eq", "value": "REVISION_REQUIRED" } },
@@ -1432,7 +1432,7 @@ function initAppResourcesCodeConfig() {
     {
         Name: CONFIG.OPERATION_SHEETS.OUTLET_RESTOCK_ITEMS,
         Scope: 'operation', ParentResource: CONFIG.OPERATION_SHEETS.OUTLET_RESTOCKS, IsActive: 'TRUE', SheetName: CONFIG.OPERATION_SHEETS.OUTLET_RESTOCK_ITEMS,
-        CodePrefix: 'ORSI', CodeSequenceLength: 7, LastDataUpdatedAt: 0, Audit: 'TRUE', RequiredHeaders: 'OutletRestockCode,SKU,Quantity', UniqueHeaders: '', UniqueCompositeHeaders: '', DefaultValues: '{"Status":"Active","Quantity":0,"Progress":"PENDING"}', RecordAccessPolicy: 'OWNER_AND_UPLINE', OwnerUserField: 'CreatedBy', AdditionalActions: '', Menu: JSON.stringify([]), UIFields: JSON.stringify([
+        CodePrefix: 'ORSI', CodeSequenceLength: 7, LastDataUpdatedAt: 0, Audit: 'TRUE', RequiredHeaders: 'OutletRestockCode,SKU,Quantity', UniqueHeaders: '', UniqueCompositeHeaders: '', DefaultValues: '{"Status":"Active","Quantity":0,"Progress":"PENDING"}',        AccessRegionSource: '{"subject":[{"column":"WarehouseCode","resource":"Warehouses","empty":"next","fail":"user"},{"user":true}]}', OwnerUserField: 'CreatedBy', AdditionalActions: '', Menu: JSON.stringify([]), UIFields: JSON.stringify([
             { header: 'OutletRestockCode', label: 'Outlet Restock Code', type: 'text' },
             { header: 'WarehouseCode', label: 'Warehouse Code', type: 'text' },
             { header: 'SKU', label: 'SKU', type: 'text' },
@@ -1468,7 +1468,7 @@ function initAppResourcesCodeConfig() {
     {
         Name: CONFIG.OPERATION_SHEETS.OUTLET_DELIVERIES,
         Scope: 'operation', IsActive: 'TRUE', SheetName: CONFIG.OPERATION_SHEETS.OUTLET_DELIVERIES,
-        CodePrefix: 'ODL', CodeSequenceLength: 6, LastDataUpdatedAt: 0, Audit: 'TRUE', RequiredHeaders: 'Date,UserName,Progress,Status', UniqueHeaders: '', UniqueCompositeHeaders: '', DefaultValues: '{"Status":"Active","Progress":"DRAFT"}', RecordAccessPolicy: 'OWNER_AND_UPLINE', OwnerUserField: 'CreatedBy',
+        CodePrefix: 'ODL', CodeSequenceLength: 6, LastDataUpdatedAt: 0, Audit: 'TRUE', RequiredHeaders: 'Date,UserName,Progress,Status', UniqueHeaders: '', UniqueCompositeHeaders: '', DefaultValues: '{"Status":"Active","Progress":"DRAFT"}',        AccessRegionSource: '', OwnerUserField: 'CreatedBy',
         AdditionalActions: JSON.stringify([
             { "action": "MarkDeliver", "label": "Record Delivery", "icon": "assignment_turned_in", "color": "positive", "kind": "navigate", "navigate": { "target": "action", "pageSlug": "mark-deliver" }, "visibleWhen": { "column": "Progress", "op": "in", "value": ["DRAFT", "IN_TRANSIT"] } },
             { "action": "MakeInTransit", "label": "Dispatch Delivery", "icon": "local_shipping", "color": "info", "kind": "navigate", "navigate": { "target": "action", "pageSlug": "make-in-transit" }, "visibleWhen": { "column": "Progress", "op": "eq", "value": "DRAFT" } },
@@ -1511,7 +1511,7 @@ function initAppResourcesCodeConfig() {
         CodePrefix: 'OR', CodeSequenceLength: 6, LastDataUpdatedAt: 0, Audit: 'TRUE',
         RequiredHeaders: 'OutletCode,Date,SKU,Qty', UniqueHeaders: '', UniqueCompositeHeaders: '',
         DefaultValues: '{"Status":"Active","Qty":0,"Price":0,"Progress":"SUBMITTED","InvoiceAdjustmentRequired":false,"InvoiceAdjustmentDone":false,"WarehouseActionRequired":false,"WarehouseActionCompleted":false,"WarehouseAction":"","WarehouseActionDisposedReason":"","ConsumptionInvoiceCode":"","SourceInvoiceCode":""}',
-        RecordAccessPolicy: 'OWNER_AND_UPLINE', OwnerUserField: 'CreatedBy',
+        AccessRegionSource: '{"subject":[{"column":"OutletCode","resource":"Outlets","empty":"next","fail":"user"},{"column":"WarehouseCode","resource":"Warehouses","empty":"next","fail":"user"},{"user":true}]}', OwnerUserField: 'CreatedBy',
         AdditionalActions: JSON.stringify([
             { "action": "WarehouseAction", "label": "Confirm Warehouse Action", "icon": "warehouse", "color": "purple", "kind": "navigate", "navigate": { "target": "action", "pageSlug": "warehouse-action" }, "visibleWhen": { "column": "Progress", "op": "nin", "value": ["COMPLETED", "CANCELLED"] } },
             { "action": "MarkInvoiceAdjusted", "label": "Settle Return Credit", "icon": "receipt_long", "color": "primary", "kind": "navigate", "navigate": { "target": "action", "pageSlug": "mark-invoice-adjusted" }, "visibleWhen": { "column": "Progress", "op": "nin", "value": ["COMPLETED", "CANCELLED"] } },
@@ -1580,7 +1580,7 @@ function initAppResourcesCodeConfig() {
     {
         Name: CONFIG.OPERATION_SHEETS.OUTLET_CONSUMPTIONS,
         Scope: 'operation', IsActive: 'TRUE', SheetName: CONFIG.OPERATION_SHEETS.OUTLET_CONSUMPTIONS,
-        CodePrefix: 'OC', CodeSequenceLength: 6, LastDataUpdatedAt: 0, Audit: 'TRUE', RequiredHeaders: 'OutletCode,Date,Username,Progress,Status', UniqueHeaders: '', UniqueCompositeHeaders: '', DefaultValues: '{"Status":"Active","Progress":"PENDING_INVOICE_GENERATION"}', RecordAccessPolicy: 'OWNER_AND_UPLINE', OwnerUserField: 'CreatedBy',
+        CodePrefix: 'OC', CodeSequenceLength: 6, LastDataUpdatedAt: 0, Audit: 'TRUE', RequiredHeaders: 'OutletCode,Date,Username,Progress,Status', UniqueHeaders: '', UniqueCompositeHeaders: '', DefaultValues: '{"Status":"Active","Progress":"PENDING_INVOICE_GENERATION"}',        AccessRegionSource: '{"subject":[{"column":"OutletCode","resource":"Outlets","empty":"next","fail":"user"},{"user":true}]}', OwnerUserField: 'CreatedBy',
         // `MarkInvoiceGenerated` is declared for the BATCH, not for a button. Its
         // `visibleWhen` names a Progress value that never occurs, so the FAB never offers
         // it, while `resolveAction` — which ignores `visibleWhen` — still queues it.
@@ -1635,7 +1635,7 @@ function initAppResourcesCodeConfig() {
     {
         Name: CONFIG.OPERATION_SHEETS.OUTLET_CONSUMPTION_ITEMS,
         Scope: 'operation', ParentResource: CONFIG.OPERATION_SHEETS.OUTLET_CONSUMPTIONS, IsActive: 'TRUE', SheetName: CONFIG.OPERATION_SHEETS.OUTLET_CONSUMPTION_ITEMS,
-        CodePrefix: 'OCI', CodeSequenceLength: 7, LastDataUpdatedAt: 0, Audit: 'TRUE', RequiredHeaders: 'OutletConsumptionCode,SKU,Qty', UniqueHeaders: '', UniqueCompositeHeaders: 'OutletConsumptionCode+SKU', DefaultValues: '{"Status":"Active","Qty":0}', RecordAccessPolicy: 'OWNER_AND_UPLINE', OwnerUserField: 'CreatedBy', AdditionalActions: '', Menu: JSON.stringify([]), UIFields: JSON.stringify([
+        CodePrefix: 'OCI', CodeSequenceLength: 7, LastDataUpdatedAt: 0, Audit: 'TRUE', RequiredHeaders: 'OutletConsumptionCode,SKU,Qty', UniqueHeaders: '', UniqueCompositeHeaders: 'OutletConsumptionCode+SKU', DefaultValues: '{"Status":"Active","Qty":0}',        AccessRegionSource: '', OwnerUserField: 'CreatedBy', AdditionalActions: '', Menu: JSON.stringify([]), UIFields: JSON.stringify([
             { header: 'OutletConsumptionCode', label: 'Outlet Consumption Code', type: 'text' },
             { header: 'SKU', label: 'SKU', type: 'text' },
             { header: 'Qty', label: 'Qty', type: 'number' },
@@ -1651,7 +1651,7 @@ function initAppResourcesCodeConfig() {
     {
         Name: CONFIG.OPERATION_SHEETS.OUTLET_CONSUMPTION_INVOICES,
         Scope: 'operation', ParentResource: '', IsActive: 'TRUE', SheetName: CONFIG.OPERATION_SHEETS.OUTLET_CONSUMPTION_INVOICES,
-        CodePrefix: 'OCINV', CodeSequenceLength: 7, LastDataUpdatedAt: 0, Audit: 'TRUE', RequiredHeaders: 'Date,OutletCode,Username,Progress,Status', UniqueHeaders: '', UniqueCompositeHeaders: '', DefaultValues: '{"Status":"Active","Subtotal":0,"Discount":0,"TotalTaxableAmount":0,"TotalTaxAmount":0,"TaxDetails":"[]","Progress":"PENDING_PAYMENT"}', RecordAccessPolicy: 'OWNER_AND_UPLINE', OwnerUserField: 'CreatedBy',
+        CodePrefix: 'OCINV', CodeSequenceLength: 7, LastDataUpdatedAt: 0, Audit: 'TRUE', RequiredHeaders: 'Date,OutletCode,Username,Progress,Status', UniqueHeaders: '', UniqueCompositeHeaders: '', DefaultValues: '{"Status":"Active","Subtotal":0,"Discount":0,"TotalTaxableAmount":0,"TotalTaxAmount":0,"TaxDetails":"[]","Progress":"PENDING_PAYMENT"}',        AccessRegionSource: '{"subject":[{"column":"OutletCode","resource":"Outlets","empty":"next","fail":"user"},{"user":true}]}', OwnerUserField: 'CreatedBy',
         AdditionalActions: JSON.stringify([
             {"action":"SettleInvoice","label":"Settle Invoice","icon":"price_check","color":"positive","kind":"navigate","navigate":{"target":"action","pageSlug":"settle-invoice"},"column":"Progress","columnValue":"PAID","visibleWhen":{"column":"Progress","op":"in","value":["PENDING_PAYMENT","PARTIALLY_PAID"]}},
             {"action":"Cancel","label":"Cancel","icon":"cancel","color":"negative","kind":"navigate","confirm":false,"column":"Progress","columnValue":"CANCELLED","columnValueOptions":[],"fields":[{"name":"Comment","label":"Cancellation Comment","type":"textarea","required":true}],"navigate":{"target":"action","pageSlug":"cancel"},"visibleWhen":{"column":"Progress","op":"nin","value":["PAID","CANCELLED"]}}
@@ -1726,7 +1726,7 @@ function initAppResourcesCodeConfig() {
     {
         Name: CONFIG.OPERATION_SHEETS.OUTLET_CONSUMPTION_INVOICE_ITEMS,
         Scope: 'operation', ParentResource: CONFIG.OPERATION_SHEETS.OUTLET_CONSUMPTION_INVOICES, IsActive: 'TRUE', SheetName: CONFIG.OPERATION_SHEETS.OUTLET_CONSUMPTION_INVOICE_ITEMS,
-        CodePrefix: 'OCII', CodeSequenceLength: 7, LastDataUpdatedAt: 0, Audit: 'TRUE', RequiredHeaders: 'OutletConsumptionInvoiceCode,SKU,Qty,Price', UniqueHeaders: '', UniqueCompositeHeaders: 'OutletConsumptionInvoiceCode+SKU', DefaultValues: '{"Status":"Active","Qty":0,"Price":0,"Total":0,"Discount":0,"TaxableAmount":0,"TaxAmount":0,"TaxCode":""}', RecordAccessPolicy: 'OWNER_AND_UPLINE', OwnerUserField: 'CreatedBy', AdditionalActions: '', Menu: JSON.stringify([]), UIFields: JSON.stringify([
+        CodePrefix: 'OCII', CodeSequenceLength: 7, LastDataUpdatedAt: 0, Audit: 'TRUE', RequiredHeaders: 'OutletConsumptionInvoiceCode,SKU,Qty,Price', UniqueHeaders: '', UniqueCompositeHeaders: 'OutletConsumptionInvoiceCode+SKU', DefaultValues: '{"Status":"Active","Qty":0,"Price":0,"Total":0,"Discount":0,"TaxableAmount":0,"TaxAmount":0,"TaxCode":""}',        AccessRegionSource: '', OwnerUserField: 'CreatedBy', AdditionalActions: '', Menu: JSON.stringify([]), UIFields: JSON.stringify([
             { header: 'OutletConsumptionInvoiceCode', label: 'Outlet Consumption Invoice Code', type: 'text' },
             { header: 'SKU', label: 'SKU', type: 'text' },
             { header: 'Qty', label: 'Qty', type: 'number' },
@@ -1759,7 +1759,7 @@ function initAppResourcesCodeConfig() {
         UniqueHeaders: '',
         UniqueCompositeHeaders: '',
         DefaultValues: '{"Status":"Active","Amount":0,"Progress":"SUBMITTED"}',
-        RecordAccessPolicy: 'OWNER_AND_UPLINE',
+        AccessRegionSource: '{"subject":[{"column":"OutletCode","resource":"Outlets","empty":"next","fail":"user"},{"user":true}]}',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: JSON.stringify([
             {
@@ -1850,7 +1850,7 @@ function initAppResourcesCodeConfig() {
     {
         Name: CONFIG.OPERATION_SHEETS.OUTLET_MOVEMENTS,
         Scope: 'operation', IsActive: 'TRUE', SheetName: CONFIG.OPERATION_SHEETS.OUTLET_MOVEMENTS,
-        CodePrefix: 'OMV', CodeSequenceLength: 7, LastDataUpdatedAt: 0, Audit: 'TRUE', RequiredHeaders: 'OutletCode,SKU,QtyChange,ReferenceType,ReferenceCode', UniqueHeaders: '', UniqueCompositeHeaders: '', DefaultValues: '{"Status":"Active","StorageName":"_default","QtyChange":0}', RecordAccessPolicy: 'OWNER_AND_UPLINE', OwnerUserField: 'CreatedBy', AdditionalActions: '', Menu: JSON.stringify([]), UIFields: JSON.stringify([
+        CodePrefix: 'OMV', CodeSequenceLength: 7, LastDataUpdatedAt: 0, Audit: 'TRUE', RequiredHeaders: 'OutletCode,SKU,QtyChange,ReferenceType,ReferenceCode', UniqueHeaders: '', UniqueCompositeHeaders: '', DefaultValues: '{"Status":"Active","StorageName":"_default","QtyChange":0}',        AccessRegionSource: '{"subject":[{"column":"OutletCode","resource":"Outlets","empty":"next","fail":"user"},{"user":true}]}', OwnerUserField: 'CreatedBy', AdditionalActions: '', Menu: JSON.stringify([]), UIFields: JSON.stringify([
             { header: 'OutletCode', label: 'Outlet Code', type: 'text' },
             { header: 'StorageName', label: 'Storage Name', type: 'text' },
             { header: 'SKU', label: 'SKU', type: 'text' },
@@ -1870,7 +1870,7 @@ function initAppResourcesCodeConfig() {
     {
         Name: CONFIG.OPERATION_SHEETS.OUTLET_STORAGES,
         Scope: 'operation', IsActive: 'TRUE', SheetName: CONFIG.OPERATION_SHEETS.OUTLET_STORAGES,
-        CodePrefix: 'OST', CodeSequenceLength: 7, LastDataUpdatedAt: 0, Audit: 'FALSE', RequiredHeaders: 'OutletCode,SKU,Quantity', UniqueHeaders: '', UniqueCompositeHeaders: 'OutletCode+SKU', DefaultValues: '{"Quantity":0}', RecordAccessPolicy: 'ALL', OwnerUserField: 'UpdatedBy', AdditionalActions: '',
+        CodePrefix: 'OST', CodeSequenceLength: 7, LastDataUpdatedAt: 0, Audit: 'FALSE', RequiredHeaders: 'OutletCode,SKU,Quantity', UniqueHeaders: '', UniqueCompositeHeaders: 'OutletCode+SKU', DefaultValues: '{"Quantity":0}',        AccessRegionSource: '', OwnerUserField: 'UpdatedBy', AdditionalActions: '',
         Menu: JSON.stringify([]), UIFields: JSON.stringify([{ header: 'OutletCode', label: 'Outlet Code', type: 'text', required: true }, { header: 'SKU', label: 'SKU', type: 'text', required: true }, { header: 'Quantity', label: 'Quantity', type: 'number', required: true }]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: '', CustomUIName: '', ListViews: '',
         Relations: JSON.stringify({
             OutletCode: CONFIG.MASTER_SHEETS.OUTLETS,
@@ -1890,7 +1890,7 @@ function initAppResourcesCodeConfig() {
         UniqueHeaders: 'Code',
         UniqueCompositeHeaders: '',
         DefaultValues: '{"Status":"Active","Progress":"DRAFT","IsInstant":"FALSE"}',
-        RecordAccessPolicy: 'OWNER_AND_UPLINE',
+        AccessRegionSource: '{"subject":[{"column":"SourceWarehouseCode","resource":"Warehouses","empty":"next","fail":"user"},{"user":true}]}',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: JSON.stringify([
             { "action": "Approve", "label": "Approve", "icon": "check_circle", "color": "positive", "kind": "mutate", "confirm": true, "column": "Progress", "columnValue": "APPROVED", "visibleWhen": { "column": "Progress", "op": "eq", "value": "PENDING_APPROVAL" } },
@@ -1948,7 +1948,7 @@ function initAppResourcesCodeConfig() {
         UniqueHeaders: 'Code',
         UniqueCompositeHeaders: '',
         DefaultValues: '{"Status":"Active","Quantity":0,"Progress":"PENDING","SourceStorageName":"_default","DestinationStorageName":"_default"}',
-        RecordAccessPolicy: 'OWNER_AND_UPLINE',
+        AccessRegionSource: '',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: '',
         Menu: JSON.stringify([]),
@@ -1992,7 +1992,7 @@ function initAppResourcesCodeConfig() {
         UniqueHeaders: '',
         UniqueCompositeHeaders: '',
         DefaultValues: '{"Status":"Active","Progress":"Awaiting"}',
-        RecordAccessPolicy: 'OWNER_AND_UPLINE',
+        AccessRegionSource: '{"subject":[{"column":"LeadCode","resource":"Leads","empty":"next","fail":"user"},{"user":true}]}',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: JSON.stringify([
             {"action": "QuickFollowUp", "label": "Quick Follow Up", "title": "Quick Follow Up", "subtitle": "", "icon": "bolt", "color": "primary", "kind": "mutate", "resourceLevel": true, "confirm": false, "column": "Progress", "columnValue": "Completed", "columnValueOptions": [], "fields": [{"name": "LeadCode", "label": "Lead", "type": "select", "source": {"resource": "Leads", "field": "Code", "label": "Name"}, "required": true}, {"name": "Username", "value": "$userName"}, {"name": "Date", "value": "$today"}, {"name": "Purpose", "value": "Others"}, {"name": "PurposeDetail", "value": "Quick visit"}, {"name": "Outcome", "label": "Follow-up Outcome", "type": "textarea", "required": true}, {"name": "ProgressCompletedComment", "value": "Quick follow-up recorded by ${$userName} on ${$dateTime}"}, {"name": "ProgressCompletedAt", "value": "$dateTime"}, {"name": "ProgressCompletedBy", "value": "$userName"}], "targets": [{"resource": "LeadFollowUps", "mode": "create", "key": "nextFollowUp", "label": "Next Follow Up (optional)", "when": {"field": "Date", "op": "notEmpty"}, "fields": [{"name": "LeadCode", "from": "$record.LeadCode"}, {"name": "Progress", "value": "Awaiting"}, {"name": "Status", "value": "Active"}, {"name": "Username", "value": "$userName"}, {"name": "Date", "label": "Next Follow Up Date", "type": "date", "value": "$date:15", "required": false}, {"name": "Purpose", "label": "Next Purpose", "type": "select", "required": true}, {"name": "PurposeDetail", "label": "Next Purpose Detail", "type": "textarea", "required": false}]}, {"resource": "Leads", "mode": "update", "key": "lead", "code": "$record.LeadCode", "fields": [{"name": "Progress", "value": "Processing"}]}]},
@@ -2070,7 +2070,7 @@ function initAppResourcesCodeConfig() {
         UniqueHeaders: 'Name',
         UniqueCompositeHeaders: '',
         DefaultValues: '{"Status":"Active","AccountType":"ASSETS"}',
-        RecordAccessPolicy: 'ALL',
+        AccessRegionSource: '',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: '',
         Menu: JSON.stringify([]),
@@ -2096,7 +2096,7 @@ function initAppResourcesCodeConfig() {
         UniqueHeaders: 'Name',
         UniqueCompositeHeaders: '',
         DefaultValues: '{"Status":"Active"}',
-        RecordAccessPolicy: 'ALL',
+        AccessRegionSource: '',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: '',
         Menu: JSON.stringify([]),
@@ -2125,7 +2125,7 @@ function initAppResourcesCodeConfig() {
         UniqueHeaders: '',
         UniqueCompositeHeaders: '',
         DefaultValues: '{"Status":"Active"}',
-        RecordAccessPolicy: 'ALL',
+        AccessRegionSource: '',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: '',
         Menu: JSON.stringify([]),
@@ -2154,7 +2154,7 @@ function initAppResourcesCodeConfig() {
         UniqueHeaders: '',
         UniqueCompositeHeaders: '',
         DefaultValues: '{"Status":"Active"}',
-        RecordAccessPolicy: 'ALL',
+        AccessRegionSource: '',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: '',
         Menu: JSON.stringify([]),
@@ -2183,7 +2183,7 @@ function initAppResourcesCodeConfig() {
         UniqueHeaders: '',
         UniqueCompositeHeaders: '',
         DefaultValues: '{"Status":"Active"}',
-        RecordAccessPolicy: 'ALL',
+        AccessRegionSource: '',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: '',
         Menu: JSON.stringify([]),
@@ -2212,7 +2212,7 @@ function initAppResourcesCodeConfig() {
         UniqueHeaders: '',
         UniqueCompositeHeaders: '',
         DefaultValues: '{"Status":"Active"}',
-        RecordAccessPolicy: 'ALL',
+        AccessRegionSource: '',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: '',
         Menu: JSON.stringify([]),
@@ -2241,7 +2241,7 @@ function initAppResourcesCodeConfig() {
         UniqueHeaders: '',
         UniqueCompositeHeaders: '',
         DefaultValues: '{"Status":"Active"}',
-        RecordAccessPolicy: 'ALL',
+        AccessRegionSource: '',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: '',
         Menu: JSON.stringify([]),
@@ -2270,7 +2270,7 @@ function initAppResourcesCodeConfig() {
         UniqueHeaders: '',
         UniqueCompositeHeaders: '',
         DefaultValues: '{"Status":"Active","TaxableAmount":0,"TaxAmount":0}',
-        RecordAccessPolicy: 'ALL',
+        AccessRegionSource: '',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: '',
         Menu: JSON.stringify([]),
@@ -2300,7 +2300,7 @@ function initAppResourcesCodeConfig() {
         UniqueHeaders: '',
         UniqueCompositeHeaders: '',
         DefaultValues: '',
-        RecordAccessPolicy: 'ALL',
+        AccessRegionSource: '',
         OwnerUserField: '',
         AdditionalActions: '',
         Menu: JSON.stringify([{"group":["Masters"],"order":99,"label":"Bulk Upload","icon":"cloud_upload","route":"/master/bulk-upload","pageTitle":"Bulk Upload Masters","pageDescription":"Upload bulk data to any master resource","show":true}]),
@@ -2319,7 +2319,7 @@ function initAppResourcesCodeConfig() {
 function syncAppResourcesFromCode(silent) {
     const protectedColumns = [
         'FileID', 'CodePrefix', 'CodeSequenceLength', 'LastDataUpdatedAt',
-        'RecordAccessPolicy', 'AccessPolicy', 'AccessRegionSource', 'Menu', 'Reports', 'ListViews', 'CustomUIName',
+        'AccessPolicy', 'AccessRegionSource', 'Menu', 'Reports', 'ListViews', 'CustomUIName',
         'Settings', 'Dashboard', 'Options'
     ];
     initAppResourcesCodeConfig();

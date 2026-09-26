@@ -163,7 +163,6 @@ Minimum critical fields:
 - `Name`
 - `Scope`
 - `SheetName` (for non-functional resources)
-- `RecordAccessPolicy`
 
 Important references:
 - `Documents/SCHEMA_RESOURCE_COLUMNS.md` (column-by-column meaning)

@@ -255,7 +255,13 @@ function submitForm(h) {
       m.style.display = "block";
       m.className = "msg " + (r.success ? "ok" : "er");
       m.innerText = r.message || "Done";
-      // Auto-close removed; users close manually when finished.
+      if (r.success && (h === 'handleManageUser' || h === 'handleManageDesignation' || h === 'handleManageAccessRegion' || h === 'handleCreateUser' || h === 'handleUpdateUser' || h === 'handleCreateDesignation' || h === 'handleUpdateDesignation' || h === 'handleCreateAccessRegion' || h === 'handleUpdateAccessRegion')) {
+        google.script.run
+          .withSuccessHandler(function(data) {
+            if (data) refreshDialogSelects(data);
+          })
+          .getBaseDialogData();
+      }
     })
     .withFailureHandler(function(e) {
       b.disabled = false;
@@ -264,6 +270,35 @@ function submitForm(h) {
       m.className = "msg er";
       m.innerText = e.message || String(e);
     })[h](p);
+}
+
+function refreshDialogSelects(data) {
+  function esc(v) { return (v == null ? '' : String(v)).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
+  var users = data.users || [], designations = data.designations || [], accessRegions = data.accessRegions || [];
+
+  function updateSelect(name, defaultOptionHtml, optionsHtml) {
+    var sel = document.querySelector("select[name='" + name + "']");
+    if (!sel) return;
+    var currentVal = sel.value;
+    sel.innerHTML = defaultOptionHtml + optionsHtml;
+    sel.value = currentVal;
+  }
+
+  var uo = users.map(function(x) { return '<option value="' + esc(x.id) + '">' + esc(x.name) + ' (' + esc(x.id) + ')</option>'; }).join('');
+  var doo = designations.map(function(x) {
+    var label = esc(x.name) + ' - ' + esc(x.accessRegionName || 'Universe');
+    return '<option value="' + esc(x.id) + '">' + label + '</option>';
+  }).join('');
+  var aro = '<option value="">Universe (All Regions)</option>' + accessRegions.map(function(x) { return '<option value="' + esc(x.code) + '">' + esc(x.name) + ' (' + esc(x.code) + ')</option>'; }).join('');
+  var acro = accessRegions.map(function(x) { return '<option value="' + esc(x.code) + '">' + esc(x.name) + ' (' + esc(x.code) + ')</option>'; }).join('');
+  var apro = '<option value="">-- None --</option>' + acro;
+
+  updateSelect('userId', '<option value="">-- Create New User --</option>', uo);
+  updateSelect('designationId', document.querySelector("form#mainForm select[name='userId']") ? '<option value="">-- Select --</option>' : '<option value="">-- Create New Designation --</option>', doo);
+  updateSelect('parentDesignationId', '<option value="">-- None (Top Level) --</option>', doo);
+  updateSelect('accessRegion', '', aro);
+  updateSelect('lookupCode', '<option value="">-- Create New Access Region --</option>', acro);
+  updateSelect('parent', '', apro);
 }
 
 function loadDetails(t, id) {
@@ -396,8 +431,6 @@ function onManageUsersChange(userId) {
     }
     var desInput = document.querySelector("[name='designationId']");
     if (desInput) desInput.value = "";
-    var regInput = document.querySelector("[name='accessRegion']");
-    if (regInput) regInput.value = "";
     var statInput = document.querySelector("[name='status']");
     if (statInput) statInput.value = "Active";
     var mainRoleInput = document.querySelector("[name='mainRole']");
@@ -424,8 +457,8 @@ function onManageDesignationsChange(designationId) {
   if (!designationId) {
     var nameInput = document.querySelector("[name='name']");
     if (nameInput) nameInput.value = "";
-    var hlInput = document.querySelector("[name='hierarchyLevel']");
-    if (hlInput) hlInput.value = "";
+    var parentInput = document.querySelector("[name='parentDesignationId']");
+    if (parentInput) parentInput.value = "";
     var statInput = document.querySelector("[name='status']");
     if (statInput) statInput.value = "Active";
     var arInput = document.querySelector("[name='accessRegion']");

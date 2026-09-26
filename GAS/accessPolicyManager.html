@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html>
+<head>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 13px;
+    color: #1e293b;
+    padding: 20px;
+    background-color: #F1F1F3;
+    line-height: 1.5;
+  }
+  h2 {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 16px;
+    color: #000077;
+    border-bottom: 2px solid #cbd5e1;
+    padding-bottom: 8px;
+  }
+  .row { display: flex; gap: 12px; margin-bottom: 12px; }
+  .row > * { flex: 1; }
+  label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    color: #475569;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  select {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 13px;
+    font-family: inherit;
+    background: #fff;
+    color: #0f172a;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  }
+  select:focus {
+    outline: none;
+    border-color: #000077;
+    box-shadow: 0 0 0 3px rgba(0, 0, 119, 0.15);
+  }
+  .card {
+    background: #fff;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 14px;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+  }
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    border-bottom: 1px solid #f1f5f9;
+    padding-bottom: 6px;
+  }
+  .card-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #000077;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .card-subtitle {
+    font-size: 11px;
+    color: #64748b;
+  }
+  .checks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .checks label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: none;
+    color: #1e293b;
+    cursor: pointer;
+    margin-bottom: 0;
+  }
+  .checks input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+  }
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .badge-inherited {
+    background: #e0e7ff;
+    color: #3730a3;
+  }
+  .badge-custom {
+    background: #fef3c7;
+    color: #92400e;
+  }
+  .policy-box {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #0f172a;
+    color: #fff;
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-top: 12px;
+  }
+  .policy-val {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: #38bdf8;
+  }
+  .policy-desc {
+    font-size: 11px;
+    color: #94a3b8;
+  }
+  .status-bar {
+    padding: 10px 14px;
+    border-radius: 8px;
+    margin-bottom: 14px;
+    display: none;
+    font-size: 12px;
+    font-weight: 500;
+    border: 1px solid transparent;
+  }
+  .status-bar.error { display: block; background: #fef2f2; color: #991b1b; border-color: #fca5a5; }
+  .status-bar.success { display: block; background: #ecfdf5; color: #065f46; border-color: #a7f3d0; }
+  button {
+    padding: 9px 16px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-primary { background: #000077; color: #fff; }
+  .btn-primary:hover:not(:disabled) { background: #000055; }
+  .btn-secondary { background: #fff; color: #475569; border: 1px solid #cbd5e1; }
+  .btn-secondary:hover:not(:disabled) { background: #f8fafc; }
+</style>
+</head>
+<body>
+
+<div id="status" class="status-bar"></div>
+
+<div class="row">
+  <div>
+    <label>Resource</label>
+    <select id="resourceSelect" onchange="onResourceChange()">
+      <option value="">-- Select Resource --</option>
+    </select>
+  </div>
+</div>
+
+<div id="editor" style="display:none;">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+    <div>
+      <span style="font-weight:600; color:#334155;">Mode: </span>
+      <span id="modeBadge" class="badge"></span>
+    </div>
+    <button class="btn-secondary" type="button" onclick="resetToScopeDefault()" style="font-size:11px; padding:4px 8px;">Revert to Scope Default</button>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Region Access (Digit 1 - R)</span>
+      <span class="card-subtitle">Same (1) + Up (2) + Down (4)</span>
+    </div>
+    <div class="checks">
+      <label><input type="checkbox" id="reg_same" onchange="onCheckboxChange()"> Same Region (+1)</label>
+      <label><input type="checkbox" id="reg_up" onchange="onCheckboxChange()"> Up / Ancestor Regions (+2)</label>
+      <label><input type="checkbox" id="reg_down" onchange="onCheckboxChange()"> Down / Descendant Regions (+4)</label>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Owner Privileges (Digit 2 - O)</span>
+      <span class="card-subtitle">Execute (1) + Update (2) + Delete (4)</span>
+    </div>
+    <div class="checks">
+      <label><input type="checkbox" id="own_exec" onchange="onCheckboxChange()"> Execute (+1)</label>
+      <label><input type="checkbox" id="own_upd" onchange="onCheckboxChange()"> Update (+2)</label>
+      <label><input type="checkbox" id="own_del" onchange="onCheckboxChange()"> Delete (+4)</label>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Peer Privileges (Digit 3 - P)</span>
+      <span class="card-subtitle">Execute (1) + Update (2) + Delete (4)</span>
+    </div>
+    <div class="checks">
+      <label><input type="checkbox" id="peer_exec" onchange="onCheckboxChange()"> Execute (+1)</label>
+      <label><input type="checkbox" id="peer_upd" onchange="onCheckboxChange()"> Update (+2)</label>
+      <label><input type="checkbox" id="peer_del" onchange="onCheckboxChange()"> Delete (+4)</label>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Down / Child Privileges (Digit 4 - D)</span>
+      <span class="card-subtitle">Execute (1) + Update (2) + Delete (4)</span>
+    </div>
+    <div class="checks">
+      <label><input type="checkbox" id="down_exec" onchange="onCheckboxChange()"> Execute (+1)</label>
+      <label><input type="checkbox" id="down_upd" onchange="onCheckboxChange()"> Update (+2)</label>
+      <label><input type="checkbox" id="down_del" onchange="onCheckboxChange()"> Delete (+4)</label>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Up / Parent Privileges (Digit 5 - U)</span>
+      <span class="card-subtitle">Execute (1) + Update (2) + Delete (4)</span>
+    </div>
+    <div class="checks">
+      <label><input type="checkbox" id="up_exec" onchange="onCheckboxChange()"> Execute (+1)</label>
+      <label><input type="checkbox" id="up_upd" onchange="onCheckboxChange()"> Update (+2)</label>
+      <label><input type="checkbox" id="up_del" onchange="onCheckboxChange()"> Delete (+4)</label>
+    </div>
+  </div>
+
+  <div class="policy-box">
+    <div>
+      <div style="font-size:11px; text-transform:uppercase; color:#94a3b8; font-weight:600;">Stored Policy Code</div>
+      <div id="policyDisplay" class="policy-val">77111</div>
+    </div>
+    <div id="policyNote" class="policy-desc">Matches Scope Default (Cell will be saved as blank)</div>
+  </div>
+</div>
+
+<div style="margin-top:16px; display:flex; gap:8px; justify-content:flex-end;">
+  <button class="btn-secondary" onclick="google.script.host.close()">Close</button>
+  <button class="btn-primary" onclick="savePolicy()" id="saveBtn" disabled>Save Policy</button>
+</div>
+
+<script>
+var resourceData = [];
+var isUserEdited = false;
+
+google.script.run.withSuccessHandler(function(data) {
+  resourceData = data.resources || [];
+  var sel = document.getElementById('resourceSelect');
+  resourceData.forEach(function(r) {
+    var opt = document.createElement('option');
+    opt.value = r.name;
+    opt.textContent = r.label + ' (' + r.name + ') [' + r.scope + ']';
+    sel.appendChild(opt);
+  });
+}).withFailureHandler(function(err) {
+  showStatus('Failed to load: ' + err.message, 'error');
+}).app_getAccessPolicyManagerData();
+
+function findResource(name) {
+  return resourceData.find(function(r) { return r.name === name; }) || null;
+}
+
+function onResourceChange() {
+  var name = document.getElementById('resourceSelect').value;
+  var editor = document.getElementById('editor');
+  var saveBtn = document.getElementById('saveBtn');
+  if (!name) {
+    editor.style.display = 'none';
+    saveBtn.disabled = true;
+    return;
+  }
+
+  var res = findResource(name);
+  if (!res) return;
+
+  editor.style.display = 'block';
+  saveBtn.disabled = false;
+
+  var currentPolicy = (res.accessPolicy || '').trim();
+  if (currentPolicy) {
+    isUserEdited = true;
+    populateCheckboxes(currentPolicy);
+  } else {
+    isUserEdited = false;
+    populateCheckboxes(res.defaultPolicy);
+  }
+  updateDisplay();
+}
+
+function populateCheckboxes(code) {
+  var digits = (code || '77111').split('').map(function(d) { return Number(d) || 0; });
+  while (digits.length < 5) digits.push(0);
+
+  var r = digits[0], o = digits[1], p = digits[2], d = digits[3], u = digits[4];
+
+  document.getElementById('reg_same').checked = (r & 1) === 1;
+  document.getElementById('reg_up').checked = (r & 2) === 2;
+  document.getElementById('reg_down').checked = (r & 4) === 4;
+
+  document.getElementById('own_exec').checked = (o & 1) === 1;
+  document.getElementById('own_upd').checked = (o & 2) === 2;
+  document.getElementById('own_del').checked = (o & 4) === 4;
+
+  document.getElementById('peer_exec').checked = (p & 1) === 1;
+  document.getElementById('peer_upd').checked = (p & 2) === 2;
+  document.getElementById('peer_del').checked = (p & 4) === 4;
+
+  document.getElementById('down_exec').checked = (d & 1) === 1;
+  document.getElementById('down_upd').checked = (d & 2) === 2;
+  document.getElementById('down_del').checked = (d & 4) === 4;
+
+  document.getElementById('up_exec').checked = (u & 1) === 1;
+  document.getElementById('up_upd').checked = (u & 2) === 2;
+  document.getElementById('up_del').checked = (u & 4) === 4;
+}
+
+function computeCurrentDigits() {
+  var r = (document.getElementById('reg_same').checked ? 1 : 0) +
+          (document.getElementById('reg_up').checked ? 2 : 0) +
+          (document.getElementById('reg_down').checked ? 4 : 0);
+
+  var o = (document.getElementById('own_exec').checked ? 1 : 0) +
+          (document.getElementById('own_upd').checked ? 2 : 0) +
+          (document.getElementById('own_del').checked ? 4 : 0);
+
+  var p = (document.getElementById('peer_exec').checked ? 1 : 0) +
+          (document.getElementById('peer_upd').checked ? 2 : 0) +
+          (document.getElementById('peer_del').checked ? 4 : 0);
+
+  var d = (document.getElementById('down_exec').checked ? 1 : 0) +
+          (document.getElementById('down_upd').checked ? 2 : 0) +
+          (document.getElementById('down_del').checked ? 4 : 0);
+
+  var u = (document.getElementById('up_exec').checked ? 1 : 0) +
+          (document.getElementById('up_upd').checked ? 2 : 0) +
+          (document.getElementById('up_del').checked ? 4 : 0);
+
+  return '' + r + o + p + d + u;
+}
+
+function onCheckboxChange() {
+  isUserEdited = true;
+  updateDisplay();
+}
+
+function resetToScopeDefault() {
+  var res = findResource(document.getElementById('resourceSelect').value);
+  if (!res) return;
+  isUserEdited = false;
+  populateCheckboxes(res.defaultPolicy);
+  updateDisplay();
+}
+
+function updateDisplay() {
+  var res = findResource(document.getElementById('resourceSelect').value);
+  if (!res) return;
+
+  var currentCode = computeCurrentDigits();
+  var isDefault = (currentCode === res.defaultPolicy);
+
+  var badge = document.getElementById('modeBadge');
+  var display = document.getElementById('policyDisplay');
+  var note = document.getElementById('policyNote');
+
+  display.textContent = currentCode;
+
+  if (isDefault) {
+    badge.className = 'badge badge-inherited';
+    badge.textContent = 'Inherited from Scope (' + res.scope + ')';
+    note.textContent = 'Matches scope default. Saving will write a blank cell (inherited).';
+  } else {
+    badge.className = 'badge badge-custom';
+    badge.textContent = 'Custom Explicit Policy';
+    note.textContent = 'Custom policy code will be stored explicitly as text.';
+  }
+}
+
+function savePolicy() {
+  var resName = document.getElementById('resourceSelect').value;
+  if (!resName) return;
+
+  var res = findResource(resName);
+  var currentCode = computeCurrentDigits();
+  var isDefault = (currentCode === res.defaultPolicy);
+
+  // If matches default, store blank
+  var policyToSave = isDefault ? '' : currentCode;
+
+  var saveBtn = document.getElementById('saveBtn');
+  saveBtn.disabled = true;
+  saveBtn.textContent = 'Saving...';
+
+  google.script.run.withSuccessHandler(function() {
+    showStatus('Access Policy saved successfully!', 'success');
+    saveBtn.disabled = false;
+    saveBtn.textContent = 'Save Policy';
+    res.accessPolicy = policyToSave;
+    isUserEdited = !!policyToSave;
+    updateDisplay();
+  }).withFailureHandler(function(err) {
+    showStatus('Failed to save: ' + err.message, 'error');
+    saveBtn.disabled = false;
+    saveBtn.textContent = 'Save Policy';
+  }).app_saveResourceAccessPolicy(resName, policyToSave);
+}
+
+function showStatus(msg, type) {
+  var el = document.getElementById('status');
+  el.textContent = msg;
+  el.className = 'status-bar ' + type;
+  if (type === 'success') setTimeout(function() { el.style.display = 'none'; }, 3000);
+}
+</script>
+</body>
+</html>

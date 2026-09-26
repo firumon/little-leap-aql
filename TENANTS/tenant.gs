@@ -41,6 +41,8 @@ function showAddResourceDialog() { CORE_LIB.showAddResourceDialog(); }
 function showEditResourceDialog() { CORE_LIB.showEditResourceDialog(); }
 function app_showReportManagerDialog() { CORE_LIB.app_showReportManagerDialog(); }
 function app_showActionManagerDialog() { CORE_LIB.app_showActionManagerDialog(); }
+function app_showAccessPolicyManagerDialog() { CORE_LIB.app_showAccessPolicyManagerDialog(); }
+function app_showAccessRegionSourceManagerDialog() { CORE_LIB.app_showAccessRegionSourceManagerDialog(); }
 function app_showListViewsManagerDialog() { CORE_LIB.app_showListViewsManagerDialog(); }
 function app_showRelationsManagerDialog() { CORE_LIB.app_showRelationsManagerDialog(); }
 function app_showSettingsManagerDialog() { CORE_LIB.app_showSettingsManagerDialog(); }
@@ -77,6 +79,7 @@ function handleManageDesignation(form) { return CORE_LIB.handleManageDesignation
 function handleManageAccessRegion(form) { return CORE_LIB.handleManageAccessRegion(form); }
 
 // --- Detail Loaders for Admin Forms ---
+function getBaseDialogData() { return CORE_LIB.getBaseDialogData(); }
 function getUserDetails(userId) { return CORE_LIB.getUserDetails(userId); }
 function getDesignationDetails(designationId) { return CORE_LIB.getDesignationDetails(designationId); }
 function getAccessRegionDetails(code) { return CORE_LIB.getAccessRegionDetails(code); }
@@ -115,6 +118,18 @@ function app_executeRolesSetupStep(stepId) { return CORE_LIB.app_executeRolesSet
 function app_getSettingsManagerData() { return CORE_LIB.app_getSettingsManagerData(); }
 function app_saveResourceSettings(resourceName, settingsJson) {
   return CORE_LIB.app_saveResourceSettings(resourceName, settingsJson);
+}
+
+// --- Access Policy Manager Dialog ---
+function app_getAccessPolicyManagerData() { return CORE_LIB.app_getAccessPolicyManagerData(); }
+function app_saveResourceAccessPolicy(resourceName, policyString) {
+  return CORE_LIB.app_saveResourceAccessPolicy(resourceName, policyString);
+}
+
+// --- Access Region Source Manager Dialog ---
+function app_getAccessRegionSourceManagerData() { return CORE_LIB.app_getAccessRegionSourceManagerData(); }
+function app_saveResourceAccessRegionSource(resourceName, sourceJson) {
+  return CORE_LIB.app_saveResourceAccessRegionSource(resourceName, sourceJson);
 }
 
 // --- Schema Refactor Dialog ---

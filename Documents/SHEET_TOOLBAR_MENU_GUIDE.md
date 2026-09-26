@@ -40,6 +40,8 @@ Use this document when an admin asks:
 | `📚 Resources > Edit Resource` | Update existing resource config. |
 | `📚 Resources > Manage Reports` | Configure report templates and report inputs per resource. |
 | `📚 Resources > Manage Actions` | Configure `AdditionalActions` definitions per resource. |
+| `📚 Resources > Manage Access Policy` | Configure 5-digit ROPDU access policy octal bits per resource (`AccessPolicy`). |
+| `📚 Resources > Manage Access Region Source` | Configure JSON inheritance rules for region mapping per resource (`AccessRegionSource`). |
 | `📚 Resources > Manage Lists` | Configure list view filters per resource (`ListViews`). |
 | `📚 Resources > Manage Relations` | Configure explicit cross-resource relations per resource (`Relations`). |
 | `📚 Resources > Sync APP.Resources from Code` | Reconcile sheet schema/default rows with `syncAppResources.gs` source config. |
@@ -91,16 +93,16 @@ Flow:
 Result:
 - Flips `Status` between `Active` and `Inactive`.
 
-## 4. Designations (`AQL 🚀 > 💼 Designations`)
+## 4. Designations (`AQL 🚀 > 💼 Manage Designations`)
 
 ### 4.1 Create Designation
 Required:
 - `Name`
 
 Optional:
-- `HierarchyLevel`
+- `Parent Designation` — pick parent designation from dropdown, or none for top-level
 - `Status` (`Active` / `Inactive`)
-- `Access Region` — the region scope for this designation, picked from the Access Regions list
+- `Access Region` — the region scope for this designation, picked from the Access Regions list (blank means Universe (All Regions))
 - `Dashboard Score Cutoff` — a number. Dashboard items scoring below it are hidden from this
   designation. Blank or `0` shows everything
 - `Description`
@@ -108,11 +110,11 @@ Optional:
 ### 4.2 Update Designation
 Flow:
 1. Select designation.
-2. Edit fields. The form prefills from the sheet, including `Access Region` and
+2. Edit fields. The form prefills from the sheet, including `Parent Designation`, `Access Region` and
    `Dashboard Score Cutoff`.
 3. Submit.
 
-> If the two newest fields are missing from the form, the sheet does not have their columns
+> If the newest fields (`ParentDesignationID`, `AccessRegion`, `DashboardScoreCutoff`) are missing from the form, the sheet does not have their columns
 > yet. Run `⚙️ Setup & Refactor > Refactor APP Sheets` once. It adds missing columns and
 > keeps existing data.
 
@@ -206,7 +208,65 @@ Admin input needed:
 Reference:
 - `Documents/SCHEMA_RESOURCE_COLUMNS.md` (`AdditionalActions`)
 
-### 7.4 Manage Lists
+### 7.4 Manage Access Policy
+Purpose:
+- Configure per-resource `AccessPolicy` permissions using 5-digit octal notation (`ROPDU`).
+
+Digits:
+- `R`: Read (own region, children, parents)
+- `O`: Others read (cross-region records)
+- `P`: Parent modify (update/delete)
+- `D`: Descendant modify (update/delete)
+- `U`: Universe modify (all records)
+
+Weights:
+- Read digits (`R`, `O`): `1` (own), `2` (child), `4` (parent).
+- Modify digits (`P`, `D`, `U`): `1` (create), `2` (update), `4` (delete).
+
+Scope defaults:
+- `master`: `77111`
+- `operation`: `37111`
+- `accounts`: `37010`
+- `view` / `report`: `71111`
+
+Behavior:
+- Checkboxes in dialog dynamically calculate and format the 5-digit octal string.
+- If policy matches the scope default, saving sets the cell blank (inherits default).
+- If customized, it is saved as text (e.g. `'07777`) to preserve leading zeros.
+
+### 7.5 Manage Access Region Source
+Purpose:
+- Configures where a record's own region comes from — the `self` column, and the fallback walk — for `AccessRegionSource`.
+
+Format:
+- A JSON **object** with `self` and `subject`, not an array:
+
+```json
+{
+  "self": { "column": "AccessRegion", "resolve": false },
+  "subject": [
+    { "column": "OutletCode", "resource": "Outlets", "empty": "next" },
+    { "user": true }
+  ]
+}
+```
+
+Keys:
+- `self.column` — the column on this record that holds its region.
+- `self.resolve` — `true` when that column holds a place **name** to be resolved; `false` when it is already a code. Default `false`. No `self` → the target is `AccessRegion`.
+- `subject` — an ordered array. Each entry is `{ column, resource?, empty?, fail? }` or `{ user: true }`.
+- `column` — the field on this record pointing at the subject.
+- `resource` — the subject sheet; blank falls back to the relation map.
+- `empty` — when the subject's column is empty: `stop` (default) or `next`.
+- `fail` — on failure: `user` records the writer's region as the reserve, or a column name **jumps** to that entry.
+- `{ user: true }` — the saving user's designation region.
+
+Behavior:
+- The dialog is sectioned — Self, Subjects, Failures — with dropdowns and radios, and a live JSON preview. There is no JSON typing. Saving nothing writes a blank cell.
+- A rule should end with `{ user: true }`, so the column is never left blank. Blank means everyone sees that record.
+- A **blank cell** means the resource has no region columns at all.
+
+### 7.6 Manage Lists
 Purpose:
 - Configure per-resource `ListViews` filters.
 
@@ -222,7 +282,7 @@ Reference:
 - `Documents/SCHEMA_RESOURCE_COLUMNS.md` (`ListViews` JSON schema + operators)
 - `Documents/WORKFLOW_OUTLET_OPERATIONS.md / WORKFLOW_PROCUREMENT.md` section 2 (List View runtime flow)
 
-### 7.5 Manage Relations
+### 7.7 Manage Relations
 Purpose:
 - Configure per-resource `Relations` metadata (explicit cross-resource links).
 
@@ -247,7 +307,7 @@ Behavior:
 Reference:
 - `Documents/SCHEMA_RESOURCE_COLUMNS.md` (`Relations` JSON schema)
 
-### 7.6 Sync APP.Resources from Code
+### 7.8 Sync APP.Resources from Code
 Purpose:
 - Applies `GAS/syncAppResources.gs` code-level defaults/headers to sheet safely.
 
@@ -255,7 +315,7 @@ When to use:
 - After code changes touching `APP_RESOURCES_CODE_CONFIG`
 - During setup/refactor recovery
 
-### 7.7 ⚡ Recalculate LastDataUpdatedAt
+### 7.9 ⚡ Recalculate LastDataUpdatedAt
 Purpose:
 - Scans all active sheet-backed resources, finds the maximum `UpdatedAt` timestamp across all rows, and updates `APP.Resources.LastDataUpdatedAt` in a single batch write.
 - Also populates `CacheService` keys (`AQL_CURSOR_<SpreadsheetId>_<ResourceName>`) so client polling detects fresh data immediately.
@@ -268,7 +328,7 @@ Result:
 - Logs scan progress to `_LOGS_` sheet.
 - Shows completion alert with count of resources scanned, updated, and skipped.
 
-### 7.8 Regenerate App Cache
+### 7.10 Regenerate App Cache
 Purpose:
 - Clears all APP runtime caches and immediately rebuilds critical cache entries from the current sheets.
 - Includes resource config and metadata-backed APP caches.

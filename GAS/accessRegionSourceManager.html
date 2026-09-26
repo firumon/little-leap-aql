@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html>
+<head>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 13px;
+    color: #1e293b;
+    padding: 20px;
+    background-color: #F1F1F3;
+    line-height: 1.5;
+  }
+  h2 {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 16px;
+    color: #000077;
+    border-bottom: 2px solid #cbd5e1;
+    padding-bottom: 8px;
+  }
+  .row { display: flex; gap: 12px; margin-bottom: 12px; }
+  .row > * { flex: 1; }
+  label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    color: #475569;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  select {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 13px;
+    font-family: inherit;
+    background: #fff;
+    color: #0f172a;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  }
+  select:focus {
+    outline: none;
+    border-color: #000077;
+    box-shadow: 0 0 0 3px rgba(0, 0, 119, 0.15);
+  }
+  .card {
+    background: #fff;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 14px;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+  }
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    border-bottom: 1px solid #f1f5f9;
+    padding-bottom: 6px;
+  }
+  .card-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #000077;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .card-subtitle {
+    font-size: 11px;
+    color: #64748b;
+  }
+  .checks {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px;
+  }
+  .checks label, .radio-group label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: none;
+    color: #1e293b;
+    cursor: pointer;
+    margin-bottom: 0;
+  }
+  .checks input[type="checkbox"], .radio-group input[type="radio"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+  }
+  .subject-row, .failure-row {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .subject-row-header, .failure-row-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .subject-tag {
+    font-weight: 600;
+    color: #000077;
+    font-size: 12px;
+  }
+  .btn-remove {
+    background: transparent;
+    color: #ef4444;
+    border: none;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+  }
+  .btn-remove:hover {
+    background: #fee2e2;
+  }
+  .preview-box {
+    background: #0f172a;
+    color: #38bdf8;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12px;
+    line-height: 1.4;
+    white-space: pre-wrap;
+    word-break: break-all;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+  .status-bar {
+    padding: 10px 14px;
+    border-radius: 8px;
+    margin-bottom: 14px;
+    display: none;
+    font-size: 12px;
+    font-weight: 500;
+    border: 1px solid transparent;
+  }
+  .status-bar.error { display: block; background: #fef2f2; color: #991b1b; border-color: #fca5a5; }
+  .status-bar.success { display: block; background: #ecfdf5; color: #065f46; border-color: #a7f3d0; }
+  button {
+    padding: 9px 16px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-primary { background: #000077; color: #fff; }
+  .btn-primary:hover:not(:disabled) { background: #000055; }
+  .btn-secondary { background: #fff; color: #475569; border: 1px solid #cbd5e1; }
+  .btn-secondary:hover:not(:disabled) { background: #f8fafc; }
+  .empty-hint {
+    font-size: 12px;
+    color: #64748b;
+    font-style: italic;
+    padding: 6px 0;
+  }
+</style>
+</head>
+<body>
+
+<div id="status" class="status-bar"></div>
+
+<div class="row">
+  <div>
+    <label>Resource</label>
+    <select id="resourceSelect" onchange="onResourceChange()">
+      <option value="">-- Select Resource --</option>
+    </select>
+  </div>
+</div>
+
+<div id="editor" style="display:none;">
+
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">1. Self Region</span>
+      <span class="card-subtitle">Record's own column</span>
+    </div>
+    <div class="checks" style="margin-bottom: 12px;">
+      <label>
+        <input type="checkbox" id="selfEnabled" onchange="onSelfToggle()">
+        This record's region comes from its own column
+      </label>
+    </div>
+    <div id="selfDetails" style="display:none; flex-direction:column; gap:12px;">
+      <div class="row" style="margin-bottom:0;">
+        <div>
+          <label>Self Column</label>
+          <select id="selfColumn" onchange="updateLiveJson()">
+            <option value="">-- Select Column --</option>
+          </select>
+        </div>
+        <div>
+          <label>Value Type</label>
+          <div class="checks" style="padding-top: 8px;">
+            <label>
+              <input type="radio" name="selfResolve" id="selfResolveFalse" value="false" checked onchange="updateLiveJson()">
+              Region Code
+            </label>
+            <label>
+              <input type="radio" name="selfResolve" id="selfResolveTrue" value="true" onchange="updateLiveJson()">
+              Place Name (resolves to code)
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">2. Subject Resources</span>
+      <span class="card-subtitle">Chain of parent / reference lookups</span>
+    </div>
+    <div id="subjectContainer">
+      <div id="subjectList"></div>
+      <div id="subjectEmptyHint" class="empty-hint" style="display:none;">No subject rules configured.</div>
+      <div style="margin-top: 10px;">
+        <button type="button" class="btn-secondary" onclick="addSubjectRow()">+ Add Subject</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">3. Subject Failures</span>
+      <span class="card-subtitle">Fallback if subject lookup has no region</span>
+    </div>
+    <div id="failureContainer">
+      <div id="failureList"></div>
+      <div id="failureEmptyHint" class="empty-hint" style="display:none;">Add a subject above to configure failure fallbacks.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Live JSON Configuration</span>
+      <span class="card-subtitle">Value to be saved</span>
+    </div>
+    <div id="jsonPreview" class="preview-box"></div>
+  </div>
+
+</div>
+
+<div style="margin-top:16px; display:flex; gap:8px; justify-content:flex-end;">
+  <button class="btn-secondary" onclick="google.script.host.close()">Close</button>
+  <button class="btn-primary" onclick="saveSource()" id="saveBtn" disabled>Save Source</button>
+</div>
+
+<script>
+var resourceData = [];
+var currentResource = null;
+var subjects = [];
+
+google.script.run.withSuccessHandler(function(data) {
+  loadResourceData(data.resources || []);
+}).withFailureHandler(function(err) {
+  showStatus('Failed to load: ' + err.message, 'error');
+}).app_getAccessRegionSourceManagerData();
+
+function loadResourceData(list) {
+  resourceData = list;
+  var sel = document.getElementById('resourceSelect');
+  var prevVal = sel.value;
+  sel.innerHTML = '<option value="">-- Select Resource --</option>';
+  resourceData.forEach(function(r) {
+    var opt = document.createElement('option');
+    opt.value = r.name;
+    opt.textContent = r.label + ' (' + r.name + ')';
+    sel.appendChild(opt);
+  });
+  if (prevVal) {
+    sel.value = prevVal;
+    onResourceChange();
+  }
+}
+
+function findResource(name) {
+  return resourceData.find(function(r) { return r.name === name; }) || null;
+}
+
+function onResourceChange() {
+  var name = document.getElementById('resourceSelect').value;
+  var editor = document.getElementById('editor');
+  var saveBtn = document.getElementById('saveBtn');
+
+  if (!name) {
+    editor.style.display = 'none';
+    saveBtn.disabled = true;
+    currentResource = null;
+    return;
+  }
+
+  currentResource = findResource(name);
+  if (!currentResource) return;
+
+  editor.style.display = 'block';
+  saveBtn.disabled = false;
+
+  populateSelfColumns();
+
+  var raw = (currentResource.accessRegionSource || '').trim();
+  var parsed = null;
+  if (raw) {
+    try {
+      parsed = JSON.parse(raw);
+    } catch (e) {
+      parsed = null;
+    }
+  }
+
+  if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && parsed.self && parsed.self.column) {
+    document.getElementById('selfEnabled').checked = true;
+    document.getElementById('selfDetails').style.display = 'flex';
+    document.getElementById('selfColumn').value = parsed.self.column || '';
+    if (parsed.self.resolve === true) {
+      document.getElementById('selfResolveTrue').checked = true;
+    } else {
+      document.getElementById('selfResolveFalse').checked = true;
+    }
+  } else {
+    document.getElementById('selfEnabled').checked = false;
+    document.getElementById('selfDetails').style.display = 'none';
+    document.getElementById('selfColumn').value = '';
+    document.getElementById('selfResolveFalse').checked = true;
+  }
+
+  subjects = [];
+  if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && Array.isArray(parsed.subject)) {
+    parsed.subject.forEach(function(s) {
+      var isUser = s.user === true;
+      subjects.push({
+        kind: isUser ? 'user' : 'sheet',
+        column: s.column || '',
+        resource: s.resource || '',
+        empty: s.empty === 'next' ? 'next' : 'stop',
+        failEnabled: !!s.fail,
+        failType: s.fail === 'user' ? 'user' : (s.fail ? 'column' : 'user'),
+        failColumn: (s.fail && s.fail !== 'user') ? s.fail : ''
+      });
+    });
+  }
+
+  renderSubjects();
+  renderFailures();
+  updateLiveJson();
+}
+
+function populateSelfColumns() {
+  var colSel = document.getElementById('selfColumn');
+  colSel.innerHTML = '<option value="">-- Select Column --</option>';
+  if (!currentResource || !currentResource.headers) return;
+  currentResource.headers.forEach(function(h) {
+    var opt = document.createElement('option');
+    opt.value = h;
+    opt.textContent = h;
+    colSel.appendChild(opt);
+  });
+}
+
+function onSelfToggle() {
+  var checked = document.getElementById('selfEnabled').checked;
+  document.getElementById('selfDetails').style.display = checked ? 'flex' : 'none';
+  if (!checked) {
+    document.getElementById('selfColumn').value = '';
+    document.getElementById('selfResolveFalse').checked = true;
+  }
+  updateLiveJson();
+}
+
+function addSubjectRow() {
+  subjects.push({
+    kind: 'sheet',
+    column: '',
+    resource: '',
+    empty: 'stop',
+    failEnabled: false,
+    failType: 'user',
+    failColumn: ''
+  });
+  renderSubjects();
+  renderFailures();
+  updateLiveJson();
+}
+
+function removeSubjectRow(index) {
+  var removedCol = subjects[index].column;
+  subjects.splice(index, 1);
+  subjects.forEach(function(s, idx) {
+    var allowedCols = subjects.slice(0, idx).filter(function(item) { return item.kind === 'sheet'; }).map(function(item) { return item.column; }).filter(Boolean);
+    if (s.failType === 'column' && allowedCols.indexOf(s.failColumn) === -1) {
+      s.failColumn = allowedCols.length > 0 ? allowedCols[0] : '';
+      if (!s.failColumn) {
+        s.failType = 'user';
+      }
+    }
+  });
+  renderSubjects();
+  renderFailures();
+  updateLiveJson();
+}
+
+function onSubjectKindChange(index, kind) {
+  subjects[index].kind = kind;
+  renderSubjects();
+  renderFailures();
+  updateLiveJson();
+}
+
+function onSubjectFieldChange(index, field, value) {
+  subjects[index][field] = value;
+  if (field === 'column') {
+    renderFailures();
+  }
+  updateLiveJson();
+}
+
+function onSubjectEmptyChange(index, value) {
+  subjects[index].empty = value;
+  updateLiveJson();
+}
+
+function onFailToggle(index, checked) {
+  subjects[index].failEnabled = checked;
+  var allowedCols = subjects.slice(0, index).filter(function(item) { return item.kind === 'sheet'; }).map(function(item) { return item.column; }).filter(Boolean);
+  if (checked && subjects[index].failType === 'column' && !subjects[index].failColumn && allowedCols.length > 0) {
+    subjects[index].failColumn = allowedCols[0];
+  }
+  renderFailures();
+  updateLiveJson();
+}
+
+function onFailTypeChange(index, type) {
+  subjects[index].failType = type;
+  var allowedCols = subjects.slice(0, index).filter(function(item) { return item.kind === 'sheet'; }).map(function(item) { return item.column; }).filter(Boolean);
+  if (type === 'column' && !subjects[index].failColumn && allowedCols.length > 0) {
+    subjects[index].failColumn = allowedCols[0];
+  }
+  renderFailures();
+  updateLiveJson();
+}
+
+function onFailColChange(index, col) {
+  subjects[index].failColumn = col;
+  updateLiveJson();
+}
+
+function renderSubjects() {
+  var list = document.getElementById('subjectList');
+  var hint = document.getElementById('subjectEmptyHint');
+  list.innerHTML = '';
+
+  if (subjects.length === 0) {
+    hint.style.display = 'block';
+    return;
+  }
+  hint.style.display = 'none';
+
+  var currentHeaders = (currentResource && currentResource.headers) || [];
+
+  subjects.forEach(function(subj, idx) {
+    var row = document.createElement('div');
+    row.className = 'subject-row';
+
+    var header = document.createElement('div');
+    header.className = 'subject-row-header';
+    header.innerHTML = '<span class="subject-tag">Subject #' + (idx + 1) + '</span>';
+
+    var removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.className = 'btn-remove';
+    removeBtn.textContent = 'Remove';
+    removeBtn.onclick = function() { removeSubjectRow(idx); };
+    header.appendChild(removeBtn);
+    row.appendChild(header);
+
+    var kindDiv = document.createElement('div');
+    kindDiv.style.marginBottom = '6px';
+    var kindGroup = document.createElement('div');
+    kindGroup.className = 'checks';
+
+    var sheetLabel = document.createElement('label');
+    var sheetRadio = document.createElement('input');
+    sheetRadio.type = 'radio';
+    sheetRadio.name = 'subject_kind_' + idx;
+    sheetRadio.value = 'sheet';
+    sheetRadio.checked = (subj.kind !== 'user');
+    sheetRadio.onchange = function() { onSubjectKindChange(idx, 'sheet'); };
+    sheetLabel.appendChild(sheetRadio);
+    sheetLabel.appendChild(document.createTextNode(' Another sheet'));
+
+    var userLabel = document.createElement('label');
+    var userRadio = document.createElement('input');
+    userRadio.type = 'radio';
+    userRadio.name = 'subject_kind_' + idx;
+    userRadio.value = 'user';
+    userRadio.checked = (subj.kind === 'user');
+    userRadio.onchange = function() { onSubjectKindChange(idx, 'user'); };
+    userLabel.appendChild(userRadio);
+    userLabel.appendChild(document.createTextNode(' User region'));
+
+    kindGroup.appendChild(sheetLabel);
+    kindGroup.appendChild(userLabel);
+    kindDiv.appendChild(kindGroup);
+    row.appendChild(kindDiv);
+
+    if (subj.kind !== 'user') {
+      var grid = document.createElement('div');
+      grid.className = 'row';
+      grid.style.marginBottom = '0';
+
+      var colDiv = document.createElement('div');
+      colDiv.innerHTML = '<label>Subject Column</label>';
+      var colSelect = document.createElement('select');
+      colSelect.innerHTML = '<option value="">-- Select Column --</option>';
+      currentHeaders.forEach(function(h) {
+        var opt = document.createElement('option');
+        opt.value = h;
+        opt.textContent = h;
+        if (h === subj.column) opt.selected = true;
+        colSelect.appendChild(opt);
+      });
+      colSelect.onchange = function(e) { onSubjectFieldChange(idx, 'column', e.target.value); };
+      colDiv.appendChild(colSelect);
+      grid.appendChild(colDiv);
+
+      var resDiv = document.createElement('div');
+      resDiv.innerHTML = '<label>Subject Resource (Blank = Relation)</label>';
+      var resSelect = document.createElement('select');
+      resSelect.innerHTML = '<option value="">-- Use Relation Definition --</option>';
+      resourceData.forEach(function(r) {
+        var opt = document.createElement('option');
+        opt.value = r.name;
+        opt.textContent = r.label + ' (' + r.name + ')';
+        if (r.name === subj.resource) opt.selected = true;
+        resSelect.appendChild(opt);
+      });
+      resSelect.onchange = function(e) { onSubjectFieldChange(idx, 'resource', e.target.value); };
+      resDiv.appendChild(resSelect);
+      grid.appendChild(resDiv);
+
+      var emptyDiv = document.createElement('div');
+      emptyDiv.innerHTML = '<label>If Column Empty</label>';
+      var emptyGroup = document.createElement('div');
+      emptyGroup.className = 'checks';
+      emptyGroup.style.paddingTop = '8px';
+
+      var stopLabel = document.createElement('label');
+      var stopRadio = document.createElement('input');
+      stopRadio.type = 'radio';
+      stopRadio.name = 'empty_' + idx;
+      stopRadio.value = 'stop';
+      stopRadio.checked = (subj.empty !== 'next');
+      stopRadio.onchange = function() { onSubjectEmptyChange(idx, 'stop'); };
+      stopLabel.appendChild(stopRadio);
+      stopLabel.appendChild(document.createTextNode(' Stop'));
+
+      var nextLabel = document.createElement('label');
+      var nextRadio = document.createElement('input');
+      nextRadio.type = 'radio';
+      nextRadio.name = 'empty_' + idx;
+      nextRadio.value = 'next';
+      nextRadio.checked = (subj.empty === 'next');
+      nextRadio.onchange = function() { onSubjectEmptyChange(idx, 'next'); };
+      nextLabel.appendChild(nextRadio);
+      nextLabel.appendChild(document.createTextNode(' Next Subject'));
+
+      emptyGroup.appendChild(stopLabel);
+      emptyGroup.appendChild(nextLabel);
+      emptyDiv.appendChild(emptyGroup);
+      grid.appendChild(emptyDiv);
+
+      row.appendChild(grid);
+    }
+
+    list.appendChild(row);
+  });
+}
+
+function renderFailures() {
+  var list = document.getElementById('failureList');
+  var hint = document.getElementById('failureEmptyHint');
+  list.innerHTML = '';
+
+  if (subjects.length === 0) {
+    hint.style.display = 'block';
+    return;
+  }
+  hint.style.display = 'none';
+
+  subjects.forEach(function(subj, idx) {
+    var row = document.createElement('div');
+    row.className = 'failure-row';
+
+    var header = document.createElement('div');
+    header.className = 'failure-row-header';
+    var labelText = subj.kind === 'user' ? 'User region' : (subj.column || '(unselected column)');
+    header.innerHTML = '<span class="subject-tag">Subject #' + (idx + 1) + ' (' + labelText + ')</span>';
+    row.appendChild(header);
+
+    var content = document.createElement('div');
+    content.className = 'checks';
+
+    var toggleLabel = document.createElement('label');
+    var toggleBox = document.createElement('input');
+    toggleBox.type = 'checkbox';
+    toggleBox.checked = subj.failEnabled;
+    toggleBox.onchange = function(e) { onFailToggle(idx, e.target.checked); };
+    toggleLabel.appendChild(toggleBox);
+    toggleLabel.appendChild(document.createTextNode(' Enable failure fallback'));
+    content.appendChild(toggleLabel);
+
+    if (subj.failEnabled) {
+      var optionsWrap = document.createElement('div');
+      optionsWrap.className = 'checks';
+      optionsWrap.style.marginLeft = '16px';
+
+      var userLabel = document.createElement('label');
+      var userRadio = document.createElement('input');
+      userRadio.type = 'radio';
+      userRadio.name = 'failtype_' + idx;
+      userRadio.value = 'user';
+      userRadio.checked = (subj.failType === 'user');
+      userRadio.onchange = function() { onFailTypeChange(idx, 'user'); };
+      userLabel.appendChild(userRadio);
+      userLabel.appendChild(document.createTextNode(' User region'));
+      optionsWrap.appendChild(userLabel);
+
+      var allowedPrevCols = subjects.slice(0, idx).filter(function(item) { return item.kind === 'sheet'; }).map(function(item) { return item.column; }).filter(Boolean);
+
+      if (allowedPrevCols.length > 0) {
+        var colLabel = document.createElement('label');
+        var colRadio = document.createElement('input');
+        colRadio.type = 'radio';
+        colRadio.name = 'failtype_' + idx;
+        colRadio.value = 'column';
+        colRadio.checked = (subj.failType === 'column');
+        colRadio.onchange = function() { onFailTypeChange(idx, 'column'); };
+        colLabel.appendChild(colRadio);
+        colLabel.appendChild(document.createTextNode(' Another subject:'));
+        optionsWrap.appendChild(colLabel);
+
+        if (subj.failType === 'column') {
+          var selectCol = document.createElement('select');
+          selectCol.style.width = 'auto';
+          selectCol.style.display = 'inline-block';
+          selectCol.style.padding = '4px 8px';
+          allowedPrevCols.forEach(function(c) {
+            var opt = document.createElement('option');
+            opt.value = c;
+            opt.textContent = c;
+            if (c === subj.failColumn) opt.selected = true;
+            selectCol.appendChild(opt);
+          });
+          selectCol.onchange = function(e) { onFailColChange(idx, e.target.value); };
+          optionsWrap.appendChild(selectCol);
+        }
+      }
+
+      content.appendChild(optionsWrap);
+    }
+
+    row.appendChild(content);
+    list.appendChild(row);
+  });
+}
+
+function buildConfigObject() {
+  var selfEnabled = document.getElementById('selfEnabled').checked;
+  var selfCol = document.getElementById('selfColumn').value;
+  var selfResolve = document.getElementById('selfResolveTrue').checked;
+
+  var hasSelf = selfEnabled && !!selfCol;
+
+  var validSubjects = [];
+  subjects.forEach(function(s, idx) {
+    var entry;
+    if (s.kind === 'user') {
+      entry = { user: true };
+    } else {
+      if (!s.column) return;
+      entry = { column: s.column };
+      if (s.resource) entry.resource = s.resource;
+      if (s.empty) entry.empty = s.empty;
+    }
+
+    if (s.failEnabled) {
+      if (s.failType === 'user') {
+        entry.fail = 'user';
+      } else if (s.failType === 'column' && s.failColumn) {
+        var allowedCols = subjects.slice(0, idx).filter(function(item) { return item.kind === 'sheet'; }).map(function(item) { return item.column; }).filter(Boolean);
+        if (allowedCols.indexOf(s.failColumn) !== -1) {
+          entry.fail = s.failColumn;
+        }
+      }
+    }
+    validSubjects.push(entry);
+  });
+
+  if (!hasSelf && validSubjects.length === 0) {
+    return null;
+  }
+
+  var res = {};
+  if (hasSelf) {
+    res.self = {
+      column: selfCol,
+      resolve: selfResolve
+    };
+  }
+  if (validSubjects.length > 0) {
+    res.subject = validSubjects;
+  }
+  return res;
+}
+
+function updateLiveJson() {
+  var obj = buildConfigObject();
+  var preview = document.getElementById('jsonPreview');
+  if (!obj) {
+    preview.textContent = '(Empty - will save as blank string)';
+  } else {
+    preview.textContent = JSON.stringify(obj, null, 2);
+  }
+}
+
+function saveSource() {
+  var resName = document.getElementById('resourceSelect').value;
+  if (!resName) return;
+
+  var obj = buildConfigObject();
+  var jsonToSave = obj ? JSON.stringify(obj) : '';
+
+  var saveBtn = document.getElementById('saveBtn');
+  saveBtn.disabled = true;
+  saveBtn.textContent = 'Saving...';
+
+  google.script.run.withSuccessHandler(function() {
+    showStatus('Access Region Source saved successfully!', 'success');
+    saveBtn.disabled = false;
+    saveBtn.textContent = 'Save Source';
+
+    google.script.run.withSuccessHandler(function(data) {
+      loadResourceData(data.resources || []);
+    }).app_getAccessRegionSourceManagerData();
+
+  }).withFailureHandler(function(err) {
+    showStatus('Failed to save: ' + err.message, 'error');
+    saveBtn.disabled = false;
+    saveBtn.textContent = 'Save Source';
+  }).app_saveResourceAccessRegionSource(resName, jsonToSave);
+}
+
+function showStatus(msg, type) {
+  var el = document.getElementById('status');
+  el.textContent = msg;
+  el.className = 'status-bar ' + type;
+  if (type === 'success') setTimeout(function() { el.style.display = 'none'; }, 3000);
+}
+</script>
+</body>
+</html>

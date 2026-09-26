@@ -22,6 +22,8 @@ function onOpen() {
       .addItem('Manage Lists', 'app_showListViewsManagerDialog')
       .addItem('Manage Relations', 'app_showRelationsManagerDialog')
       .addItem('Manage Settings', 'app_showSettingsManagerDialog')
+      .addItem('🔐 Manage Access Policy', 'app_showAccessPolicyManagerDialog')
+      .addItem('🗺️ Manage Access Region Source', 'app_showAccessRegionSourceManagerDialog')
       .addSeparator()
       .addItem('Sync APP.Resources from Code', 'syncAppResourcesFromCode')
       .addItem('⚡ Recalculate LastDataUpdatedAt', 'recalculateAllResourcesLastDataUpdatedAtAndNotify')
@@ -67,6 +69,7 @@ function baseDialogData() {
     roleActionsMatrix: getRoleActionMatrix()
   };
 }
+function getBaseDialogData() { return baseDialogData(); }
 
 function showDialog(action, title, width, height, data) {
   var template = HtmlService.createTemplateFromFile('adminDialog');
@@ -91,7 +94,6 @@ function handleCreateUser(form) {
       PasswordHash: hashPasswordMenu(password),
       DesignationID: txt(form.designationId),
       Roles: rolesInputToCsv(form.mainRole, form.additionalRoles),
-      AccessRegion: normalizeAccessRegionCode(form.accessRegion),
       Status: txt(form.status || 'Active'),
       Avatar: '',
       ApiKey: ''
@@ -117,7 +119,6 @@ function handleUpdateUser(form) {
     put(ctx.sheet, row, ctx.idx.Email, email);
     put(ctx.sheet, row, ctx.idx.DesignationID, txt(form.designationId));
     put(ctx.sheet, row, ctx.idx.Roles, rolesInputToCsv(form.mainRole, form.additionalRoles));
-    put(ctx.sheet, row, ctx.idx.AccessRegion, normalizeAccessRegionCode(form.accessRegion));
     put(ctx.sheet, row, ctx.idx.Status, txt(form.status || 'Active'));
     if (txt(form.password)) put(ctx.sheet, row, ctx.idx.PasswordHash, hashPasswordMenu(form.password));
     if (typeof clearUsersCache === 'function') clearUsersCache();
@@ -161,21 +162,58 @@ function handleManageAccessRegion(form) {
   }
 }
 
+function validateParentDesignation(designationId, parentDesignationId) {
+  const parentId = txt(parentDesignationId);
+  if (!parentId) return '';
+
+  const selfId = txt(designationId);
+  if (selfId && parentId === selfId) {
+    throw new Error('A designation cannot be its own parent.');
+  }
+
+  const parentDesig = getDesignationById(parentId);
+  if (!parentDesig || !parentDesig.id || parentDesig.name === '') {
+    throw new Error('Parent designation not found.');
+  }
+
+  if (selfId) {
+    var curr = parentDesig;
+    var depth = 0;
+    var maxDepth = 50;
+    while (curr && curr.parentDesignationId && depth < maxDepth) {
+      if (curr.parentDesignationId === selfId) {
+        throw new Error('Parent designation cycle detected.');
+      }
+      curr = getDesignationById(curr.parentDesignationId);
+      depth++;
+    }
+    if (depth >= maxDepth) {
+      throw new Error('Parent designation depth limit exceeded.');
+    }
+  }
+
+  return parentId;
+}
+
 function handleCreateDesignation(form) {
   try {
     const ctx = ctxOf(CONFIG.SHEETS.DESIGNATIONS);
     const name = txt(form.name);
     if (!name) throw new Error('Designation name required.');
-    if (findRow(ctx.sheet, ctx.idx.Name, name, 2, false) !== -1) throw new Error('Designation already exists.');
+    if (findDesignationRowByNameRegion(ctx, name, form.accessRegion) !== -1) {
+      throw new Error('A designation with this name already exists in this region.');
+    }
+    const parentId = validateParentDesignation('', form.parentDesignationId);
     ctx.sheet.appendRow(toRow(ctx.headers, {
       DesignationID: nextId(ctx, 'DesignationID', 'D', 4),
       Name: name,
-      HierarchyLevel: Number(form.hierarchyLevel || 0) || '',
+      ParentDesignationID: parentId,
       Status: txt(form.status || 'Active'),
       AccessRegion: txt(form.accessRegion),
       DashboardScoreCutoff: Number(form.dashboardScoreCutoff || 0) || '',
       Description: txt(form.description)
     }));
+    if (typeof bumpSessionAuthVersion === 'function') bumpSessionAuthVersion();
     return ok('Designation created.');
   } catch (e) { return fail(e); }
 }
@@ -183,15 +221,25 @@ function handleCreateDesignation(form) {
 function handleUpdateDesignation(form) {
   try {
     const ctx = ctxOf(CONFIG.SHEETS.DESIGNATIONS);
-    const row = findRow(ctx.sheet, ctx.idx.DesignationID, txt(form.designationId), 2, true);
+    const designationId = txt(form.designationId);
+    const row = findRow(ctx.sheet, ctx.idx.DesignationID, designationId, 2, true);
     if (row === -1) throw new Error('Designation not found.');
-    if (!txt(form.name)) throw new Error('Designation name required.');
-    put(ctx.sheet, row, ctx.idx.Name, txt(form.name));
-    put(ctx.sheet, row, ctx.idx.HierarchyLevel, Number(form.hierarchyLevel || 0) || '');
+    const name = txt(form.name);
+    if (!name) throw new Error('Designation name required.');
+    if (findDesignationRowByNameRegion(ctx, name, form.accessRegion, row) !== -1) {
+      throw new Error('A designation with this name already exists in this region.');
+    }
+    const parentId = validateParentDesignation(designationId, form.parentDesignationId);
+    put(ctx.sheet, row, ctx.idx.Name, name);
+    // LEGACY: delete in next release.
+    if (ctx.idx.ParentDesignationID !== undefined) {
+      put(ctx.sheet, row, ctx.idx.ParentDesignationID, parentId);
+    }
     put(ctx.sheet, row, ctx.idx.Status, txt(form.status || 'Active'));
     put(ctx.sheet, row, ctx.idx.AccessRegion, txt(form.accessRegion));
     put(ctx.sheet, row, ctx.idx.DashboardScoreCutoff, Number(form.dashboardScoreCutoff || 0) || '');
     put(ctx.sheet, row, ctx.idx.Description, txt(form.description));
+    if (typeof bumpSessionAuthVersion === 'function') bumpSessionAuthVersion();
     return ok('Designation updated.');
   } catch (e) { return fail(e); }
 }
@@ -214,6 +262,8 @@ function handleCreateAccessRegion(form) {
       Name: name,
       Parent: parent
     }));
+    if (typeof clearAccessRegionsCache === 'function') clearAccessRegionsCache();
+    if (typeof bumpSessionAuthVersion === 'function') bumpSessionAuthVersion();
     return ok('Access Region created.');
   } catch (e) { return fail(e); }
 }
@@ -240,6 +290,8 @@ function handleUpdateAccessRegion(form) {
     put(ctx.sheet, row, ctx.idx.Code, code);
     put(ctx.sheet, row, ctx.idx.Name, name);
     put(ctx.sheet, row, ctx.idx.Parent, parent);
+    if (typeof clearAccessRegionsCache === 'function') clearAccessRegionsCache();
+    if (typeof bumpSessionAuthVersion === 'function') bumpSessionAuthVersion();
     return ok('Access Region updated.');
   } catch (e) { return fail(e); }
 }
@@ -334,12 +386,12 @@ function handleEditResource(form) {
 function getUserDetails(userId) {
   const ctx = ctxOf(CONFIG.SHEETS.USERS), row = findRow(ctx.sheet, ctx.idx.UserID, txt(userId), 2, true);
   if (row === -1) return null;
-  return { userId: get(ctx.sheet, row, ctx.idx.UserID), name: get(ctx.sheet, row, ctx.idx.Name), email: get(ctx.sheet, row, ctx.idx.Email), designationId: get(ctx.sheet, row, ctx.idx.DesignationID), roles: get(ctx.sheet, row, ctx.idx.Roles), accessRegion: get(ctx.sheet, row, ctx.idx.AccessRegion) };
+  return { userId: get(ctx.sheet, row, ctx.idx.UserID), name: get(ctx.sheet, row, ctx.idx.Name), email: get(ctx.sheet, row, ctx.idx.Email), designationId: get(ctx.sheet, row, ctx.idx.DesignationID), roles: get(ctx.sheet, row, ctx.idx.Roles) };
 }
 function getDesignationDetails(designationId) {
   const ctx = ctxOf(CONFIG.SHEETS.DESIGNATIONS), row = findRow(ctx.sheet, ctx.idx.DesignationID, txt(designationId), 2, true);
   if (row === -1) return null;
-  return { designationId: get(ctx.sheet, row, ctx.idx.DesignationID), name: get(ctx.sheet, row, ctx.idx.Name), hierarchyLevel: get(ctx.sheet, row, ctx.idx.HierarchyLevel), status: get(ctx.sheet, row, ctx.idx.Status), accessRegion: get(ctx.sheet, row, ctx.idx.AccessRegion), dashboardScoreCutoff: get(ctx.sheet, row, ctx.idx.DashboardScoreCutoff), description: get(ctx.sheet, row, ctx.idx.Description) };
+  return { designationId: get(ctx.sheet, row, ctx.idx.DesignationID), name: get(ctx.sheet, row, ctx.idx.Name), parentDesignationId: get(ctx.sheet, row, ctx.idx.ParentDesignationID), status: get(ctx.sheet, row, ctx.idx.Status), accessRegion: get(ctx.sheet, row, ctx.idx.AccessRegion), dashboardScoreCutoff: get(ctx.sheet, row, ctx.idx.DashboardScoreCutoff), description: get(ctx.sheet, row, ctx.idx.Description) };
 }
 function getAccessRegionDetails(code) {
   const ctx = ctxOf(CONFIG.SHEETS.ACCESS_REGIONS), row = findRow(ctx.sheet, ctx.idx.Code, normalizeAccessRegionInputCode(code), 2, true);
@@ -381,8 +433,18 @@ function getResourceDetails(resourceName) {
 
 function getUsersList() { return listRows(CONFIG.SHEETS.USERS, 'UserID', 'Name', 'Email'); }
 function getRolesList() { return listRows(CONFIG.SHEETS.ROLES, 'RoleID', 'Name'); }
-function getDesignationsList() { return listRows(CONFIG.SHEETS.DESIGNATIONS, 'DesignationID', 'Name').map(function (d) { return { id: d.id, name: d.name }; }); }
 function getAccessRegionsList() { return listRows(CONFIG.SHEETS.ACCESS_REGIONS, 'Code', 'Name').map(function (r) { return { code: r.id, name: r.name }; }); }
+function getDesignationsList() {
+  const regions = getAccessRegionsList();
+  const regionMap = {};
+  regions.forEach(function (r) { regionMap[r.code] = r.name; });
+  return listRows(CONFIG.SHEETS.DESIGNATIONS, 'DesignationID', 'Name').map(function (d) {
+    const desig = getDesignationById(d.id);
+    const regionCode = desig.accessRegion || '';
+    const regionName = !regionCode ? 'Universe' : (regionMap[regionCode] || regionCode);
+    return { id: d.id, name: d.name, accessRegionName: regionName };
+  });
+}
 function getResourcesList() {
   try {
     const ctx = ctxOf(CONFIG.SHEETS.RESOURCES);
@@ -523,6 +585,21 @@ function hashPasswordMenu(password) { return hashPassword(password || ''); }
 function findRow(sheet, colIndex, value, startRow, matchCase) {
   return findRowByValue(sheet, colIndex, value, startRow, matchCase);
 }
+function findDesignationRowByNameRegion(ctx, name, regionCode, excludeRow) {
+  const values = ctx.sheet.getDataRange().getValues();
+  const targetName = (name || '').toString().trim().toLowerCase();
+  const targetRegion = normalizeAccessRegionCode(regionCode);
+  for (let i = 1; i < values.length; i++) {
+    const rowNum = i + 1;
+    if (excludeRow && rowNum === excludeRow) continue;
+    const rowName = (values[i][ctx.idx.Name] || '').toString().trim().toLowerCase();
+    const rowRegion = normalizeAccessRegionCode(values[i][ctx.idx.AccessRegion] || '');
+    if (rowName === targetName && rowRegion === targetRegion) {
+      return rowNum;
+    }
+  }
+  return -1;
+}
 function nextId(ctx, header, prefix, digits) {
   if (ctx.idx[header] === undefined) return '';
   const values = ctx.sheet.getDataRange().getValues(), re = new RegExp('^' + prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(\\d+)$'); let max = 0;
@@ -556,7 +633,10 @@ function buildDialogBody(action, data) {
   var uo = users.map(function (x) { return '<option value="' + esc(x.id) + '">' + esc(x.name) + ' (' + esc(x.id) + ')</option>'; }).join('');
   var ro = roles.map(function (x) { return '<option value="' + esc(x.id) + '">' + esc(x.name) + ' (' + esc(x.id) + ')</option>'; }).join('');
   var rso = resources.map(function (x) { return '<option value="' + esc(x.name) + '">' + esc(x.name) + '</option>'; }).join('');
-  var doo = designations.map(function (x) { return '<option value="' + esc(x.id) + '">' + esc(x.name) + '</option>'; }).join('');
+  var doo = designations.map(function (x) {
+    var label = esc(x.name) + ' - ' + esc(x.accessRegionName || 'Universe');
+    return '<option value="' + esc(x.id) + '">' + label + '</option>';
+  }).join('');
   var aro = '<option value="">Universe (All Regions)</option>' + accessRegions.map(function (x) { return '<option value="' + esc(x.code) + '">' + esc(x.name) + ' (' + esc(x.code) + ')</option>'; }).join('');
   var acro = accessRegions.map(function (x) { return '<option value="' + esc(x.code) + '">' + esc(x.name) + ' (' + esc(x.code) + ')</option>'; }).join('');
   var apro = '<option value="">-- None --</option>' + acro;
@@ -594,8 +674,7 @@ function buildDialogBody(action, data) {
            '<div class="g"><label>Name</label><input name="name" required></div>' +
            '<div class="g"><label>Email</label><input name="email" type="email" required></div>' +
            '<div class="g"><label>Password</label><input name="password" id="userPasswordInput" type="password"></div>' +
-           '<div class="row"><div class="g"><label>Designation</label><select name="designationId"><option value="">-- Select --</option>' + doo + '</select></div>' +
-           '<div class="g"><label>Access Region</label><select name="accessRegion">' + aro + '</select></div></div>' +
+           '<div class="g"><label>Designation</label><select name="designationId"><option value="">-- Select --</option>' + doo + '</select></div>' +
            userRoleSelection() +
            '<div class="g"><label>Status</label><select name="status"><option>Active</option><option>Inactive</option></select></div>' +
            '<button id="submitBtn">Create User</button></form>';
@@ -604,9 +683,9 @@ function buildDialogBody(action, data) {
     body = '<form id="mainForm" onsubmit="event.preventDefault();submitManageDesignationsForm()">' +
            '<div class="g"><label>Designation</label><select name="designationId" onchange="onManageDesignationsChange(this.value)"><option value="">-- Create New Designation --</option>' + doo + '</select></div>' +
            '<div class="g"><label>Name</label><input name="name" required></div>' +
-           '<div class="g"><label>HierarchyLevel</label><input name="hierarchyLevel" type="number"></div>' +
+           '<div class="g"><label>Parent Designation</label><select name="parentDesignationId"><option value="">-- None (Top Level) --</option>' + doo + '</select></div>' +
            '<div class="g"><label>Status</label><select name="status"><option>Active</option><option>Inactive</option></select></div>' +
-           '<div class="g"><label>Access Region</label><select name="accessRegion">' + apro + '</select></div>' +
+           '<div class="g"><label>Access Region</label><select name="accessRegion">' + aro + '</select></div>' +
            '<div class="g"><label>Dashboard Score Cutoff</label><input name="dashboardScoreCutoff" type="number" min="0" step="1" placeholder="0"></div>' +
            '<div class="small">Dashboard items scoring below this number are hidden from this designation. 0 shows everything.</div>' +
            '<div class="g"><label>Description</label><textarea name="description"></textarea></div>' +
@@ -1084,6 +1163,241 @@ function app_saveResourceSettings(resourceName, settingsJson) {
     throw new Error('Resource not found: ' + resourceName);
   } catch (e) {
     throw new Error('Failed to save settings: ' + e.message);
+  }
+}
+
+// =====================================================
+// Access Policy Manager
+// =====================================================
+
+function app_showAccessPolicyManagerDialog() {
+  const html = HtmlService.createHtmlOutputFromFile('accessPolicyManager')
+    .setWidth(720)
+    .setHeight(680)
+    .setTitle('Manage Access Policy');
+  SpreadsheetApp.getUi().showModalDialog(html, 'Manage Access Policy');
+}
+
+function app_getAccessPolicyManagerData() {
+  try {
+    var resources = getAllResourcesConfigs({ includeInactive: true });
+    var resourceList = resources.map(function(res) {
+      var scope = (res.scope || 'master').toString().trim().toLowerCase();
+      var defaultPolicy = getDefaultAccessPolicyForScope(scope);
+      return {
+        name: res.name,
+        scope: scope,
+        label: (Array.isArray(res.menus) && res.menus.length > 0 && res.menus[0].label) || res.name,
+        accessPolicy: (res.accessPolicy || '').toString().trim(),
+        defaultPolicy: defaultPolicy
+      };
+    });
+
+    return { resources: resourceList };
+  } catch (e) {
+    throw new Error('Failed to load access policy manager data: ' + e.message);
+  }
+}
+
+function app_saveResourceAccessPolicy(resourceName, policyString) {
+  try {
+    if (!resourceName) throw new Error('Resource name is required');
+    var policy = (policyString || '').toString().trim();
+
+    if (policy !== '' && !isValidAccessPolicyString(policy)) {
+      throw new Error('Access Policy must be exactly five digits, each between 0 and 7 (e.g. 77111).');
+    }
+
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName(CONFIG.SHEETS.RESOURCES);
+    if (!sheet) throw new Error('Sheet ' + CONFIG.SHEETS.RESOURCES + ' not found');
+
+    var data = sheet.getDataRange().getValues();
+    var headers = data[0];
+    var nameIdx = headers.indexOf('Name');
+    var policyIdx = headers.indexOf('AccessPolicy');
+
+    if (nameIdx === -1) throw new Error('Column "Name" not found in ' + CONFIG.SHEETS.RESOURCES);
+    if (policyIdx === -1) throw new Error('Column "AccessPolicy" not found in ' + CONFIG.SHEETS.RESOURCES);
+
+    for (var r = 1; r < data.length; r++) {
+      if (data[r][nameIdx] === resourceName) {
+        var cell = sheet.getRange(r + 1, policyIdx + 1);
+        if (!policy) {
+          cell.setValue('');
+        } else {
+          cell.setNumberFormat('@');
+          cell.setValue("'" + policy);
+        }
+        clearResourceConfigCache();
+        if (typeof bumpSessionAuthVersion === 'function') bumpSessionAuthVersion();
+        return true;
+      }
+    }
+
+    throw new Error('Resource not found: ' + resourceName);
+  } catch (e) {
+    throw new Error('Failed to save access policy: ' + e.message);
+  }
+}
+
+// =====================================================
+// Access Region Source Manager
+// =====================================================
+
+function app_showAccessRegionSourceManagerDialog() {
+  const html = HtmlService.createHtmlOutputFromFile('accessRegionSourceManager')
+    .setWidth(840)
+    .setHeight(680)
+    .setTitle('Manage Access Region Source');
+  SpreadsheetApp.getUi().showModalDialog(html, 'Manage Access Region Source');
+}
+
+function app_getAccessRegionSourceManagerData() {
+  try {
+    var resources = getAllResourcesConfigs({ includeInactive: true });
+    var resourceList = resources.map(function(res) {
+      var realHeaders = [];
+      if (res.fileId && res.sheetName) {
+        try {
+          realHeaders = getSheetHeadersByMeta(res.fileId, res.sheetName);
+        } catch (e) {
+          realHeaders = [];
+        }
+      }
+      if (!realHeaders || !realHeaders.length) {
+        realHeaders = (res.requiredHeaders || []).concat(res.uniqueHeaders || []).concat(res.headers || []);
+      }
+
+      var rawSource = res.accessRegionSource;
+      var sourceStr = '';
+      if (rawSource !== null && rawSource !== undefined && rawSource !== '') {
+        sourceStr = typeof rawSource === 'object' ? JSON.stringify(rawSource) : rawSource.toString().trim();
+      }
+
+      return {
+        name: res.name,
+        scope: res.scope || 'master',
+        label: (Array.isArray(res.menus) && res.menus.length > 0 && res.menus[0].label) || res.name,
+        accessRegionSource: sourceStr,
+        headers: realHeaders,
+        relations: res.relations || {}
+      };
+    });
+
+    return { resources: resourceList };
+  } catch (e) {
+    throw new Error('Failed to load access region source data: ' + e.message);
+  }
+}
+
+function app_saveResourceAccessRegionSource(resourceName, sourceJson) {
+  try {
+    if (!resourceName) throw new Error('Resource name is required');
+    var rawText = (sourceJson || '').toString().trim();
+    var valueToSave = '';
+
+    if (rawText !== '') {
+      var parsed;
+      try {
+        parsed = JSON.parse(rawText);
+      } catch (jsonErr) {
+        throw new Error('Invalid JSON: ' + jsonErr.message);
+      }
+
+      if (Array.isArray(parsed)) {
+        throw new Error('Access Region Source must be an object, not an array.');
+      }
+      if (!parsed || typeof parsed !== 'object') {
+        throw new Error('Access Region Source must be an object.');
+      }
+
+      var hasSelf = parsed.self !== undefined && parsed.self !== null;
+      var hasSubject = parsed.subject !== undefined && parsed.subject !== null;
+
+      if (!hasSelf && !hasSubject) {
+        valueToSave = '';
+      } else {
+        if (hasSelf) {
+          if (typeof parsed.self !== 'object' || Array.isArray(parsed.self)) {
+            throw new Error('"self" must be an object.');
+          }
+          if (!parsed.self.column || !parsed.self.column.toString().trim()) {
+            throw new Error('"self.column" is required.');
+          }
+          if (typeof parsed.self.resolve !== 'boolean') {
+            throw new Error('"self.resolve" must be true or false.');
+          }
+        }
+
+        if (hasSubject) {
+          if (!Array.isArray(parsed.subject)) {
+            throw new Error('"subject" must be an array.');
+          }
+
+          var subjectCols = [];
+          for (var s = 0; s < parsed.subject.length; s++) {
+            var item = parsed.subject[s];
+            var num = s + 1;
+            if (!item || typeof item !== 'object' || Array.isArray(item)) {
+              throw new Error('Subject ' + num + ': must be an object.');
+            }
+            if (item.user !== true) {
+              if (!item.column || !item.column.toString().trim()) {
+                throw new Error('Subject ' + num + ': "column" is required when user is not true.');
+              }
+              subjectCols.push(item.column.toString().trim());
+            }
+          }
+
+          for (var i = 0; i < parsed.subject.length; i++) {
+            var entry = parsed.subject[i];
+            var itemNum = i + 1;
+
+            if (entry.empty !== undefined && entry.empty !== null && entry.empty !== '') {
+              if (entry.empty !== 'stop' && entry.empty !== 'next') {
+                throw new Error('Subject ' + itemNum + ': "empty" must be "stop" or "next".');
+              }
+            }
+
+            if (entry.fail !== undefined && entry.fail !== null && entry.fail !== '') {
+              if (entry.fail !== 'user') {
+                var failTarget = entry.fail.toString().trim();
+                if (subjectCols.indexOf(failTarget) === -1) {
+                  throw new Error('Subject ' + itemNum + ': "fail" target "' + failTarget + '" must match a subject column in this rule or "user".');
+                }
+              }
+            }
+          }
+        }
+
+        valueToSave = JSON.stringify(parsed);
+      }
+    }
+
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName(CONFIG.SHEETS.RESOURCES);
+    if (!sheet) throw new Error('Sheet ' + CONFIG.SHEETS.RESOURCES + ' not found');
+
+    var data = sheet.getDataRange().getValues();
+    var headers = data[0];
+    var nameIdx = headers.indexOf('Name');
+    var sourceIdx = headers.indexOf('AccessRegionSource');
+
+    if (nameIdx === -1) throw new Error('Column "Name" not found in ' + CONFIG.SHEETS.RESOURCES);
+    if (sourceIdx === -1) throw new Error('Column "AccessRegionSource" not found in ' + CONFIG.SHEETS.RESOURCES);
+
+    for (var r = 1; r < data.length; r++) {
+      if (data[r][nameIdx] === resourceName) {
+        sheet.getRange(r + 1, sourceIdx + 1).setValue(valueToSave);
+        clearResourceConfigCache();
+        return true;
+      }
+    }
+
+    throw new Error('Resource not found: ' + resourceName);
+  } catch (e) {
+    throw new Error('Failed to save access region source: ' + e.message);
   }
 }
 

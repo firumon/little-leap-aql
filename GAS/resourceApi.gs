@@ -853,7 +853,7 @@ function buildNewResourceRow(headers, idx, providedValues, schema) {
 
   headers.forEach(function (header) {
     const headerIndex = idx[header];
-    if (header === 'Code' || isAuditHeader(header) || isRegionHeader(header)) {
+    if (header === 'Code' || isAuditHeader(header)) {
       return;
     }
 
@@ -878,7 +878,7 @@ function buildNewResourceRow(headers, idx, providedValues, schema) {
 function mergeMasterRow(existingRow, idx, providedValues, schema) {
   const row = existingRow.slice();
   Object.keys(providedValues).forEach(function (header) {
-    if (header === 'Code' || isAuditHeader(header) || idx[header] === undefined || isRegionHeader(header)) {
+    if (header === 'Code' || isAuditHeader(header) || idx[header] === undefined) {
       return;
     }
     row[idx[header]] = normalizeValueByHeader(header, providedValues[header]);
@@ -1093,10 +1093,6 @@ function resolveAccessRegionHeader(idx, resourceConfig) {
   if (selfCol && idx[selfCol] !== undefined) return selfCol;
   if (idx.AccessRegion !== undefined) return 'AccessRegion';
   return '';
-}
-
-function isRegionHeader(header) {
-  return header === 'AccessRegion';
 }
 
 function normalizeValueByHeader(header, value) {

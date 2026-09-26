@@ -210,6 +210,11 @@ Use when adding, removing, reordering, or changing permission gates for the web 
   - `Documents/UI_SIDEBAR_MENU_SYSTEM.md` — **single canonical doc** covering schema, data flow, permission gating, tree building, route guard, and admin operation
   - [MAP.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/MAP.md)
 
+### Access Regions & Access Policy System
+Use when inspecting, designing, or modifying access regions, access policies, region inheritance sources, or row-level access enforcement.
+- Read:
+  - `Documents/ACCESS_REGION_AND_POLICY_SYSTEM.md` — **single canonical doc** covering access regions, ROPDU access policy octal bits, AccessRegionSource JSON grammar, write-time inheritance, and read-time record filtering
+
 ### Login Payload Or Auth Response Changes
 Use when changing `handleLogin()` response shape, field sources, or frontend storage of login data.
 - Read:

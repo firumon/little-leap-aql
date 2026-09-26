@@ -178,36 +178,17 @@ The picker appends the stored value in parentheses, so `{"SKU": {"resource":"SKU
 2. **Topology** — `parents`, `children`, `linkRefs`, and `refs` are built *exclusively* from that normalized map, so heuristic and explicit relations behave identically downstream (`useRecord` `$parent`/`$children`/`$<singular>` getters, `useFormFields` pickers).
 
 ## AccessPolicy Column Schema & Usage
-The `AccessPolicy` column in `APP.Resources` holds a 5-digit octal string (`ROPDU`), configuring record access rules:
-* **Digits (left to right)**:
-  - `R`: Region directions bitmask (`1` = SAME, `2` = DOWN, `4` = UP). Max `7`.
-  - `O`: Owner permissions bitmask (`1` = Execute, `2` = Update, `4` = Delete).
-  - `P`: Peer permissions bitmask.
-  - `D`: Downline (subordinate) permissions bitmask.
-  - `U`: Upline (manager) permissions bitmask.
-* **Format**: 5-digit text string (e.g. `'77111'`). Blank inherits hardcoded scope default (`master`: `77111`, `operation`: `37111`, `accounts`: `37010`, `view`/`report`: `71111`).
+The `AccessPolicy` column in `APP.Resources` holds a 5-digit octal string (`ROPDU`), configuring regional and action access rules:
+* **Format**: 5-digit text string (e.g. `'77111'`). Blank inherits scope default (`master`: `77111`, `operation`: `37111`, `accounts`: `37010`, `view`/`report`: `71111`).
 * **Exposed on Metadata**: `accessPolicy` string (or empty string when inheriting).
+* **Canonical Specification**: Full details on octal digit meanings (`ROPDU`), bit weights (`SAME = 1`, `DOWN = 2`, `UP = 4`), and row-level enforcement are in [ACCESS_REGION_AND_POLICY_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ACCESS_REGION_AND_POLICY_SYSTEM.md#3-access-policy-ropdu).
 
 ## AccessRegionSource Column Schema & Usage
 The `AccessRegionSource` column in `APP.Resources` configures how a record's access region is determined:
-* **Purpose**: Identifies the record's own region column (`self`), and fallback walk rules (`subject`) when the region is empty on write.
-* **Format**: JSON object with `self` and `subject`:
-```json
-{
-  "self": { "column": "AccessRegion", "resolve": false },
-  "subject": [
-    { "column": "OutletCode", "resource": "Outlets", "empty": "next" },
-    { "user": true }
-  ]
-}
-```
-* **Keys**:
-  - `self.column`: Column name where this resource's region code or place name lives.
-  - `self.resolve`: `true` if the column holds a region name (resolved against user's accessible regions); `false` if it holds a code.
-  - `subject`: Ordered array of fallback lookup rules.
-    - `{ user: true }`: Fallback to user's assigned designation region.
-    - `{ column, resource?, empty?, fail? }`: Walk related subject record.
+* **Format**: JSON object with `self` (record's own region field) and `subject` (fallback lookup walk).
 * **Exposed on Metadata**: `accessRegionSource` (parsed JSON object or `null` if blank).
+* **Canonical Specification**: Full details on the `self` and `subject` JSON grammar, write-time resolution, and place-name resolution are in [ACCESS_REGION_AND_POLICY_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ACCESS_REGION_AND_POLICY_SYSTEM.md#4-accessregionsource).
+
 
 ## Settings Column Schema & Usage
 The `Settings` column in `APP.Resources` defines configurable setting descriptors for the resource.

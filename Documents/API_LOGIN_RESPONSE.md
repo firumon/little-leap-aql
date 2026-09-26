@@ -75,7 +75,7 @@ Shape built by `buildAuthUserPayload()` at `GAS/auth.gs:205`:
 | `name` | `APP.Users.Name` | `GAS/auth.gs:208` |
 | `email` | `APP.Users.Email` | `GAS/auth.gs:209` |
 | `avatar` | `APP.Users.Avatar` | `GAS/auth.gs:210` |
-| `accessRegion` | `APP.Users.AccessRegion` + `APP.AccessRegions` | `GAS/auth.gs:211` → `buildUserAccessRegionPayload()` in `GAS/accessRegion.gs`. Carries `code`, `isUniverse`, `children`, `parents`, `regions` |
+| `accessRegion` | `APP.Users.AccessRegion` + `APP.AccessRegions` (via `APP.Designations.AccessRegion`) | `GAS/auth.gs:211` → `buildUserAccessRegionPayload()` in `GAS/accessRegion.gs`. Carries `code`, `isUniverse`, `children`, `parents`, `regions`. Canonical specification: [ACCESS_REGION_AND_POLICY_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ACCESS_REGION_AND_POLICY_SYSTEM.md#71-login--profile-payload) |
 | `designation` | `APP.Designations` via `APP.Users.DesignationID` | `GAS/auth.gs:212` → `getDesignationById()` in `GAS/auth.gs`. Carries `id`, `name`, `parentDesignationId`, `accessRegion`, `dashboardScoreCutoff`. Read in the app through `stores/auth.js` as `userDesignation`, `userDesignationAccessRegion` and `dashboardScoreCutoff` |
 | `roles` | `APP.Roles` via `APP.Users.Roles` (CSV of RoleIDs) | `GAS/auth.gs:213` → `getRoleNamesByIds()` in `GAS/auth.gs` |
 | `role` | `APP.Users.Role` (legacy primary role field) | `GAS/auth.gs:214` → `getPrimaryRoleName()` in `GAS/auth.gs` |
@@ -136,8 +136,8 @@ Array of resource entries built by `buildAuthorizedResourceEntry()` at `GAS/reso
 | `scope` | `master`, `operation`, or `accounts` |
 | `parentResource` | Name of parent resource for child resources (e.g., `Products` for `SKUs`) |
 | `relations` | Explicit cross-resource relation map from `APP.Resources.Relations`, keyed by source column header. Values are either a target resource name (shorthand) or `{ resource, targetHeader?, labelHeader? }`. Merged over the frontend's heuristic derivation in `useDataStore._deriveAllRelations()`; explicit entries win. Empty object when unconfigured. See [SCHEMA_RESOURCE_COLUMNS.md](file:///f:/LITTLE%20LEAP/AQL/Documents/SCHEMA_RESOURCE_COLUMNS.md) |
-| `accessPolicy` | 5-digit ROPDU octal string (e.g. `'77111'`) from `APP.Resources.AccessPolicy`, or empty string when inheriting scope defaults |
-| `accessRegionSource` | Parsed JSON object/array from `APP.Resources.AccessRegionSource` specifying self column and subject walk rules, or `null` if blank |
+| `accessPolicy` | 5-digit ROPDU octal string (e.g. `'77111'`) from `APP.Resources.AccessPolicy`, or empty string when inheriting scope defaults. Canonical specification: [ACCESS_REGION_AND_POLICY_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ACCESS_REGION_AND_POLICY_SYSTEM.md#3-access-policy-ropdu) |
+| `accessRegionSource` | Parsed JSON object/array from `APP.Resources.AccessRegionSource` specifying self column and subject walk rules, or `null` if blank. Canonical specification: [ACCESS_REGION_AND_POLICY_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ACCESS_REGION_AND_POLICY_SYSTEM.md#4-accessregionsource) |
 | `sheetName` | Target Google Sheet tab name |
 | `codePrefix` | Prefix for auto-generated codes (e.g., `PRD`) |
 | `codeSequenceLength` | Zero-padded numeric suffix length |

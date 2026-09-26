@@ -118,27 +118,15 @@ Flow:
 > yet. Run `⚙️ Setup & Refactor > Refactor APP Sheets` once. It adds missing columns and
 > keeps existing data.
 
-## 5. Access Regions (`AQL 🚀 > 🌍 Access Regions`)
+## 5. Access Regions (`AQL 🚀 > 🌍 Manage Access Regions`)
 
-### 5.1 Create Access Region
-Required:
-- `Code` (must match `AAA999`, example: `UAE001`)
-- `Name`
+Opens the Access Regions management dialog (`adminDialog.html`).
 
-Optional:
-- `Parent` (must exist if set)
+- **Create**: Requires `Code` (`AAA999`, e.g. `UAE001`) and `Name`. Optional `Parent` (must exist if set; cannot be same as code).
+- **Update**: Select existing region, edit fields, and submit.
+- **Cache**: Automatically invalidates memory cache and increments session auth version.
+- **Canonical Specification**: For hierarchy rules, tree expansion, and universe access, see [ACCESS_REGION_AND_POLICY_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ACCESS_REGION_AND_POLICY_SYSTEM.md#2-core-concepts).
 
-Validation:
-- Parent cannot be same as code.
-- Duplicate code not allowed.
-
-### 5.2 Update Access Region
-Flow:
-1. Select region.
-2. Form auto-fills.
-3. Edit and submit.
-
-Validation rules are same as create.
 
 ## 6. Roles (`AQL 🚀 > 🛡️ Roles`)
 
@@ -210,61 +198,23 @@ Reference:
 
 ### 7.4 Manage Access Policy
 Purpose:
-- Configure per-resource `AccessPolicy` permissions using 5-digit octal notation (`ROPDU`).
-
-Digits:
-- `R`: Read (own region, children, parents)
-- `O`: Others read (cross-region records)
-- `P`: Parent modify (update/delete)
-- `D`: Descendant modify (update/delete)
-- `U`: Universe modify (all records)
-
-Weights:
-- Read digits (`R`, `O`): `1` (own), `2` (child), `4` (parent).
-- Modify digits (`P`, `D`, `U`): `1` (create), `2` (update), `4` (delete).
-
-Scope defaults:
-- `master`: `77111`
-- `operation`: `37111`
-- `accounts`: `37010`
-- `view` / `report`: `71111`
+- Configure per-resource `AccessPolicy` 5-digit octal string (`ROPDU`).
 
 Behavior:
 - Checkboxes in dialog dynamically calculate and format the 5-digit octal string.
-- If policy matches the scope default, saving sets the cell blank (inherits default).
+- If policy matches the scope default (`master`: `77111`, `operation`: `37111`, `accounts`: `37010`, `view`/`report`: `71111`), saving sets the cell blank (inherits default).
 - If customized, it is saved as text (e.g. `'07777`) to preserve leading zeros.
+- Canonical specification for `ROPDU` digit definitions, bit weights, and row filtering: see [ACCESS_REGION_AND_POLICY_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ACCESS_REGION_AND_POLICY_SYSTEM.md#3-access-policy-ropdu).
 
 ### 7.5 Manage Access Region Source
 Purpose:
-- Configures where a record's own region comes from — the `self` column, and the fallback walk — for `AccessRegionSource`.
-
-Format:
-- A JSON **object** with `self` and `subject`, not an array:
-
-```json
-{
-  "self": { "column": "AccessRegion", "resolve": false },
-  "subject": [
-    { "column": "OutletCode", "resource": "Outlets", "empty": "next" },
-    { "user": true }
-  ]
-}
-```
-
-Keys:
-- `self.column` — the column on this record that holds its region.
-- `self.resolve` — `true` when that column holds a place **name** to be resolved; `false` when it is already a code. Default `false`. No `self` → the target is `AccessRegion`.
-- `subject` — an ordered array. Each entry is `{ column, resource?, empty?, fail? }` or `{ user: true }`.
-- `column` — the field on this record pointing at the subject.
-- `resource` — the subject sheet; blank falls back to the relation map.
-- `empty` — when the subject's column is empty: `stop` (default) or `next`.
-- `fail` — on failure: `user` records the writer's region as the reserve, or a column name **jumps** to that entry.
-- `{ user: true }` — the saving user's designation region.
+- Configures a resource's own region column (`self`) and fallback inheritance rules (`subject`) for `AccessRegionSource`.
 
 Behavior:
-- The dialog is sectioned — Self, Subjects, Failures — with dropdowns and radios, and a live JSON preview. There is no JSON typing. Saving nothing writes a blank cell.
-- A rule should end with `{ user: true }`, so the column is never left blank. Blank means everyone sees that record.
-- A **blank cell** means the resource has no region columns at all.
+- The dialog is sectioned (Self Region, Subject Resources, Subject Failures) with dropdowns, radios, and a live JSON preview.
+- Saving an empty configuration writes a blank cell.
+- Canonical specification for the JSON grammar, place-name resolution, and write-time fallback walk: see [ACCESS_REGION_AND_POLICY_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ACCESS_REGION_AND_POLICY_SYSTEM.md#4-accessregionsource).
+
 
 ### 7.6 Manage Lists
 Purpose:

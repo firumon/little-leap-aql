@@ -19,13 +19,13 @@ This document describes the APP spreadsheet as the control plane for authenticat
 - role/designation/region assignment
 
 ### AccessRegions
-- region hierarchy for scoped access
+- region hierarchy for scoped access (Code, Name, Parent)
+- canonical specification: [ACCESS_REGION_AND_POLICY_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ACCESS_REGION_AND_POLICY_SYSTEM.md#2-core-concepts)
 
 ### Designations
 - hierarchy/authority model
 - columns: `DesignationID`, `Name`, `ParentDesignationID`, `Status`, `AccessRegion`, `DashboardScoreCutoff`, `Description`
-- `AccessRegion` holds the region scope at designation level. Access region was previously
-  held at role level; the column exists and is written by the menu, but nothing reads it yet
+- `AccessRegion` holds the active region scope for users with this designation (resolved during login/profile fetch; see [ACCESS_REGION_AND_POLICY_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ACCESS_REGION_AND_POLICY_SYSTEM.md#23-how-a-user-gets-their-region))
 - `DashboardScoreCutoff` is a number. A dashboard item scoring below it is not shown to this
   designation. Blank or `0` shows everything
 - both columns reach the app on the login payload under `user.designation`
@@ -39,7 +39,7 @@ This document describes the APP spreadsheet as the control plane for authenticat
 ### Resources
 - runtime metadata registry for backend and frontend
 - includes resource configuration columns such as `AccessPolicy` (5-digit octal ROPDU scope permissions), `AccessRegionSource` (JSON object of region inheritance paths), `Settings` (custom resource setting definitions), `Dashboard` (widget analytics declarations), and `Options` (resource-specific option lists, sitting immediately after `ListViews` and before `CustomUIName`)
-- column meanings are owned by [SCHEMA_RESOURCE_COLUMNS.md](F:/LITTLE%20LEAP/AQL/Documents/SCHEMA_RESOURCE_COLUMNS.md)
+- column meanings are owned by [SCHEMA_RESOURCE_COLUMNS.md](file:///f:/LITTLE%20LEAP/AQL/Documents/SCHEMA_RESOURCE_COLUMNS.md); access policy and region source specifications are owned by [ACCESS_REGION_AND_POLICY_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ACCESS_REGION_AND_POLICY_SYSTEM.md)
 
 ### Config
 - deployment-specific settings such as file IDs and sync-related values

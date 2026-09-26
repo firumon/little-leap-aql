@@ -22,7 +22,7 @@ export function useProfilePage() {
     role: '...',
     designation: null,
     roles: [],
-    accessRegion: { code: '', isUniverse: true, accessibleCodes: [], accessibleRegions: [] },
+    accessRegion: { code: '', isUniverse: true, children: [], parents: [], regions: {} },
     avatar: ''
   })
 

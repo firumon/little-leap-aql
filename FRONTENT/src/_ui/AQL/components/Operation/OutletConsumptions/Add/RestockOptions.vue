@@ -103,10 +103,8 @@ const warehouseCode = pageState.useControls(RESTOCK_CONTROL.WAREHOUSE, '', NODE.
 
 const restockRows = computed(() => restock.children(NODE.RESTOCK_ITEMS).value || [])
 
-// `hasRegionAccess`, not a flat equality test: it also honours universe-scoped users
-// and rolled-up child regions.
 const regionWarehouses = computed(() => warehouses.items.value
-  .filter((row) => isActive(row) && hasRegionAccess(row.AccessRegion))
+  .filter((row) => isActive(row) && hasRegionAccess(row.AccessRegion, 'Warehouses'))
   .map((row) => ({ value: text(row.Code), label: text(row.Name) || text(row.Code) })))
 
 // Turned back on it refills from what sold. What that means is OutletRestocks' own rule,

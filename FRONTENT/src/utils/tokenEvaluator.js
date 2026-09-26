@@ -320,9 +320,10 @@ export const TOKENS = {
     label: 'My accessible regions (list — use with "is one of")',
     group: 'Current User',
     array: true,
+    // Returns the user's own region code; resolves to the same value as $userRegion.
     value: (params, ctx) => {
-      const codes = ctx.user?.accessRegion?.accessibleCodes
-      return Array.isArray(codes) ? codes.filter(Boolean) : []
+      const code = ctx.user?.accessRegion?.code
+      return code ? [code] : []
     },
     coerce: ['slug']
   }

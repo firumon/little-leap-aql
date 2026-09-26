@@ -39,7 +39,7 @@ export function useAuth () {
       role: authStore.userRole,
       roles: authStore.userRoles,
       designation: authStore.userDesignation,
-      // Object: `{ code, isUniverse, accessibleCodes, accessibleRegions }`.
+      // Object: `{ code, isUniverse, children, parents, regions }`.
       // Read it through `hasRegionAccess` rather than comparing `.code` by hand.
       accessRegion: authStore.userAccessRegion,
       avatar: text(profile.avatar || profile.Avatar)
@@ -58,12 +58,8 @@ export function useAuth () {
     return (user.value?.roles || []).some((role) => text(role).toLowerCase() === target)
   }
 
-  /**
-   * A universe-scoped user reaches every region; otherwise the code must be the
-   * user's own region or one of the regions rolled up beneath it. An empty
-   * `regionCode` means "unscoped", which everyone can reach.
-   */
-  function hasRegionAccess (regionCode) {
+  // Checks if the user is allowed to access records for the given resource and region.
+  function hasRegionAccess (regionCode, resourceName) {
     const target = text(regionCode)
     if (!target) return true
 
@@ -71,8 +67,7 @@ export function useAuth () {
     if (!region) return false
     if (region.isUniverse) return true
 
-    const accessible = [region.code, ...(region.accessibleCodes || [])]
-    return accessible.some((code) => text(code) === target)
+    return region.regions?.[resourceName]?.[target] === true
   }
 
   return {

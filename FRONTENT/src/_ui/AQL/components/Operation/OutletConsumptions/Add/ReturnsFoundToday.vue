@@ -59,9 +59,8 @@ const returnRows = computed(() => (returnsState.node.value.records || [])
   .map((row, index) => ({ row, index }))
   .filter((entry) => num(entry.row.Qty) > 0))
 
-// `hasRegionAccess`, not a flat equality test: it also honours universe-scoped users.
 const warehouseOptions = computed(() => warehouses.items.value
-  .filter((row) => isActive(row) && hasRegionAccess(row.AccessRegion))
+  .filter((row) => isActive(row) && hasRegionAccess(row.AccessRegion, 'Warehouses'))
   .map((row) => ({ value: text(row.Code), label: text(row.Name) || text(row.Code) })))
 
 const priceListCode = computed(() => text(priceListForOutlet(outletCode.value)?.code))

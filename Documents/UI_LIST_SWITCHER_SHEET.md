@@ -212,7 +212,7 @@ equally on an epoch-ms audit column.
 | `$userRole` | `user.role` (primary role) |
 | `$userRoles` | **Array** of all role names |
 | `$userRegion` | `user.accessRegion.code` |
-| `$userRegions` | **Array** of `user.accessRegion.accessibleCodes` |
+| `$userRegions` | **Array** of user region code (`[user.accessRegion.code]`) |
 
 All are compared case-insensitively and trimmed. Array-valued tokens are intended for the
 `in` / `not_in` operators, where each element is matched individually:

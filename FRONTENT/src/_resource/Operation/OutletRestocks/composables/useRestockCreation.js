@@ -145,8 +145,8 @@ export function defaultSubmissionComment (withConsumption = true) {
  * user's region does not reach is not a source, and a user who cannot approve cannot
  * self-approve either, so both live here rather than being re-tested per screen.
  *
- * `hasRegionAccess` also honours universe-scoped users and rolled-up child regions, which
- * a flat `=== accessRegion` test silently excludes.
+ * `hasRegionAccess` reads `user.accessRegion.allowed[resourceName]`, a per-resource
+ * region-code hash built server-side from RegionAccessPolicy.
  *
  * Plain function, not a computed: called from inside a caller's own `computed` or `watch`
  * it stays reactive, and called from a page contract's `ready` it still answers.
@@ -158,7 +158,7 @@ export function restockDirectOptions () {
   const warehouses = (useRecord().rows('Warehouses') || [])
     .map(asRow)
     .filter((row) => text(row.Status || 'Active') === 'Active')
-    .filter((row) => hasRegionAccess(row.AccessRegion))
+    .filter((row) => hasRegionAccess(row.AccessRegion, 'Warehouses'))
     .map((row) => ({
       value: text(row.Code),
       label: [text(row.Code), text(row.Name)].filter(Boolean).join(' · ')

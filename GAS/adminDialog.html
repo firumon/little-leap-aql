@@ -275,6 +275,7 @@ function submitForm(h) {
 function refreshDialogSelects(data) {
   function esc(v) { return (v == null ? '' : String(v)).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
   var users = data.users || [], designations = data.designations || [], accessRegions = data.accessRegions || [];
+  if (data.designations) window._designationsList = data.designations;
 
   function updateSelect(name, defaultOptionHtml, optionsHtml) {
     var sel = document.querySelector("select[name='" + name + "']");
@@ -295,10 +296,30 @@ function refreshDialogSelects(data) {
 
   updateSelect('userId', '<option value="">-- Create New User --</option>', uo);
   updateSelect('designationId', document.querySelector("form#mainForm select[name='userId']") ? '<option value="">-- Select --</option>' : '<option value="">-- Create New Designation --</option>', doo);
-  updateSelect('parentDesignationId', '<option value="">-- None (Top Level) --</option>', doo);
+  updateParentDesignationSelect(document.querySelector("select[name='designationId']") ? document.querySelector("select[name='designationId']").value : '');
   updateSelect('accessRegion', '', aro);
   updateSelect('lookupCode', '<option value="">-- Create New Access Region --</option>', acro);
   updateSelect('parent', '', apro);
+}
+
+function updateParentDesignationSelect(currentDesignationId) {
+  function esc(v) { return (v == null ? '' : String(v)).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
+  var sel = document.querySelector("select[name='parentDesignationId']");
+  if (!sel) return;
+  var currentVal = sel.value;
+  var list = window._designationsList;
+  if (!list) {
+    var desSelect = document.querySelector("select[name='designationId']");
+    list = desSelect ? Array.from(desSelect.options).map(function(o) { return { id: o.value, name: o.text }; }).filter(function(o) { return !!o.id; }) : [];
+  }
+  var options = list.filter(function(x) {
+    return !currentDesignationId || String(x.id) !== String(currentDesignationId);
+  }).map(function(x) {
+    var label = esc(x.name) + (x.accessRegionName ? ' - ' + esc(x.accessRegionName) : '');
+    return '<option value="' + esc(x.id) + '">' + label + '</option>';
+  }).join('');
+  sel.innerHTML = '<option value="">-- None (Top Level) --</option>' + options;
+  sel.value = currentVal;
 }
 
 function loadDetails(t, id) {
@@ -467,8 +488,10 @@ function onManageDesignationsChange(designationId) {
     if (cutoffInput) cutoffInput.value = "";
     var descInput = document.querySelector("[name='description']");
     if (descInput) descInput.value = "";
+    updateParentDesignationSelect("");
     if (btn) btn.innerText = "Create Designation";
   } else {
+    updateParentDesignationSelect(designationId);
     loadDetails('Designation', designationId);
     if (btn) btn.innerText = "Update Designation";
   }

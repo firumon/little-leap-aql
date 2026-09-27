@@ -40,7 +40,6 @@ export function useAuth () {
       roles: authStore.userRoles,
       designation: authStore.userDesignation,
       // Object: `{ code, isUniverse, children, parents, regions }`.
-      // Read it through `hasRegionAccess` rather than comparing `.code` by hand.
       accessRegion: authStore.userAccessRegion,
       designationScope: authStore.userDesignationScope,
       avatar: text(profile.avatar || profile.Avatar)
@@ -60,24 +59,11 @@ export function useAuth () {
     return (user.value?.roles || []).some((role) => text(role).toLowerCase() === target)
   }
 
-  // Checks if the user is allowed to access records for the given resource and region.
-  function hasRegionAccess (regionCode, resourceName) {
-    const target = text(regionCode)
-    if (!target) return true
-
-    const region = user.value?.accessRegion
-    if (!region) return false
-    if (region.isUniverse) return true
-
-    return region.regions?.[resourceName]?.[target] === true
-  }
-
   return {
     user,
     designationScope,
     isAuthenticated,
     logout,
-    hasRole,
-    hasRegionAccess
+    hasRole
   }
 }

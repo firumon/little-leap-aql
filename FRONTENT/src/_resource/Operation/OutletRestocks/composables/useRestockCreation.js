@@ -137,15 +137,12 @@ export function defaultSubmissionComment (withConsumption = true) {
   return withConsumption ? 'Submitted with an outlet consumption.' : 'Submitted from an outlet visit.'
 }
 
-// Checks if the user can route restocks directly and lists warehouses accessible in their region.
 export function restockDirectOptions () {
-  const { hasRegionAccess } = useAuth()
   const config = useResourceConfig(RESOURCE_NAME)
 
   const warehouses = (useRecord().rows('Warehouses') || [])
     .map(asRow)
     .filter((row) => text(row.Status || 'Active') === 'Active')
-    .filter((row) => hasRegionAccess(row.AccessRegion, 'Warehouses'))
     .map((row) => ({
       value: text(row.Code),
       label: [text(row.Code), text(row.Name)].filter(Boolean).join(' · ')

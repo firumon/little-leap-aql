@@ -36,7 +36,7 @@ defineOptions({ name: 'OutletConsumptionsAddReturnsFoundToday', inheritAttrs: fa
 
 const props = defineProps({ gutter: { type: String, default: 'sm' } })
 
-const { pageState, hasRegionAccess, resource } = useConsumptionAddContext()
+const { pageState, resource } = useConsumptionAddContext()
 const { _C } = useCurrency()
 
 const warehouses = resource('Warehouses')
@@ -60,7 +60,7 @@ const returnRows = computed(() => (returnsState.node.value.records || [])
   .filter((entry) => num(entry.row.Qty) > 0))
 
 const warehouseOptions = computed(() => warehouses.items.value
-  .filter((row) => isActive(row) && hasRegionAccess(row.AccessRegion, 'Warehouses'))
+  .filter((row) => isActive(row))
   .map((row) => ({ value: text(row.Code), label: text(row.Name) || text(row.Code) })))
 
 const priceListCode = computed(() => text(priceListForOutlet(outletCode.value)?.code))

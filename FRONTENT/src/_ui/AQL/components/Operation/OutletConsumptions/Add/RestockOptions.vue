@@ -83,7 +83,7 @@ const props = defineProps({ step: { type: [Number, String], default: null } })
 const attrs = useAttrs()
 const gutterClass = computed(() => `q-gutter-y-${attrs.gutter || 'sm'}`)
 
-const { pageState, ui, hasRegionAccess, resource } = useConsumptionAddContext()
+const { pageState, ui, resource } = useConsumptionAddContext()
 const warehouses = resource('Warehouses')
 
 const SelectField = resolveFieldComponent('select', 'add')
@@ -104,7 +104,7 @@ const warehouseCode = pageState.useControls(RESTOCK_CONTROL.WAREHOUSE, '', NODE.
 const restockRows = computed(() => restock.children(NODE.RESTOCK_ITEMS).value || [])
 
 const regionWarehouses = computed(() => warehouses.items.value
-  .filter((row) => isActive(row) && hasRegionAccess(row.AccessRegion, 'Warehouses'))
+  .filter((row) => isActive(row))
   .map((row) => ({ value: text(row.Code), label: text(row.Name) || text(row.Code) })))
 
 // Turned back on it refills from what sold. What that means is OutletRestocks' own rule,

@@ -12,7 +12,7 @@ export function useConsumptionAddContext () {
   const resourceRecord = inject('resourceRecord', null)
   const resourceConfig = inject('resourceConfig', null)
   const ui = useAQLConfig()
-  const { user, hasRegionAccess } = useAuth()
+  const { user } = useAuth()
   const { query } = useRouteConfig()
 
   return {
@@ -21,7 +21,6 @@ export function useConsumptionAddContext () {
     resourceConfig,
     ui,
     user,
-    hasRegionAccess,
     query,
     // Core-composable relays. Called by the card, so this adds no fetches of its own.
     resource: (name) => usePageRecord(name),

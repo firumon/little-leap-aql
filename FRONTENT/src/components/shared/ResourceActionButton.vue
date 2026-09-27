@@ -42,6 +42,11 @@ const props = defineProps({
     type: String,
     default: null
   },
+  // Optional record object or string code to gate against (AccessRegion and AccessPolicy)
+  record: {
+    type: [Object, String],
+    default: null
+  },
   // If true, the button won't render at all if unauthorized. If false, renders disabled with a tooltip.
   hideIfUnauthorized: {
     type: Boolean,
@@ -109,7 +114,7 @@ const { allowed } = useResourceConfig()
 // Compute permission state
 const hasPermission = computed(() => {
   if (!props.action) return true
-  return allowed(props.action, props.targetResource)
+  return allowed(props.action, props.targetResource, props.record)
 })
 
 // Control visibility of the button

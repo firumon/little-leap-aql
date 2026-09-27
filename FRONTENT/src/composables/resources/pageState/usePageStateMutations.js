@@ -231,7 +231,7 @@ export function usePageStateMutations ({ state, registry, hydrate, notify }) {
     if (!isPlainObject(node.permissions) || !node.resource) return null
     const { allowed } = useResourceConfig(node.resource)
     for (const [action, message] of Object.entries(node.permissions)) {
-      if (allowed(action, node.resource) === true) continue
+      if (allowed(action, node.resource, node.record) === true) continue
       return message || `You are not allowed to ${action} ${node.resource}.`
     }
     return null

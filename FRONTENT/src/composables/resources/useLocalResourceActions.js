@@ -167,7 +167,7 @@ export function useLocalResourceActions (context, taken) {
       // `allowed` takes an action name, a list of them, or a map of resource to
       // action — so an action that writes another resource gates on that one.
       const perm = def.permission ?? def.permissions
-      if (perm != null && resourceConfig?.allowed?.(perm) !== true) continue
+      if (perm != null && resourceConfig?.allowed?.(perm, null, record) !== true) continue
       if (!isActionVisible(def, record)) continue
       if (gate(def.show, record) === false) continue
       if (gate(def.hide, record) === true) continue

@@ -1180,6 +1180,7 @@ function buildAuthorizedResourceEntry(resourceName, options) {
     parentResource: config.parentResource || '',
     relations: config.relations || {},
     accessPolicy: config.accessPolicy || '',
+    ownerUserField: config.ownerUserField || 'CreatedBy',
     accessRegionSource: (config.accessRegionSource && typeof config.accessRegionSource === 'object') ? config.accessRegionSource : parseJsonCell(config.accessRegionSource, null),
     sheetName: config.sheetName,
     codePrefix: config.codePrefix,

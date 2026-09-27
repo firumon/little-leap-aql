@@ -216,6 +216,7 @@ function verifySessionProof(token, sessionKey) {
       user: state.user,
       roleIds: state.roleIds,
       accessRegionScope: state.accessRegionScope,
+      designationScope: state.designationScope || (typeof buildUserDesignationScope === 'function' ? buildUserDesignationScope(state.user) : null),
       regions: state.regions,
       sessionGeneration: clientGen
     }
@@ -225,6 +226,7 @@ function verifySessionProof(token, sessionKey) {
 const SESSION_AUTH_LEVEL_KEYS = {
   roleIds: true,
   accessRegionScope: true,
+  designationScope: true,
   regions: true,
   rowNumber: true
 };
@@ -252,6 +254,9 @@ function updateSessionAuth(token, patch) {
 
   if (regionOrDesigChanged) {
     state.accessRegionScope = buildUserAccessRegionScope(state.user);
+    if (typeof buildUserDesignationScope === 'function') {
+      state.designationScope = buildUserDesignationScope(state.user);
+    }
     let authorizedResourceNames = [];
     try {
       const authorizedResources = getLoginAuthorizedResources(state.roleIds || []);

@@ -226,6 +226,7 @@ function handleLogin(email, password) {
   syncUsersCachedCell(users, emailRow, 'ApiKey', token);
   const roleIds = resolveUserRoleIds(row);
   const accessRegionScope = buildUserAccessRegionScope(row);
+  const designationScope = buildUserDesignationScope(row);
   const authorizedResources = getLoginAuthorizedResources(roleIds);
   const authorizedResourceNames = authorizedResources.map(function(r) { return r && r.name ? r.name : ''; }).filter(Boolean);
   const regions = buildUserRegions(accessRegionScope, authorizedResourceNames);
@@ -235,13 +236,14 @@ function handleLogin(email, password) {
     user: sanitizeUserRowForSession(row),
     roleIds: roleIds,
     accessRegionScope: accessRegionScope,
+    designationScope: designationScope,
     regions: regions
   });
 
   return {
     success: true,
     token,
-    user: buildAuthUserPayload(row, roleIds, regions),
+    user: buildAuthUserPayload(row, roleIds, regions, designationScope),
     resources: authorizedResources,
     appConfig: getLoginAppConfig(),
     appOptions: getAppOptions()
@@ -269,6 +271,7 @@ function seedSessionProofState(token, authContext) {
     user: authContext.user,
     roleIds: authContext.roleIds,
     accessRegionScope: authContext.accessRegionScope,
+    designationScope: authContext.designationScope || buildUserDesignationScope(authContext.user),
     regions: authContext.regions,
     rowNumber: authContext.rowNumber
   });
@@ -297,6 +300,7 @@ function resolveUserAuthFromSheet(token) {
   const user = sanitizeUserRowForSession(rawUser);
   const roleIds = resolveUserRoleIds(user);
   const accessRegionScope = buildUserAccessRegionScope(user);
+  const designationScope = buildUserDesignationScope(user);
   let authorizedResourceNames = [];
   try {
     const authorizedResources = getLoginAuthorizedResources(roleIds);
@@ -309,6 +313,7 @@ function resolveUserAuthFromSheet(token) {
     user: user,
     roleIds: roleIds,
     accessRegionScope: accessRegionScope,
+    designationScope: designationScope,
     regions: regions
   };
 }
@@ -327,6 +332,7 @@ function validateToken(token) {
       user: state.user,
       roleIds: state.roleIds,
       accessRegionScope: state.accessRegionScope,
+      designationScope: state.designationScope || buildUserDesignationScope(state.user),
       regions: state.regions
     };
   }
@@ -357,7 +363,7 @@ function ensureAuthSheetContext(auth) {
 function handleGetProfile(auth) {
   return {
     success: true,
-    user: buildAuthUserPayload(auth.user, auth.roleIds, auth.regions),
+    user: buildAuthUserPayload(auth.user, auth.roleIds, auth.regions, auth.designationScope),
     appConfig: getLoginAppConfig(),
     accessRegions: getAccessRegionContext().rows
   };
@@ -401,7 +407,7 @@ function getLoginAuthorizedResources(roleIds) {
   });
 }
 
-function buildAuthUserPayload(userRow, roleIds, regions) {
+function buildAuthUserPayload(userRow, roleIds, regions, designationScope) {
   let userRegions = regions;
   // LEGACY: delete in next release.
   if (!userRegions && userRow) {
@@ -415,6 +421,8 @@ function buildAuthUserPayload(userRow, roleIds, regions) {
     userRegions = buildUserRegions(scope, resourceNames);
   }
 
+  const resolvedDesignationScope = designationScope || buildUserDesignationScope(userRow);
+
   return {
     id: userRow.UserID,
     name: userRow.Name,
@@ -422,6 +430,7 @@ function buildAuthUserPayload(userRow, roleIds, regions) {
     avatar: userRow.Avatar || '',
     accessRegion: buildUserAccessRegionPayload(userRow, userRegions),
     designation: getDesignationById(userRow.DesignationID),
+    designationScope: resolvedDesignationScope,
     roles: getRoleNamesByIds(roleIds || resolveUserRoleIds(userRow)),
     role: getPrimaryRoleName(userRow)
   };
@@ -658,6 +667,86 @@ function getDesignationById(designationId) {
   }
 
   return designation;
+}
+
+function buildUserDesignationScope(userRow) {
+  const code = (userRow && userRow.DesignationID ? userRow.DesignationID : '').toString().trim();
+  const cache = getDesignationsCache();
+  const byId = cache.byId || {};
+
+  const parents = [];
+  let currentId = code;
+  let safety = 0;
+  while (currentId && byId[currentId] && safety < 100) {
+    const parentId = (byId[currentId].parentDesignationId || '').toString().trim();
+    if (!parentId || parents.indexOf(parentId) !== -1 || parentId === code) break;
+    parents.push(parentId);
+    currentId = parentId;
+    safety++;
+  }
+
+  const childMap = {};
+  Object.keys(byId).forEach(function(dId) {
+    const pId = (byId[dId].parentDesignationId || '').toString().trim();
+    if (pId) {
+      if (!childMap[pId]) childMap[pId] = [];
+      childMap[pId].push(dId);
+    }
+  });
+
+  const children = [];
+  if (code) {
+    const queue = [code];
+    const seen = {};
+    seen[code] = true;
+    while (queue.length > 0) {
+      const parent = queue.shift();
+      const directChildren = childMap[parent] || [];
+      for (var i = 0; i < directChildren.length; i++) {
+        const cId = directChildren[i];
+        if (!seen[cId]) {
+          seen[cId] = true;
+          children.push(cId);
+          queue.push(cId);
+        }
+      }
+    }
+  }
+
+  const designationNames = {};
+  const designationParentMap = {};
+  Object.keys(byId).forEach(function(dId) {
+    const dName = (byId[dId].name || '').toString().trim();
+    if (dName) {
+      designationNames[dName.toLowerCase()] = dId;
+    }
+    const pId = (byId[dId].parentDesignationId || '').toString().trim();
+    if (pId) {
+      designationParentMap[dId] = pId;
+    }
+  });
+
+  const userDesignationMap = {};
+  const users = getUsersContext();
+  if (users && users.idx && users.idx.UserID !== undefined && users.idx.DesignationID !== undefined && Array.isArray(users.values)) {
+    for (var r = 1; r < users.values.length; r++) {
+      const row = users.values[r];
+      const uId = (row[users.idx.UserID] || '').toString().trim();
+      const dId = (row[users.idx.DesignationID] || '').toString().trim();
+      if (uId && dId) {
+        userDesignationMap[uId] = dId;
+      }
+    }
+  }
+
+  return {
+    code: code,
+    parents: parents,
+    children: children,
+    designationNames: designationNames,
+    designationParentMap: designationParentMap,
+    userDesignationMap: userDesignationMap
+  };
 }
 
 function getUserRoleIds(userId) {

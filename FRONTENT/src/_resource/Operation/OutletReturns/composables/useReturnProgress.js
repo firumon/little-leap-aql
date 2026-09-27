@@ -193,23 +193,23 @@ export function isEditable (record) {
 
 // Each gate claims its OWN registered action, not generic `update`: a role granted
 // canWarehouseAction without record-edit rights must still be able to settle that leg.
-function may (action) {
-  return !!useResourceConfig(RESOURCE_NAME).allowed(action)
+function may (action, record) {
+  return !!useResourceConfig(RESOURCE_NAME).allowed(action, RESOURCE_NAME, record)
 }
 
 /** A return may be cancelled at any point before it comes to rest. */
 export function canCancel (record) {
-  return may('cancel') && isOpen(record)
+  return may('cancel', record) && isOpen(record)
 }
 
 /** The warehouse leg is owed and unresolved — the `WarehouseAction` route's show condition. */
 export function canConfirmWarehouseAction (record) {
-  return may('warehouseAction') && warehouseActionRequired(record) && !warehouseActionCompleted(record)
+  return may('warehouseAction', record) && warehouseActionRequired(record) && !warehouseActionCompleted(record)
 }
 
 /** The credit is owed and unresolved — the `MarkInvoiceAdjusted` route's show condition. */
 export function canMarkInvoiceAdjusted (record) {
-  return may('markInvoiceAdjusted') && invoiceAdjustmentRequired(record) && !invoiceAdjustmentDone(record)
+  return may('markInvoiceAdjusted', record) && invoiceAdjustmentRequired(record) && !invoiceAdjustmentDone(record)
 }
 
 export const INVOICE_MATCH_ACTIVE = 'ACTIVE'

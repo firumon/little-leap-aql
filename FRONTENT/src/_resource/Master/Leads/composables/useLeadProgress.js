@@ -148,9 +148,18 @@ export function isEditable (row) {
   return !isApproved(row)
 }
 
+const PROGRESS_ACTION_MAP = {
+  [APPROVED]: 'approve',
+  [REJECTED]: 'reject',
+  [LATER]: 'later',
+  [PROCESSING]: 'resumeLead'
+}
+
 export function canTransitionTo (row, target) {
   const { allowed } = useResourceConfig(RESOURCE_NAME)
-  return canMoveTo(row, target) && allowed('update')
+  const canonical = canonicalProgress(target)
+  const action = PROGRESS_ACTION_MAP[canonical] || 'update'
+  return canMoveTo(row, target) && allowed(action, RESOURCE_NAME, row)
 }
 
 export function canProgress (row) {

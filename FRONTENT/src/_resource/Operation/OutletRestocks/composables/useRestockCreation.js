@@ -137,20 +137,7 @@ export function defaultSubmissionComment (withConsumption = true) {
   return withConsumption ? 'Submitted with an outlet consumption.' : 'Submitted from an outlet visit.'
 }
 
-/**
- * Whether this user may route a restock themselves, and out of which warehouse.
- *
- * The two questions a routing screen asks — "is there stock I may draw from?" and "am I
- * allowed to draw it?" — are one domain answer, not two UI conditions. A warehouse the
- * user's region does not reach is not a source, and a user who cannot approve cannot
- * self-approve either, so both live here rather than being re-tested per screen.
- *
- * `hasRegionAccess` reads `user.accessRegion.allowed[resourceName]`, a per-resource
- * region-code hash built server-side from RegionAccessPolicy.
- *
- * Plain function, not a computed: called from inside a caller's own `computed` or `watch`
- * it stays reactive, and called from a page contract's `ready` it still answers.
- */
+// Checks if the user can route restocks directly and lists warehouses accessible in their region.
 export function restockDirectOptions () {
   const { hasRegionAccess } = useAuth()
   const config = useResourceConfig(RESOURCE_NAME)

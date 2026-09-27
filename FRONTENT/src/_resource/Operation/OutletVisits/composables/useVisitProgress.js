@@ -1,4 +1,4 @@
-﻿/**
+/**
  * OutletVisits — the visit workflow vocabulary and its state-transition predicates.
  *
  * Layer 2 (UI_RESOURCE_DOMAIN_LOGIC.md §2): the single answer to "what state is this
@@ -158,7 +158,7 @@ export function isEditable (row) {
 // close a visit. Permission is resolved from this module's own resource name (§3.2).
 function canTransition (row, action) {
   const { allowed } = useResourceConfig(RESOURCE_NAME)
-  return allowed(action) && isPlanned(row)
+  return allowed(action, RESOURCE_NAME, row) && isPlanned(row)
 }
 
 export function canComplete (row) {

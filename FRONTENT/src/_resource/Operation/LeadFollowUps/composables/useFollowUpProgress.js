@@ -102,19 +102,19 @@ export function isEditable (row) {
 
 function canTransition (row, action) {
   const { allowed } = useResourceConfig(RESOURCE_NAME)
-  return allowed(action) && isAwaiting(row)
+  return allowed(action, RESOURCE_NAME, row) && isAwaiting(row)
 }
 
 export function canComplete (row) {
-  return canTransition(row, 'update')
+  return canTransition(row, 'complete')
 }
 
 export function canPostpone (row) {
-  return canTransition(row, 'update')
+  return canTransition(row, 'postpone')
 }
 
 export function canCancel (row) {
-  return canTransition(row, 'update')
+  return canTransition(row, 'cancel')
 }
 
 export function canRespond (row) {

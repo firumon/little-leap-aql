@@ -220,14 +220,14 @@ const RESOURCE_NAME = 'OutletDeliveries'
 
 // Each gate claims its OWN registered action, not generic `update`: a role granted
 // canMarkComplete without record-edit rights must still be able to close a run.
-function may (action) {
-  return !!useResourceConfig(RESOURCE_NAME).allowed(action)
+function may (action, record) {
+  return !!useResourceConfig(RESOURCE_NAME).allowed(action, RESOURCE_NAME, record)
 }
 
 // DRAFT only, and only while nothing has been handed over: no cancellation can un-deliver
 // goods. Fails closed when the item rows are not supplied.
 export function canCancel (record, orsiRows = null) {
-  if (!may('cancel')) return false
+  if (!may('cancel', record)) return false
   if (!isDraft(record)) return false
   if (!Array.isArray(orsiRows)) return false
   return !hasDeliveredItems(record, orsiRows)
@@ -244,19 +244,19 @@ export function canCancel (record, orsiRows = null) {
  * reporting `true` here would let an empty draft be closed as a finished delivery.
  */
 export function canComplete (record, orsiRows = []) {
-  if (!may('markComplete')) return false
+  if (!may('markComplete', record)) return false
   const ratio = deliveryRatio(record, orsiRows)
   return ratio.total > 0 && ratio.delivered === ratio.total
 }
 
 /** Whether lines may still be handed over against this manifest. */
 export function canDeliver (record) {
-  return may('markDeliver') && (isDraft(record) || isInTransit(record))
+  return may('markDeliver', record) && (isDraft(record) || isInTransit(record))
 }
 
 /** Whether the run may be marked as departed. */
 export function canMakeInTransit (record) {
-  return may('makeInTransit') && isDraft(record)
+  return may('makeInTransit', record) && isDraft(record)
 }
 
 // DRAFT only. Once the van has left, the load is physical and cannot be re-lined from a

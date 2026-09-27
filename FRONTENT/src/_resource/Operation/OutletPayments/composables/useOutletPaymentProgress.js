@@ -57,7 +57,7 @@ export function canCreatePayment () {
 
 export function canCancelPayment (record) {
   const isRowActive = text(asRow(record).Status).toUpperCase() !== 'ARCHIVED'
-  return !!gate().allowed({ outletPayment: 'update' }) && isSubmitted(record) && isRowActive
+  return !!gate().allowed({ outletPayment: 'cancel' }, null, record) && isSubmitted(record) && isRowActive
 }
 
 // ─── Composable Wrapper ───────────────────────────────────────────────────────

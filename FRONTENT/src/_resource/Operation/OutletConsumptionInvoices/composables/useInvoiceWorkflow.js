@@ -176,7 +176,7 @@ export function canCreateInvoice () {
 
 /** Editable only while nothing has been collected and the document is still open. */
 export function canEditInvoice (record) {
-  return !!gate().allowed({ outletConsumptionInvoice: 'update' }) && progressOf(record) === PENDING_PAYMENT
+  return !!gate().allowed({ outletConsumptionInvoice: 'update' }, null, record) && progressOf(record) === PENDING_PAYMENT
 }
 
 // Taking money is the PAYMENTS resource's own right, not an edit on the invoice: a
@@ -194,9 +194,9 @@ export const canRecordPayment = canMakePayment
  * a CANCELLED one must not be resurrected into PAID.
  */
 export function canSettleInvoice (record) {
-  const allowed = gate().allowed({ outletConsumptionInvoice: 'settleInvoice' }) ||
+  const allowed = gate().allowed({ outletConsumptionInvoice: 'settleInvoice' }, null, record) ||
     // The sheet action was renamed; a tenant still on the old grant keeps its rights.
-    gate().allowed({ outletConsumptionInvoice: 'markPaid' })
+    gate().allowed({ outletConsumptionInvoice: 'markPaid' }, null, record)
   return !!allowed && isOpen(record)
 }
 
@@ -212,7 +212,7 @@ export const canMarkPaid = canSettleInvoice
  * actually enforces it.
  */
 export function canCancelInvoice (record) {
-  return !!gate().allowed({ outletConsumptionInvoice: 'cancel' }) && progressOf(record) === PENDING_PAYMENT
+  return !!gate().allowed({ outletConsumptionInvoice: 'cancel' }, null, record) && progressOf(record) === PENDING_PAYMENT
 }
 
 // ─── Forced settlement ────────────────────────────────────────────────────────

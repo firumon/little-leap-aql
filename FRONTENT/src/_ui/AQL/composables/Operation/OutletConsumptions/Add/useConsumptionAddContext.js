@@ -25,6 +25,6 @@ export function useConsumptionAddContext () {
     query,
     // Core-composable relays. Called by the card, so this adds no fetches of its own.
     resource: (name) => usePageRecord(name),
-    allowed: (name, action) => useResourceConfig(name).allowed(action) === true
+    allowed: (name, action, recordOrCode) => useResourceConfig(name).allowed(action, name, recordOrCode) === true
   }
 }

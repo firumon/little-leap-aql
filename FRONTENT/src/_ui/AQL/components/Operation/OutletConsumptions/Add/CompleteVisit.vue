@@ -61,7 +61,7 @@ const visible = computed(() => stepVisible(pageState, props.step))
 const visitCode = computed(() => String(consumption.node.value.record.OutletVisitCode || '').trim())
 
 const canComplete = computed(() =>
-  !!visitCode.value && allowed(NODE.VISITS, 'complete'))
+  !!visitCode.value && allowed(NODE.VISITS, 'complete', visitCode.value))
 
 // A page control, not the node: the answer must survive the queued action being pulled
 // and re-queued as the outlet or the visit changes.

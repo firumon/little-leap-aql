@@ -1,4 +1,4 @@
-﻿import { planAllocatedQty } from 'src/_resource/Operation/OutletRestocks/composables/useRestockAllocation'
+import { planAllocatedQty } from 'src/_resource/Operation/OutletRestocks/composables/useRestockAllocation'
 import { readApprovalPlan } from 'src/_ui/AQL/composables/Operation/OutletRestocks/useRestockApproval'
 
 /**
@@ -94,7 +94,7 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
   function permitted () {
     return resourceConfig?.allowed({
       OutletRestocks: 'reallocate', OutletRestockItems: 'create', StockMovements: 'create'
-    })
+    }, null, restock())
   }
 
   return {

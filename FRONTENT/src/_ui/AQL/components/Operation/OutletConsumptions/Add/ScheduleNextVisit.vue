@@ -111,7 +111,7 @@ const nextVisitComment = computed(() => plan.value.comment)
 const onCompletion = computed(() =>
   !!text(consumption.node.value.record.OutletVisitCode) &&
   getCtrl(pageState, CTRL.COMPLETE_VISIT, true) === true &&
-  allowed(NODE.VISITS, 'complete'))
+  allowed(NODE.VISITS, 'complete', text(consumption.node.value.record.OutletVisitCode)))
 
 const canSchedule = computed(() =>
   !!outletCode.value && allowed(NODE.VISITS, 'create'))

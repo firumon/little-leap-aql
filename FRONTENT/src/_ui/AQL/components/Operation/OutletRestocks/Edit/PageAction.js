@@ -1,4 +1,4 @@
-﻿import { toDateTime24 } from 'src/utils/dateHelpers'
+import { toDateTime24 } from 'src/utils/dateHelpers'
 import { useAuth } from 'src/composables/core/useAuth'
 import { restockEditableProgress } from 'src/_resource/Operation/OutletRestocks/composables/useRestockProgress'
 
@@ -98,7 +98,7 @@ export default (props, { pageState, resourceConfig }) => {
       if (!restockEditableProgress(parent.record.value.Progress)) {
         return { valid: false, message: 'Only restock requests in Draft or Revision Required state can be edited.' }
       }
-      if (!resourceConfig?.allowed('update')) {
+      if (!resourceConfig?.allowed('update', null, parent.record.value)) {
         return { valid: false, message: 'You are not allowed to edit this restock request.' }
       }
 

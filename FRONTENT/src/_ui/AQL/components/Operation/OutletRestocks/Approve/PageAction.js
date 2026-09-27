@@ -1,4 +1,4 @@
-﻿import { useAuth } from 'src/composables/core/useAuth'
+import { useAuth } from 'src/composables/core/useAuth'
 import { buildRestockRejectNodes } from 'src/_resource/Operation/OutletRestocks/composables/useRestockPayload'
 import { planAllocatedQty } from 'src/_resource/Operation/OutletRestocks/composables/useRestockAllocation'
 import {
@@ -97,8 +97,8 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
   // never match — it fails closed and silently blocks the button.
   function permitted () {
     return isInitialApproval()
-      ? resourceConfig?.allowed({ OutletRestocks: 'approve', OutletRestockItems: 'create', StockMovements: 'create' })
-      : resourceConfig?.allowed({ OutletRestockItems: 'create', StockMovements: 'create' })
+      ? resourceConfig?.allowed({ OutletRestocks: 'approve', OutletRestockItems: 'create', StockMovements: 'create' }, null, restock())
+      : resourceConfig?.allowed({ OutletRestockItems: 'create', StockMovements: 'create' }, null, restock())
   }
 
   return {
@@ -170,7 +170,7 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
     reject: (name, { nav }) => {
       const parent = restock()
       if (!text(parent.Code)) return { valid: false, message: 'This restock request could not be loaded.' }
-      if (!resourceConfig?.allowed('reject')) return { valid: false, message: 'You are not allowed to reject this restock request.' }
+      if (!resourceConfig?.allowed('reject', null, parent)) return { valid: false, message: 'You are not allowed to reject this restock request.' }
       if (!comment()) return { valid: false, message: 'A comment is required to reject a request.' }
 
       const rows = (resourceRecord?.childRecordsByResource?.value || {})[CHILD] || []

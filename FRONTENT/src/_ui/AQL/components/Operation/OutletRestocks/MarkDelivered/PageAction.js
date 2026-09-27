@@ -1,4 +1,4 @@
-﻿import { deliverableRows } from 'src/_resource/Operation/OutletRestocks/composables/useRestockDelivery'
+import { deliverableRows } from 'src/_resource/Operation/OutletRestocks/composables/useRestockDelivery'
 
 /**
  * OutletRestocks › MarkDelivered › PageAction — JS modifier (tier 2: resource + page).
@@ -66,7 +66,7 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
   // the outlet stock movement the batch actually writes. Failing closed here is the
   // rule; hiding the entry point on the View page is only UX.
   function permitted () {
-    return resourceConfig?.allowed({ OutletRestocks: 'markDelivered', OutletMovements: 'create' })
+    return resourceConfig?.allowed({ OutletRestocks: 'markDelivered', OutletMovements: 'create' }, null, restock())
   }
 
   return {

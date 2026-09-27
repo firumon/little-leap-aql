@@ -42,10 +42,12 @@ export function useAuth () {
       // Object: `{ code, isUniverse, children, parents, regions }`.
       // Read it through `hasRegionAccess` rather than comparing `.code` by hand.
       accessRegion: authStore.userAccessRegion,
+      designationScope: authStore.userDesignationScope,
       avatar: text(profile.avatar || profile.Avatar)
     }
   })
 
+  const designationScope = computed(() => authStore.userDesignationScope)
   const isAuthenticated = computed(() => !!authStore.token)
 
   function logout () {
@@ -72,6 +74,7 @@ export function useAuth () {
 
   return {
     user,
+    designationScope,
     isAuthenticated,
     logout,
     hasRole,

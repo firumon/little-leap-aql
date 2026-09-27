@@ -67,6 +67,7 @@ export const useAuthStore = defineStore('auth', () => {
       .filter(Boolean)
   })
   const userAccessRegion = computed(() => user.value?.accessRegion || { code: '', isUniverse: true, children: [], parents: [], regions: {}, regionNames: {} })
+  const userDesignationScope = computed(() => user.value?.designationScope || { code: '', parents: [], children: [], designationNames: {}, userDesignationMap: {} })
   const authorizedResources = computed(() => resources.value)
   const appConfigMap = computed(() => appConfig.value || {})
   const appOptionsMap = computed(() => appOptions.value || {})
@@ -204,6 +205,7 @@ export const useAuthStore = defineStore('auth', () => {
     userDesignationAccessRegion,
     dashboardScoreCutoff,
     userAccessRegion,
+    userDesignationScope,
     authorizedResources,
     appConfigMap,
     appOptionsMap,

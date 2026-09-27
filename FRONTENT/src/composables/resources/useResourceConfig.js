@@ -1,5 +1,6 @@
 import { computed, unref } from 'vue'
 import { useAuthStore } from 'src/stores/auth'
+import { useRecord } from './useRecord'
 import { useRouteConfig } from './useRouteConfig'
 import {
   OPERATORS,
@@ -66,6 +67,107 @@ function checkActionsList(resConfig, actions) {
   if (!Array.isArray(actions)) return false
   if (!actions.length) return true
   return actions.every((act) => checkSingleAction(resConfig, act))
+}
+
+function getDefaultAccessPolicyForScope(scope) {
+  const s = String(scope || '').trim().toLowerCase()
+  if (s === 'operation') return '37111'
+  if (s === 'accounts') return '37010'
+  if (s === 'view' || s === 'report') return '71111'
+  return '77111'
+}
+
+function checkRecordRelationGate(resConfig, action, record, auth) {
+  const cleanAction = String(action || '').trim().replace(/^can(?=[A-Z])/, '')
+  const actionLower = cleanAction.toLowerCase()
+
+  if (actionLower === 'read' || actionLower === 'write' || actionLower === 'create') {
+    return true
+  }
+
+  let requiredBit = 1
+  if (actionLower === 'update') {
+    requiredBit = 2
+  } else if (actionLower === 'delete') {
+    requiredBit = 4
+  }
+
+  const ownerField = resConfig.ownerUserField || 'CreatedBy'
+  const ownerId = String(record[ownerField] || '').trim()
+  if (!ownerId) {
+    return true
+  }
+
+  const userScope = auth.userDesignationScope || {}
+  const ownerDesig = (userScope.userDesignationMap && userScope.userDesignationMap[ownerId])
+    ? String(userScope.userDesignationMap[ownerId]).trim()
+    : ''
+
+  if (!ownerDesig) {
+    return true
+  }
+
+  const userDesig = String(userScope.code || '').trim()
+  const parents = Array.isArray(userScope.parents) ? userScope.parents : []
+  const children = Array.isArray(userScope.children) ? userScope.children : []
+
+  let relationIndex = -1
+  if (ownerDesig === userDesig) {
+    relationIndex = 1
+  } else if (parents.includes(ownerDesig)) {
+    relationIndex = 4
+  } else if (children.includes(ownerDesig)) {
+    relationIndex = 3
+  } else {
+    const parentOfCurrent = parents[0] || auth.user?.designation?.parentDesignationId || ''
+    const parentOfOwner = (userScope.designationParentMap && userScope.designationParentMap[ownerDesig]) || ''
+    if (parentOfCurrent && parentOfOwner && parentOfCurrent === parentOfOwner) {
+      relationIndex = 2
+    }
+  }
+
+  let policy = String(resConfig.accessPolicy || '').trim()
+  if (!/^[0-7]{5}$/.test(policy)) {
+    policy = getDefaultAccessPolicyForScope(resConfig.scope)
+  }
+
+  if (relationIndex === -1) {
+    return false
+  }
+
+  const digit = parseInt(policy.charAt(relationIndex), 10) || 0
+  return (digit & requiredBit) === requiredBit
+}
+
+function resolveRecord(resConfig, recordOrCode) {
+  if (!recordOrCode) return null
+  if (typeof recordOrCode === 'object') return recordOrCode
+  if (typeof recordOrCode === 'string' && resConfig?.name) {
+    return useRecord().recordBy(resConfig.name, 'Code', recordOrCode) || null
+  }
+  return null
+}
+
+function checkActionAllowedOnResource(resConfig, action, recordOrCode, auth) {
+  if (!checkSingleAction(resConfig, action)) {
+    return false
+  }
+
+  const record = resolveRecord(resConfig, recordOrCode)
+  if (!record || typeof record !== 'object') {
+    return true
+  }
+
+  const regionTarget = String(record.AccessRegion ?? '').trim()
+  if (regionTarget) {
+    const accessRegion = auth.userAccessRegion
+    if (accessRegion && !accessRegion.isUniverse) {
+      const allowedInRegion = accessRegion.regions?.[resConfig.name]?.[regionTarget] === true
+      if (!allowedInRegion) return false
+    }
+  }
+
+  return checkRecordRelationGate(resConfig, action, record, auth)
 }
 
 // ─── Declarative permission rules ─────────────────────────────────────────────
@@ -178,7 +280,7 @@ export function useResourceConfig(resourceNameOverride) {
 
   const permissions = computed(() => activeConfig.value?.permissions || {})
 
-  const allowed = (query, targetResourceName) => {
+  const allowed = (query, targetResourceName, recordOrCode) => {
     if (!query) return false
 
     // 1. Multi-Resource Map (Object Query)
@@ -187,9 +289,9 @@ export function useResourceConfig(resourceNameOverride) {
         const resConfig = findResourceConfig(resName)
         if (!resConfig) return false
         if (Array.isArray(actQuery)) {
-          return checkActionsList(resConfig, actQuery)
+          return actQuery.every((act) => checkActionAllowedOnResource(resConfig, act, recordOrCode, auth))
         }
-        return checkSingleAction(resConfig, actQuery)
+        return checkActionAllowedOnResource(resConfig, actQuery, recordOrCode, auth)
       })
     }
 
@@ -198,14 +300,14 @@ export function useResourceConfig(resourceNameOverride) {
 
     // 2. Array of actions on a single resource
     if (Array.isArray(query)) {
-      return checkActionsList(resConfig, query)
+      return query.every((act) => checkActionAllowedOnResource(resConfig, act, recordOrCode, auth))
     }
 
     // 3. Single action on a single resource
-    return checkSingleAction(resConfig, query)
+    return checkActionAllowedOnResource(resConfig, query, recordOrCode, auth)
   }
 
-  const missing = (query, targetResourceName) => {
+  const missing = (query, targetResourceName, recordOrCode) => {
     if (!query) return [{ resource: targetResourceName || resourceName.value || '(unknown)', action: '*' }]
 
     if (typeof query === 'object' && !Array.isArray(query)) {
@@ -218,7 +320,9 @@ export function useResourceConfig(resourceNameOverride) {
         }
         const actions = Array.isArray(actQuery) ? actQuery : [actQuery]
         for (const act of actions) {
-          if (!checkSingleAction(resConfig, act)) gaps.push({ resource: resName, action: String(act) })
+          if (!checkActionAllowedOnResource(resConfig, act, recordOrCode, auth)) {
+            gaps.push({ resource: resName, action: String(act) })
+          }
         }
       }
       return gaps
@@ -230,7 +334,7 @@ export function useResourceConfig(resourceNameOverride) {
 
     const actions = Array.isArray(query) ? query : [query]
     return actions
-      .filter((act) => !checkSingleAction(resConfig, act))
+      .filter((act) => !checkActionAllowedOnResource(resConfig, act, recordOrCode, auth))
       .map((act) => ({ resource: resConfig.name || name, action: String(act) }))
   }
 

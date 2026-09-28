@@ -10,14 +10,15 @@
  * them, and finally what is physically on its shelves.
  *
  *   1. OutletDetails    identity — who, where, how to reach them, how long since anything moved
- *   2. OperatingRules   the commercial terms every downstream calculation uses
- *   3. SummaryStats     the four open positions, so the reader need not count rows below
- *   4. Visits           ── the five operational streams, newest first ──
- *   5. Restocks
- *   6. Returns
- *   7. Invoices
- *   8. Payments
- *   9. CurrentStock     the derived shelf balance
+ *   2. SubOutlets       the outlets that roll up to this one, when it heads a family
+ *   3. OperatingRules   the commercial terms every downstream calculation uses
+ *   4. SummaryStats     the four open positions, so the reader need not count rows below
+ *   5. Visits           ── the five operational streams, newest first ──
+ *   6. Restocks
+ *   7. Returns
+ *   8. Invoices
+ *   9. Payments
+ *  10. CurrentStock     the derived shelf balance
  *
  * ── STRICT VIEW CONTRACT ──
  * Every card RENDERS INFORMATION ONLY. Not one carries a "Plan Visit" or "New Restock"
@@ -40,6 +41,7 @@ export default {
   sections: [
     'PageHeader',
     'OutletDetails',
+    'SubOutlets',
     'OperatingRules',
     'SummaryStats',
     'Visits',

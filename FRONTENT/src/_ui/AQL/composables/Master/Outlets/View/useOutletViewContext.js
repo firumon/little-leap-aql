@@ -119,6 +119,24 @@ export function useOutletViewContext () {
 
   const summary = computed(() => index.summaryFor(outletCode.value))
 
+  // ── Outlet family: this outlet's place in its mother / sub-outlet group ─────
+  //
+  // Read through the shared index's family maps rather than by re-grouping the outlet
+  // list here, so this page and the family analytics can never disagree about who
+  // belongs to whom (§6.1).
+
+  const isMotherCompany = computed(() => index.isMother(outletCode.value))
+  const childOutlets = computed(() => index.childOutletsFor(outletCode.value))
+
+  const parentCode = computed(() =>
+    text(outlet.value?.ParentOutletCode ?? outlet.value?.parentOutletCode))
+
+  const parentOutlet = computed(() =>
+    (parentCode.value ? index.outletMap.value.get(parentCode.value) : null))
+
+  const parentOutletName = computed(() =>
+    parentOutlet.value?.Name || parentOutlet.value?.name || parentCode.value)
+
   // ── The five streams, sliced to this outlet ─────────────────────────────────
 
   const visits = computed(() => index.visitsFor(outletCode.value))
@@ -219,6 +237,12 @@ export function useOutletViewContext () {
     outlet,
     outletCode,
     summary,
+
+    isMotherCompany,
+    childOutlets,
+    parentCode,
+    parentOutlet,
+    parentOutletName,
 
     visits,
     restocks,

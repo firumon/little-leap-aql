@@ -24,11 +24,17 @@
                 dense square
                 :color="line.color"
                 text-color="white"
-                class="q-my-none"
+                :class="[line.clickable ? 'cursor-pointer' : '', 'q-my-none']"
+                @click="onLineClick(line)"
               >
+                <q-icon v-if="line.icon" :name="line.icon" class="q-mr-xs" />
                 {{ line.value }}
               </q-chip>
-              <span v-else>{{ line.value }}</span>
+              <span
+                v-else
+                :class="line.clickable ? 'cursor-pointer text-primary' : ''"
+                @click="onLineClick(line)"
+              >{{ line.value }}</span>
             </div>
           </div>
         </div>
@@ -70,13 +76,17 @@ const props = defineProps({
 })
 
 const {
-  evaluate, ui, pending, record, summary, activityColor, activityLabel
+  evaluate, ui, pending, record, summary, activityColor, activityLabel,
+  isMotherCompany, childOutlets, parentCode, parentOutletName, openRecord
 } = useOutletViewContext()
 
 const finalTitle = computed(() => evaluate(props.title))
 const rowDelay = (index) => ({ animationDelay: `${index * ui.rowStaggerMs}ms` })
 
 const text = (value) => (value == null ? '' : String(value).trim())
+
+/** Only a line that opted in is a link; the rest must stay inert on tap. */
+const onLineClick = (line) => { if (line.clickable) line.onClick?.() }
 
 const location = computed(() =>
   [record.value?.area, record.value?.city, record.value?.province, record.value?.country]
@@ -103,6 +113,28 @@ const lines = computed(() => {
     { label: 'Tax registration', value: text(outlet.taxRegistrationNumber) }
   ].filter((line) => !!line.value)
 
+  // ── Where this outlet sits in its family ──
+  // The two are mutually exclusive by construction: heading a family and belonging to one
+  // cannot both be true, so a reader is never shown two statements about the same question.
+  const family = []
+  if (isMotherCompany.value) {
+    family.push({
+      label: 'Organization',
+      value: `Mother Company (${childOutlets.value.length} sub-outlets)`,
+      chip: true,
+      color: 'primary',
+      icon: 'hub'
+    })
+  }
+  if (parentCode.value) {
+    family.push({
+      label: 'Parent Company',
+      value: parentOutletName.value,
+      clickable: true,
+      onClick: () => openRecord('outlets', parentCode.value, 'master')
+    })
+  }
+
   const state = [
     {
       label: 'Status',
@@ -118,6 +150,6 @@ const lines = computed(() => {
     }
   ]
 
-  return [...identity, ...optional, ...state]
+  return [...identity, ...family, ...optional, ...state]
 })
 </script>

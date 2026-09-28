@@ -20,6 +20,7 @@
  *   invoicedLastMonth       - sum grandTotalOf of non-cancelled invoices dated last month
  *   nonCancelledCount       - base count of non-cancelled invoices
  *   topInvoicedOutlets      - top 8 outlets by invoiced money inside chosen range
+ *   invoicedByOutletCode    - Map of outletCode to invoiced money inside chosen range, every outlet, no cut-off
  *   invoicedPerDay          - invoiced money per day, last 30 days
  *   writtenOffThisMonth     - sum settledOffOf by ProgressPaidAt (fallback Date) this month
  *   writtenOffLastMonth     - sum settledOffOf by ProgressPaidAt (fallback Date) last month
@@ -28,7 +29,7 @@
  *
  * Controls:
  *   range: menu picker, $last7Days / $last30Days / $last90Days / $thisMonth / $lastMonth,
- *          changes the window topInvoicedOutlets counts in
+ *          changes the window topInvoicedOutlets and invoicedByOutletCode count in
  */
 
 import { ref, computed } from 'vue'
@@ -145,22 +146,33 @@ export default function useInvoiceData () {
       })
     ]
 
-    // Top invoiced outlets inside range
-    const topInvoicedOutlets = computed(() => {
+    // Invoiced money per outlet inside the range, keyed by outlet CODE and NOT cut down.
+    // `topInvoicedOutlets` below is a ranked window onto this same map. A consumer that
+    // groups outlets into families (Outlets › mother companies) needs every outlet's total
+    // by code — the ranked list is too narrow for that, and its `label` is a name, not a code.
+    const invoicedByOutletCode = computed(() => {
       const totalsByOutlet = new Map()
-      const outletNames = new Map()
 
       for (const row of invoiceRows.value) {
         if (!inRange(row.date, range.value)) continue
         const code = row.outletCode
         if (!code) continue
         totalsByOutlet.set(code, (totalsByOutlet.get(code) || 0) + (row.total || 0))
-        if (!outletNames.has(code)) {
-          outletNames.set(code, row.outletName || code)
-        }
       }
 
-      return [...totalsByOutlet.entries()]
+      return totalsByOutlet
+    })
+
+    // Top invoiced outlets inside range
+    const topInvoicedOutlets = computed(() => {
+      const outletNames = new Map()
+
+      for (const row of invoiceRows.value) {
+        const code = row.outletCode
+        if (code && !outletNames.has(code)) outletNames.set(code, row.outletName || code)
+      }
+
+      return [...invoicedByOutletCode.value.entries()]
         .map(([code, total]) => ({
           label: outletNames.get(code) || code,
           value: Number(total.toFixed(2))
@@ -224,6 +236,7 @@ export default function useInvoiceData () {
       invoicedThisMonth,
       invoicedLastMonth,
       nonCancelledCount,
+      invoicedByOutletCode,
       topInvoicedOutlets,
       invoicedPerDay,
       writtenOffThisMonth,

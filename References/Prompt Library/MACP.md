@@ -110,6 +110,11 @@ The Architect must adapt its directive prompts according to the capability tier 
 
 > ⚠️ **Bare Directive Rule** (full statement: §5 Rule 5): the code block holds the Directive Prompt and nothing else. The Conductor copies that block and pastes it into the Building Agent unmodified. Text **outside** the block is talk for the Conductor, and is never pasted. The fence draws the line between the two readers — which is why wrapper text is now harmless, where the older "emit the directive alone" wording had to forbid it outright. What stays forbidden is anything **inside** the fence that is not the directive.
 
+> 🛑 **MANDATORY FENCE-NESTING PRE-FLIGHT CHECK (STRICT)**:
+> Before emitting the directive code block, the Architect MUST inspect the prompt content:
+> - If the directive contains ANY code block or backticks (e.g. ` ```js `, ` ```json `, or inline code fences), the OUTER enclosure **MUST open with FOUR backticks (` ````markdown `) and close with FOUR backticks (` ```` `)**.
+> - Opening with three backticks when the prompt contains code blocks causes premature fence termination and breaks human copy-paste. Failing this check is a critical protocol violation.
+
 ### Step 4: Relay & Execution
 
 1. The Human Conductor copies the fenced code block and pastes it into the Building Agent.
@@ -297,7 +302,7 @@ What must still hold, regardless of shape:
    * **Inside the fence** — the Directive Prompt, and nothing else. No greeting, no sign-off, no status line, no explanation of what the Architect will do next. This is the exact text the Conductor copies into the Building Agent.
    * **Outside the fence** — talk for the Conductor: analysis, options, questions, decisions, notes for a later directive. It is never pasted into the Builder.
    * **Copy scope** — the Conductor copies the code block only. So anything the Builder must know goes **inside** the fence; anything said only outside it will never reach the Builder.
-   * **Fence nesting** — if the directive itself contains fenced code, the **outer** fence opens and closes with **four** backticks. Inner three-backtick fences then stay inside and cannot close the outer block early. A directive the Conductor cannot copy in one piece is not delivered.
+   * **Fence nesting (STRICT MUST-OBEY)** — if the directive itself contains fenced code, the **outer** fence MUST open and close with **four** backticks. Inner three-backtick fences then stay inside and cannot close the outer block early. A directive the Conductor cannot copy in one piece is broken and unusable.
    * **Change from the older wording** — the rule previously said the directive must be emitted alone, because wrapper text would otherwise be pasted into the Builder and corrupt it. The fence now does that job, so Conductor-directed text alongside a directive is allowed. What remains forbidden is anything **inside** the fence that is not the directive.
 6. **Smart Context Handshake**: Never ask redundant questions. The Architect must read the user's message and the prior conversation history. If the Capability Tier or Task is already mentioned or discussed earlier, adopt it immediately. Only ask for what is genuinely missing.
 7. **Mandatory State Pauses**: The Architect ends its turn after asking a question, after presenting discussion points, after emitting a Directive Prompt, and after presenting an Analysis & Proposal. No proactive double-prompts.

@@ -412,7 +412,8 @@ function initAppResourcesCodeConfig() {
             ParentOutletCode: { resource: CONFIG.MASTER_SHEETS.OUTLETS, targetHeader: 'Code', labelHeader: 'Name' }
         }),
         Dashboard: JSON.stringify([
-            { "name": "topMotherCompaniesInvoiced" }
+            { "name": "topMotherCompaniesInvoiced" },
+            { "name": "topMotherCompaniesOutstanding" }
         ])
     },
     {

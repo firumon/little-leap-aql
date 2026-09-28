@@ -26,8 +26,11 @@ This document describes the APP spreadsheet as the control plane for authenticat
 - hierarchy/authority model
 - columns: `DesignationID`, `Name`, `ParentDesignationID`, `Status`, `AccessRegion`, `DashboardScoreCutoff`, `Description`
 - `AccessRegion` holds the active region scope for users with this designation (resolved during login/profile fetch; see [ACCESS_REGION_AND_POLICY_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ACCESS_REGION_AND_POLICY_SYSTEM.md#23-how-a-user-gets-their-region))
-- `DashboardScoreCutoff` is a number. A dashboard item scoring below it is not shown to this
-  designation. Blank or `0` shows everything
+- `DashboardScoreCutoff` is a percentage from `0` to `100`. The app finds the lowest and
+  highest current dashboard scores and calculates `threshold = min + (cutoff / 100) × (max - min)`.
+  It keeps only items with a score strictly greater than this threshold. Blank or `0` (and any
+  non-positive value) shows everything. `100` or higher hides everything. If all scores match,
+  or the threshold is at or below the minimum, all items are kept.
 - both columns reach the app on the login payload under `user.designation`
 
 ### Roles

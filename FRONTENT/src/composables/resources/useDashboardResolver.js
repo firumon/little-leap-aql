@@ -283,11 +283,26 @@ export function useDashboardResolver () {
     }
 
     const cutoff = Number(auth.dashboardScoreCutoff) || 0
-    const filtered = cutoff > 0
-      ? scored.filter((it) => it.score.value >= cutoff)
-      : scored
+    const scores = scored
+      .map((it) => it.score?.value)
+      .filter((v) => typeof v === 'number' && !isNaN(v))
+    let filtered = scored
 
-    return [...filtered].sort((a, b) => b.score.value - a.score.value)
+    if (scores.length > 0) {
+      const min = Math.min(...scores)
+      const max = Math.max(...scores)
+      const threshold = min + (cutoff / 100) * (max - min)
+
+      if (cutoff > 0 && cutoff < 100 && min !== max && threshold > min) {
+        filtered = scored.filter((it) => (it.score?.value ?? 0) > threshold)
+      }
+    }
+
+    if (cutoff >= 100) {
+      filtered = []
+    }
+
+    return [...filtered].sort((a, b) => (b.score?.value ?? 0) - (a.score?.value ?? 0))
   })
 
   return {

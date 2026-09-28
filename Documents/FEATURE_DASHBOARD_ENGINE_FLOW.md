@@ -149,10 +149,12 @@ The execution sequence is fixed:
 1. Filter on everything that needs no score (name/source, widget, active, activeExcept, multiplier !== 0, permission, span !== 0).
 2. Per resource: count surviving items n and calculate bag.
 3. Score every survivor using the formula.
-4. **Then** drop any tile whose score falls below `auth.dashboardScoreCutoff` (if cutoff > 0).
+4. **Then** apply `auth.dashboardScoreCutoff` as a percentage from 0 to 100. For scored items, set `min` and `max` to the lowest and highest `score.value`, then calculate `threshold = min + (cutoff / 100) × (max - min)`. Keep only items with `score.value > threshold`.
 5. **Then** sort tiles descending by score.
 
 **The cutoff never changes anyone's share**: counting survivors before cutting ensures a cutoff removes cards without altering the score or rank of remaining tiles.
+
+Cutoff edge cases are fixed: a cutoff of 0 or less keeps all scored items; a cutoff of 100 or more returns no items; identical scores keep all items; and an interpolated threshold at or below `min` keeps all items. The final list stays sorted by descending `score.value`.
 
 ### Worked example
 

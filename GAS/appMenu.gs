@@ -40,6 +40,7 @@ function onOpen() {
   menu.addToUi();
 }
 
+
 function showManageUsersDialog() {
   showDialog('manageUsers', 'Manage Users', 620, 800, baseDialogData());
 }
@@ -686,8 +687,8 @@ function buildDialogBody(action, data) {
            '<div class="g"><label>Parent Designation</label><select name="parentDesignationId"><option value="">-- None (Top Level) --</option>' + doo + '</select></div>' +
            '<div class="g"><label>Status</label><select name="status"><option>Active</option><option>Inactive</option></select></div>' +
            '<div class="g"><label>Access Region</label><select name="accessRegion">' + aro + '</select></div>' +
-           '<div class="g"><label>Dashboard Score Cutoff</label><input name="dashboardScoreCutoff" type="number" min="0" step="1" placeholder="0"></div>' +
-           '<div class="small">Dashboard items scoring below this number are hidden from this designation. 0 shows everything.</div>' +
+           '<div class="g"><label>Dashboard Score Cutoff (0-100%)</label><input name="dashboardScoreCutoff" type="number" min="0" max="100" step="1" placeholder="0-100"></div>' +
+           '<div class="small">This percentage hides lower-scored dashboard items. 0% shows everything; 100% hides everything.</div>' +
            '<div class="g"><label>Description</label><textarea name="description"></textarea></div>' +
            '<button id="submitBtn">Create Designation</button></form>';
   }
@@ -1698,5 +1699,3 @@ function app_runSchemaRefactor(scope, selectedResourceNames, decisions) {
     throw new Error('Failed to run schema refactor: ' + e.message);
   }
 }
-
-

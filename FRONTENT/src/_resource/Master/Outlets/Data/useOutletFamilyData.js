@@ -59,7 +59,7 @@ export default function useOutletFamilyData () {
 
     const topMotherCompaniesOutstanding = computed(() => {
       const balanceByCode = new Map(
-        (views.Outlets.value || []).map((row) => [row.code, row.totalBalance || 0])
+        (views.value?.Outlets || []).map((row) => [row.code, row.totalBalance || 0])
       )
 
       return motherOutlets.value

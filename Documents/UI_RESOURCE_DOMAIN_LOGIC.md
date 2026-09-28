@@ -126,6 +126,26 @@ src/_resource/{Scope}/{Resource}/
 └─ utils/                     Resource-specific pure calculations and helpers
 ```
 
+### 3.0.2 Layer 2 Internal Divisions
+
+Layer 2 has three clear parts. Each part has one job.
+
+| Folder | Role | Used by |
+|---|---|---|
+| `composables/` | Operational domain logic. It enriches entities, checks CRUD input, applies state changes, builds payloads, and owns in-memory `O(1)` indexes such as `useOutletIndex.js`. | Index, View, Add, and Edit pages. |
+| `Data/` | Analytical domain logic (DJS). It prepares topic data, filters by date range, ranks items such as Top N results, builds KPI summaries, and exposes dashboard controls. | Dashboard items and report components. |
+| `Dashboard/` | Dashboard item descriptors (DBI). Each descriptor declares the widget preset, size, permissions, and DJS data source binding. | The dashboard engine. |
+
+The `Data/` purity rule is strict: a DJS calculates metrics only for its own resource
+domain entity. It does not become a second calculation engine for another resource.
+
+#### Cross-Resource Domain Purity Rule
+
+A resource domain composable or DJS in Resource A must never read raw rows from Resource B
+to recalculate Resource B's business logic. It must import Resource B's own Layer 2 domain
+composables and consume their calculated figures. This keeps each business rule in one
+place and keeps resource changes safe.
+
 ### 3.1 What does NOT belong here
 
 - Anything that renders — no Vue templates, no component definitions.

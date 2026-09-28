@@ -50,6 +50,8 @@
 ## 6. VUE REACTIVITY & STATE COMPOSITION (STRICT)
 * **Single Source of Truth**: Every UI state domain has one reactive source of truth.
 * **Resource Aggregation**: Combine related resources (e.g., Products, SKUs, Storage locations) in a composable `computed()` property to form an array of unified aggregate objects. Derive all filter conditions (e.g. warehouse filter) from this single composed state.
+* **Layer 2 Analytics Boundary**: Analytics and dashboard calculations belong in the owning resource's `Data/` files (DJS). Keep `composables/` lean. It is for operational workflows, domain actions, and in-memory joins and indexes.
+* **Cross-Resource Boundary Barrier**: If Resource A needs a metric or aggregation from Resource B, and Resource B does not provide it or has a speed or design problem, the agent must stop. It must report the problem to the Human Conductor, explain the case, and wait for approval before changing Resource B. It must not edit Resource B silently or on its own.
 * **Forbidden**: No parallel arrays, mirror objects, duplicate caches, watcher chains, or manual synchronization code to mimic reactivity. Fix stale UI by modifying the canonical reactive source.
 * **Thin Page Orchestration**: Vue page files must act strictly as orchestrators:
   * *Templates*: No nested raw HTML layouts (like `div > div > ul > li`). Compose using child components and conditional flags (`v-if`/`v-else`).

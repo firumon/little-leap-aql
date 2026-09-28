@@ -95,11 +95,11 @@ function setup_getMasterSchemas() {
     },
     {
       resourceName: CONFIG.MASTER_SHEETS.OUTLETS,
-      headers: ['Code', 'Name', 'ContactPerson', 'Phone', 'Email', 'Country', 'Province', 'City', 'Area', 'CommunicationAddress', 'ShippingAddress', 'BillingAddress', 'MapLocationLink', 'Picture', 'Picture2', 'Picture3', 'Licence', 'TaxRegistrationNumber', 'TaxRegistrationName', 'AccessRegion', 'Status'].concat(commonAuditColumns),
+      headers: ['Code', 'Name', 'ParentOutletCode', 'ContactPerson', 'Phone', 'Email', 'Country', 'Province', 'City', 'Area', 'CommunicationAddress', 'ShippingAddress', 'BillingAddress', 'MapLocationLink', 'Picture', 'Picture2', 'Picture3', 'Licence', 'TaxRegistrationNumber', 'TaxRegistrationName', 'AccessRegion', 'Status'].concat(commonAuditColumns),
       statusDefault: 'Active',
-      defaults: { Status: 'Active', Country: 'UAE', TaxRegistrationNumber: '', TaxRegistrationName: '' },
+      defaults: { Status: 'Active', Country: 'UAE', TaxRegistrationNumber: '', TaxRegistrationName: '', ParentOutletCode: '' },
       columnWidths: {
-        Code: 130, Name: 240, ContactPerson: 180, Phone: 140, Email: 220,
+        Code: 130, Name: 240, ParentOutletCode: 140, ContactPerson: 180, Phone: 140, Email: 220,
         Country: 120, Province: 150, Area: 150, City: 140, CommunicationAddress: 260, ShippingAddress: 260, BillingAddress: 260,
         MapLocationLink: 180, Picture: 150, Picture2: 150, Picture3: 150, Licence: 150,
         TaxRegistrationNumber: 180, TaxRegistrationName: 200,

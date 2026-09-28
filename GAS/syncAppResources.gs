@@ -328,7 +328,7 @@ function initAppResourcesCodeConfig() {
         RequiredHeaders: 'Name',
         UniqueHeaders: 'Name',
         UniqueCompositeHeaders: '',
-        DefaultValues: '{"Status":"Active","Country":"UAE","TaxRegistrationNumber":"","TaxRegistrationName":""}',
+        DefaultValues: '{"Status":"Active","Country":"UAE","TaxRegistrationNumber":"","TaxRegistrationName":"","ParentOutletCode":""}',
         AccessRegionSource: '{"self":{"column":"Country","resolve":true},"subject":[{"user":true}]}',
         OwnerUserField: 'CreatedBy',
         // The four operational entry points an outlet's View page offers, as FAB items.
@@ -356,6 +356,7 @@ function initAppResourcesCodeConfig() {
         ]),
         UIFields: JSON.stringify([
             { header: 'Name', label: 'Name', type: 'text', required: true },
+            { header: 'ParentOutletCode', label: 'Parent Outlet', type: 'select', source: { resource: 'Outlets', field: 'Code', label: 'Name' }, required: false },
             { header: 'ContactPerson', label: 'Contact Person', type: 'text' },
             { header: 'Phone', label: 'Phone', type: 'tel' },
             { header: 'Email', label: 'Email', type: 'text' },
@@ -406,6 +407,12 @@ function initAppResourcesCodeConfig() {
             { "name": "RecentlyConsumed", "label": "Consumed", "icon": "point_of_sale", "color": "deep-orange", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Status", "operator": "eq", "value": "Active" }] } },
             { "name": "RecentlyPaid", "label": "Paid", "icon": "payments", "color": "positive", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Status", "operator": "eq", "value": "Active" }] } },
             { "name": "RecentlyVisited", "label": "Visited", "icon": "event_available", "color": "info", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Status", "operator": "eq", "value": "Active" }] } }
+        ]),
+        Relations: JSON.stringify({
+            ParentOutletCode: { resource: CONFIG.MASTER_SHEETS.OUTLETS, targetHeader: 'Code', labelHeader: 'Name' }
+        }),
+        Dashboard: JSON.stringify([
+            { "name": "topMotherCompaniesInvoiced" }
         ])
     },
     {

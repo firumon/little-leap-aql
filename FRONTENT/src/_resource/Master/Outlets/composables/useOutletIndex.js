@@ -113,6 +113,42 @@ const build = (recordSource) => {
   const paymentsByOutlet = computed(() => groupByOutlet(rawPayments.value))
   const returnsByOutlet = computed(() => groupByOutlet(rawReturns.value))
 
+  // ── Outlet family: mother companies and their sub-outlets ───────────────────
+  //
+  // One `Map` keyed by `ParentOutletCode`, built once over the outlet master list. Every
+  // family question downstream — is this a mother, who are its children, which codes make
+  // up the group — is then an O(1) map read, never a scan of `outlets`.
+  //
+  // A blank `ParentOutletCode` is a standalone outlet: grouping under `''` would turn every
+  // unassigned outlet into a phantom child of a non-existent parent, so those rows are dropped.
+
+  const childOutletsByParent = computed(() => {
+    const map = new Map()
+    for (const outlet of outlets.value) {
+      const parent = text(outlet.ParentOutletCode ?? outlet.parentOutletCode)
+      if (!parent) continue
+      const bucket = map.get(parent)
+      if (bucket) bucket.push(outlet)
+      else map.set(parent, [outlet])
+    }
+    return map
+  })
+
+  const childOutletsFor = (code) => childOutletsByParent.value.get(text(code)) || []
+
+  /** Outlets that head at least one sub-outlet — the mother companies. */
+  const motherOutlets = computed(() =>
+    outlets.value.filter((outlet) => childOutletsFor(outlet.Code || outlet.code).length > 0))
+
+  const isMother = (code) => childOutletsFor(code).length > 0
+
+  /** The codes a family projection spans: the outlet itself, then each of its children. */
+  const familyCodesFor = (code) => {
+    const self = text(code)
+    const children = childOutletsFor(self).map((outlet) => text(outlet.Code || outlet.code))
+    return [self, ...children]
+  }
+
   /** The five activity streams, resolved to their live maps, in vocabulary order. */
   const streamMaps = computed(() => ({
     visit: visitsByOutlet.value,
@@ -331,6 +367,30 @@ const build = (recordSource) => {
   const sortedFor = (map, code, column) =>
     [...(map.get(text(code)) || [])].sort((a, b) => text(b[column]).localeCompare(text(a[column])))
 
+  // ── Per-family projections ──────────────────────────────────────────────────
+  //
+  // A mother company's cards read the same streams as a standalone outlet's, so these are the
+  // `sortedFor` shape widened to every code in the family. Each is `familyCodesFor` (a Map
+  // read) plus one Map read per child — a family card never scans a whole stream, and the
+  // output stays newest-first exactly as the single-outlet slices are.
+
+  const sortedFamilyFor = (map, code, column) => {
+    const rows = []
+    for (const familyCode of familyCodesFor(code)) {
+      const list = map.get(familyCode)
+      if (list) rows.push(...list)
+    }
+    return rows.sort((a, b) => text(b[column]).localeCompare(text(a[column])))
+  }
+
+  const familyVisitsFor = (code) => sortedFamilyFor(visitsByOutlet.value, code, 'Date')
+  const familyRestocksFor = (code) => sortedFamilyFor(restocksByOutlet.value, code, 'Date')
+  const familyConsumptionsFor = (code) => sortedFamilyFor(consumptionsByOutlet.value, code, 'Date')
+  const familyInvoicesFor = (code) => sortedFamilyFor(invoicesByOutlet.value, code, 'Date')
+  const familyPaymentsFor = (code) => sortedFamilyFor(paymentsByOutlet.value, code, 'Date')
+  const familyReturnsFor = (code) => sortedFamilyFor(returnsByOutlet.value, code, 'Date')
+  const familyStockFor = (code) => familyCodesFor(code).flatMap((familyCode) => stockRowsOf(familyCode))
+
   return {
     // Raw streams — for a consumer that genuinely needs the whole set.
     rawVisits,
@@ -350,6 +410,13 @@ const build = (recordSource) => {
     paymentsByOutlet,
     returnsByOutlet,
     storagesByOutlet,
+
+    // Outlet family.
+    childOutletsByParent,
+    motherOutlets,
+    isMother,
+    childOutletsFor,
+    familyCodesFor,
 
     // Summaries.
     outletSummaries,
@@ -379,7 +446,16 @@ const build = (recordSource) => {
     invoicesFor: (code) => sortedFor(invoicesByOutlet.value, code, 'Date'),
     paymentsFor: (code) => sortedFor(paymentsByOutlet.value, code, 'Date'),
     returnsFor: (code) => sortedFor(returnsByOutlet.value, code, 'Date'),
-    stockFor: (code) => stockRowsOf(code)
+    stockFor: (code) => stockRowsOf(code),
+
+    // Per-family projections.
+    familyVisitsFor,
+    familyRestocksFor,
+    familyConsumptionsFor,
+    familyInvoicesFor,
+    familyPaymentsFor,
+    familyReturnsFor,
+    familyStockFor
   }
 }
 

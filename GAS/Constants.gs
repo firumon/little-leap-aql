@@ -116,7 +116,7 @@ const  APP_OPTIONS_SEED = {
   OutletConsumptionProgress: ['PENDING_INVOICE_GENERATION', 'INVOICE_GENERATED', 'CANCELLED'],
   OutletConsumptionInvoiceProgress: ['PENDING_PAYMENT', 'PARTIALLY_PAID', 'PAID', 'CANCELLED'],
   OutletConsumptionInvoiceSettlementReasons: ['Waived Off', 'RoundOff', 'Bad Debt / Write-Off', 'Underpayment Settled', 'Other'],
-  OutletPaymentProgress: ['SUBMITTED', 'CANCELLED'],
+  OutletPaymentProgress: ['SUBMITTED', 'APPROVED', 'CANCELLED'],
   OutletPaymentMode: ['Cash', 'Cheque', 'Bank Transfer', 'Card', 'Other'],
   RFQLeadTimeType: ['FLEXIBLE','STRICT','RANGE_10','RANGE_25'],
   RFQShippingTermMode: ['ANY','FIXED'],

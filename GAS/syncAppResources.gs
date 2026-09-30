@@ -1661,6 +1661,7 @@ function initAppResourcesCodeConfig() {
         Scope: 'operation', ParentResource: '', IsActive: 'TRUE', SheetName: CONFIG.OPERATION_SHEETS.OUTLET_CONSUMPTION_INVOICES,
         CodePrefix: 'OCINV', CodeSequenceLength: 7, LastDataUpdatedAt: 0, Audit: 'TRUE', RequiredHeaders: 'Date,OutletCode,Username,Progress,Status', UniqueHeaders: '', UniqueCompositeHeaders: '', DefaultValues: '{"Status":"Active","Subtotal":0,"Discount":0,"TotalTaxableAmount":0,"TotalTaxAmount":0,"TaxDetails":"[]","Progress":"PENDING_PAYMENT"}',        AccessRegionSource: '{"subject":[{"column":"OutletCode","resource":"Outlets","empty":"next","fail":"user"},{"user":true}]}', OwnerUserField: 'CreatedBy',
         AdditionalActions: JSON.stringify([
+            {"action":"CollectPayment","label":"Collect Payment","icon":"payments","color":"positive","kind":"navigate","navigate":{"target":"resource","resource":"OutletPayments","pageSlug":"add"},"confirm":false},
             {"action":"SettleInvoice","label":"Settle Invoice","icon":"price_check","color":"positive","kind":"navigate","navigate":{"target":"action","pageSlug":"settle-invoice"},"column":"Progress","columnValue":"PAID","visibleWhen":{"column":"Progress","op":"in","value":["PENDING_PAYMENT","PARTIALLY_PAID"]}},
             {"action":"Cancel","label":"Cancel","icon":"cancel","color":"negative","kind":"navigate","confirm":false,"column":"Progress","columnValue":"CANCELLED","columnValueOptions":[],"fields":[{"name":"Comment","label":"Cancellation Comment","type":"textarea","required":true}],"navigate":{"target":"action","pageSlug":"cancel"},"visibleWhen":{"column":"Progress","op":"nin","value":["PAID","CANCELLED"]}}
         ]),
@@ -1771,6 +1772,18 @@ function initAppResourcesCodeConfig() {
         OwnerUserField: 'CreatedBy',
         AdditionalActions: JSON.stringify([
             {
+                "action": "Approve",
+                "label": "Approve",
+                "icon": "check_circle",
+                "color": "positive",
+                "kind": "navigate",
+                "navigate": { "target": "action", "pageSlug": "approve" },
+                "confirm": false,
+                "column": "Progress",
+                "columnValue": "APPROVED",
+                "columnValueOptions": []
+            },
+            {
                 "action": "Cancel",
                 "label": "Cancel",
                 "icon": "cancel",
@@ -1806,6 +1819,16 @@ function initAppResourcesCodeConfig() {
                 "pageTitle": "Outlet Payments",
                 "pageDescription": "View and record outlet payments",
                 "show": true
+            },
+            {
+                "group": ["Field Sales"],
+                "order": 9,
+                "label": "Payment Approve",
+                "icon": "price_check",
+                "route": "/operation/outlet-payments/approve",
+                "pageTitle": "Approve Outlet Payments",
+                "pageDescription": "Review and approve executive payment collections",
+                "show": true
             }
         ]),
         UIFields: JSON.stringify([
@@ -1820,6 +1843,9 @@ function initAppResourcesCodeConfig() {
             { header: 'ProgressSubmittedAt', label: 'Submitted At', type: 'datetime' },
             { header: 'ProgressSubmittedBy', label: 'Submitted By', type: 'text' },
             { header: 'ProgressSubmittedComment', label: 'Submitted Comment', type: 'textarea' },
+            { header: 'ProgressApprovedAt', label: 'Approved At', type: 'datetime' },
+            { header: 'ProgressApprovedBy', label: 'Approved By', type: 'text' },
+            { header: 'ProgressApprovedComment', label: 'Approved Comment', type: 'textarea' },
             { header: 'ProgressCancelledAt', label: 'Cancelled At', type: 'datetime' },
             { header: 'ProgressCancelledBy', label: 'Cancelled By', type: 'text' },
             { header: 'ProgressCancelledComment', label: 'Cancelled Comment', type: 'textarea' },
@@ -1840,7 +1866,8 @@ function initAppResourcesCodeConfig() {
         // `Index/ListSwitcher.js` instead and read the Layer 2 aggregate.
         ListViews: JSON.stringify([
             { "name": "Recent", "label": "Recent", "icon": "history", "color": "indigo-7", "default": true, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Status", "operator": "eq", "value": "Active" }] } },
-            { "name": "CompletedPayments", "label": "Completed Payments", "icon": "savings", "color": "teal-7", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "SUBMITTED" }] } },
+            { "name": "PendingApproval", "label": "Pending Approval", "icon": "schedule", "color": "warning", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "SUBMITTED" }] } },
+            { "name": "CompletedPayments", "label": "Completed Payments", "icon": "savings", "color": "teal-7", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "APPROVED" }] } },
             { "name": "CancelledPayments", "label": "Cancelled Payments", "icon": "block", "color": "grey-7", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "CANCELLED" }] } }
         ]),
         Dashboard: JSON.stringify([
@@ -1849,7 +1876,10 @@ function initAppResourcesCodeConfig() {
             { "name": "collectionsPerDay" },
             { "name": "topPayingOutlets" },
             { "name": "collectionsByPerson" },
-            { "name": "cancelledPayments" }
+            { "name": "cancelledPayments" },
+            { "name": "pendingApproval" },
+            { "name": "userWisePendingAmount" },
+            { "name": "approvalPerformance" }
         ]),
         Relations: JSON.stringify({
             OutletCode: CONFIG.MASTER_SHEETS.OUTLETS
@@ -2451,4 +2481,3 @@ function syncAppResourcesFromCode(silent) {
         clearAllAppCaches();
     }
 }
-

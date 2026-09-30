@@ -213,7 +213,7 @@ export function payableLabel (figures, money) {
  */
 export function countsAsPayment (payment = {}) {
   const row = asRow(payment)
-  return isActiveRow(row) && text(row.Progress).toUpperCase() !== 'CANCELLED'
+  return isActiveRow(row) && text(row.Progress).toUpperCase() === 'APPROVED'
 }
 
 /** The total collected against an invoice, from that invoice's own payment rows. */

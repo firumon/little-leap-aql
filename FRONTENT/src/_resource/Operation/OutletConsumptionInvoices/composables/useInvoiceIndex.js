@@ -143,11 +143,12 @@ const build = (recordSource) => {
     const map = new Map()
     payments.value.forEach((payment) => {
       if (!countsAsPayment(payment)) return
-      const code = text(payment.OutletConsumptionInvoiceCode)
-      if (!code) return
-      const bucket = map.get(code)
-      if (bucket) bucket.push(payment)
-      else map.set(code, [payment])
+      const codes = text(payment.OutletConsumptionInvoiceCode).split(',').map(text).filter(Boolean)
+      codes.forEach((code) => {
+        const bucket = map.get(code)
+        if (bucket) bucket.push(payment)
+        else map.set(code, [payment])
+      })
     })
     return map
   })

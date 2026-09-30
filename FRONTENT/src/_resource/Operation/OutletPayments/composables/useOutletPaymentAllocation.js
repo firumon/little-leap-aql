@@ -41,11 +41,12 @@ export function indexPaymentsByInvoice (payments = []) {
   for (const payment of (Array.isArray(payments) ? payments : [])) {
     const row = asRow(payment)
     if (!countsAsPayment(row)) continue
-    const code = text(row.OutletConsumptionInvoiceCode)
-    if (!code) continue
-    const bucket = map.get(code)
-    if (bucket) bucket.push(row)
-    else map.set(code, [row])
+    const codes = text(row.OutletConsumptionInvoiceCode).split(',').map(text).filter(Boolean)
+    for (const code of codes) {
+      const bucket = map.get(code)
+      if (bucket) bucket.push(row)
+      else map.set(code, [row])
+    }
   }
   return map
 }

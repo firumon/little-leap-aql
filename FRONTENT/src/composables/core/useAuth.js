@@ -48,6 +48,7 @@ export function useAuth () {
 
   const designationScope = computed(() => authStore.userDesignationScope)
   const isAuthenticated = computed(() => !!authStore.token)
+  const appOptionsMap = computed(() => authStore.appOptionsMap || {})
 
   function logout () {
     return authLogic.logout()
@@ -63,6 +64,7 @@ export function useAuth () {
     user,
     designationScope,
     isAuthenticated,
+    appOptionsMap,
     logout,
     hasRole
   }

@@ -6,27 +6,12 @@
     :class="[gutterClass, $attrs.class]"
     :style="[staggerStyle, $attrs.style]"
   >
-    <!-- TransitionGroup (no `tag`, so it renders no wrapper element and the q-items stay
-         direct children of q-list, preserving separators/gutter). Items fade and slide into
-         place on load/filter, and reorder via FLIP `-move` transitions. The loading spinner
-         and empty state live inside the group as keyed children so switching between
-         populated ⇄ empty ⇄ loading views cross-fades instead of unmounting abruptly.
-
-         `appear` is unconditional rather than a prop: motion is a property of the list, not
-         something a caller opts into. Without it the group skips its FIRST render, so a list
-         that mounts fresh — which is what a `.vue` content override does, since it swaps the
-         component identity at `contents/List.vue` instead of patching AppList in place —
-         popped in with no animation at all. Vue falls the `-appear-*` classes back to the
-         `-enter-*` ones, so transitions.scss needs no new rules and the existing
-         prefers-reduced-motion guard already covers this. -->
     <TransitionGroup name="aql-list-item" appear>
       <!-- Loading State -->
       <q-item v-if="loading && !items.length" key="list-loading-state" class="flex flex-center q-pa-xl">
         <q-spinner color="primary" size="3em" />
       </q-item>
 
-      <!-- Empty State — keyed wrapper so caller-provided #empty fragments (which may be
-           unkeyed) still participate in the group transition -->
       <div v-else-if="!items.length" key="list-empty-state">
         <slot name="empty">
           <q-item class="empty-state-container q-py-xl text-center">
@@ -44,7 +29,7 @@
         :key="resolveKey(item, index)"
         :clickable="isItemClickable"
         v-ripple="isItemClickable"
-        @click="isItemClickable && emit('click', item)"
+        @click="isItemClickable && onItemClick(item)"
         :class="['interactive-list-card q-px-md', itemClass, { 'aql-list-highlight': isHighlighted, 'q-py-sm':dense, 'q-py-md q-px-md':!dense, 'item-bordered':itemBordered }]"
         :style="isHighlighted ? { '--aql-list-highlight-color': highlightColor(item) } : {}"
       >
@@ -64,10 +49,27 @@
             </slot>
           </q-item-section>
 
+          <!-- Left Side Selectable Checkbox -->
+          <q-item-section v-if="isSelectableLeft" :top="align === 'top'" side>
+            <Renderable
+              :slot-fn="slots.checkbox || slots.select"
+              :value="checkboxValue(item)"
+              :item="item"
+              :is="QCheckbox"
+              :model-value="modelValue"
+              :val="getItemVal(item)"
+              :true-value="trueValue"
+              :false-value="falseValue"
+              :indeterminate-value="indeterminateValue"
+              :color="resolveCheckboxColor(item)"
+              :dense="dense"
+              @update:model-value="onCheckboxUpdate"
+              @click.stop
+            />
+          </q-item-section>
+
           <!-- Main Content Area -->
           <q-item-section>
-            <!-- We loop over the contentArray sequence. Renderable resolves each cell:
-                 caller slot > component-valued prop > wrapped scalar. -->
             <Renderable
               v-for="(contentProp, contentIndex) in contentArray"
               :key="contentIndex"
@@ -94,9 +96,25 @@
             />
           </q-item-section>
 
-          <!-- Action Section (Button) — `btn` carries an icon name rather than slot
-               content, hence value-prop. -->
-          <q-item-section v-if="hasBtn(item) || slots.btn" side>
+          <!-- Right Side Selectable Checkbox OR Action Button -->
+          <q-item-section v-if="isSelectableRight" :top="align === 'top'" side>
+            <Renderable
+              :slot-fn="slots.checkbox || slots.select"
+              :value="checkboxValue(item)"
+              :item="item"
+              :is="QCheckbox"
+              :model-value="modelValue"
+              :val="getItemVal(item)"
+              :true-value="trueValue"
+              :false-value="falseValue"
+              :indeterminate-value="indeterminateValue"
+              :color="resolveCheckboxColor(item)"
+              :dense="dense"
+              @update:model-value="onCheckboxUpdate"
+              @click.stop
+            />
+          </q-item-section>
+          <q-item-section v-else-if="hasBtn(item) || slots.btn" side>
             <Renderable
               :slot-fn="slots.btn"
               :value="btn"
@@ -127,16 +145,10 @@
 
 <script setup>
 import { computed, useSlots, getCurrentInstance, ref, watch } from 'vue'
-import { QBtn, colors } from 'quasar'
+import { QBtn, QCheckbox, colors } from 'quasar'
 import Renderable, { isComponentDef } from 'components/abstract/Renderable.js'
 import { MainLabel, MainCaption, MetaLabel, MetaCaption, MetaChip, MetaBadge } from 'components/abstract/ListRenderers.js'
 
-// `inheritAttrs: false` because this is the end of the drill chain. AppList forwards
-// its `$attrs` here wholesale, and page props now travel all the way down so any
-// component can claim its own `Props<Identity>` block (src/utils/placeholderProps.js).
-// With fallthrough on, every unconsumed key — object-valued `Props*` blocks included —
-// would be written onto the root element as `propspageheader="[object Object]"`.
-// `class`/`style` are re-bound explicitly below so callers keep styling this list.
 defineOptions({ name: 'List', inheritAttrs: false })
 
 const props = defineProps({
@@ -148,23 +160,9 @@ const props = defineProps({
   itemKey: { type: [String, Function], default: 'Code' },
   loading: { type: Boolean, default: false },
   emptyText: { type: String, default: 'No items found.' },
-  // The empty state's icon and its tint. Both were hardcoded here, which made every empty
-  // list in the app say the same thing in the same tone — and an empty state's MEANING is
-  // not uniform: a queue that is clear is good news and a search that matched nothing is a
-  // typo, and neither reads correctly under a generic grey box glyph
-  // (UI_MODULE_DEVELOPER_GUIDE.md §10.4 — "empty is not always neutral"). The defaults are
-  // the previously hardcoded values, so every existing caller is unchanged.
   emptyIcon: { type: String, default: 'inventory_2' },
   emptyIconColor: { type: String, default: 'grey-4' },
   bordered: { type: Boolean, default: false },
-  // Vertical rhythm BETWEEN rows, as a Quasar spacing token (`none`/`xs`/`sm`/
-  // `md`/`lg`/`xl`) — previously the hardcoded `q-gutter-y-xs` on the root.
-  // Declared as a prop so it is fed by `pageProps.gutter`, which travels all the
-  // way down through `$attrs` (see `inheritAttrs` note below): one page-level
-  // setting now spaces Sections, Contents and list rows identically. `xs` is the
-  // default because that is what was hardcoded, and it is also what
-  // `usePageResolver` seeds `pageProps.gutter` with, so nothing shifts.
-  // `false`/`'none'` turns the gutter off for a caller that owns its own spacing.
   gutter: { type: [String, Boolean], default: 'xs' },
   itemBordered: { type: Boolean, default: true },
   separator: { type: Boolean, default: false },
@@ -173,6 +171,14 @@ const props = defineProps({
   highlight: { type: [Boolean, String], default: false },
   highlightColor: { type: [String, Function], default: null },
   clickable: { type: Boolean, default: null },
+  selectable: { type: [Boolean, String], default: false, validator: v => [true, false, 'left', 'right'].includes(v) },
+  checkbox: { type: [Boolean, String, Function, Object], default: null },
+  modelValue: { type: [Array, Boolean, String, Number, Object], default: undefined },
+  val: { type: [String, Function], default: null },
+  trueValue: { default: true },
+  falseValue: { default: false },
+  indeterminateValue: { default: null },
+  checkboxColor: { type: [String, Function], default: null },
   itemClass: { type: [String, Array, Object], default: null },
   icon: { type: [String, Function], default: null },
   iconColor: { type: [String, Function], default: null },
@@ -182,16 +188,7 @@ const props = defineProps({
   avatarColor: { type: [String, Function], default: 'primary' },
   avatarSize: { type: String, default: 'md' },
   layout: { type: Array, default: () => ['label', 'caption'] },
-  // Array = per-item content column sequence. A String may arrive here when
-  // $attrs forwards a content-resolver identity (e.g. Content.vue's `content:
-  // "Create"`) down through AppList/FormChild — contentArray below already
-  // ignores non-Array values and falls back to layout, so this is a pure
-  // prop-validation widen, not a behavior change.
   content: { type: [Array, String], default: null },
-  // Object is accepted on every prop routed through Renderable (label, caption, chip,
-  // badge, metaLabel, metaCaption, btn) so a `_ui/` JS modifier can pass a component
-  // definition instead of a value resolver — `metaCaption: OverduePill`. NOT widened on
-  // icon/avatar/*Color, which still go through resolveProp directly and would break.
   label: { type: [String, Function, Object], default: 'Code' },
   labelClass: { type: [String, Array, Object], default: null },
   caption: { type: [String, Function, Object], default: null },
@@ -213,7 +210,13 @@ const props = defineProps({
   btnColor: { type: [String, Function], default: null },
 })
 
-const emit = defineEmits(['click', 'update:page'])
+const emit = defineEmits([
+  'click',
+  'update:page',
+  'update:modelValue',
+  'update:model-value',
+  'update:selected'
+])
 const slots = useSlots()
 const instance = getCurrentInstance()
 const currentPage = ref(1)
@@ -223,16 +226,12 @@ const pageModel = computed({
   set: value => setPage(value)
 })
 
-// `q-gutter-y-none` is not a real Quasar class, so "no gutter" has to resolve to
-// no class at all rather than to a token that silently does nothing.
 const gutterClass = computed(() => {
   const token = props.gutter
   if (token === false || token === '' || token === 'none' || token == null) return null
   return `q-gutter-y-${token}`
 })
 
-// Rows are short and numerous, so the cascade runs much tighter than the
-// page-level default or it reads as lag.
 const staggerStyle = {
   '--aql-stagger-enter-step': '35ms',
   '--aql-stagger-leave-step': '25ms'
@@ -269,12 +268,48 @@ const hasClick = computed(() => {
   return !!(props && (props.onClick || props['on-click'] || props.onClickOnce))
 })
 
+const isSelectable = computed(() => {
+  const s = props.selectable
+  if (s === true || s === 'left' || s === 'right') return true
+  return !!(props.checkbox || slots.checkbox || slots.select);
+
+})
+
+const isSelectableRight = computed(() => {
+  return props.selectable === 'right'
+})
+
+const isSelectableLeft = computed(() => {
+  return isSelectable.value && !isSelectableRight.value
+})
+
+function checkboxValue(item) {
+  if (props.checkbox !== null && props.checkbox !== undefined) {
+    return resolveProp(props.checkbox, item)
+  }
+  return !!isSelectable.value
+}
+
+function isItemSelectable(item) {
+  return checkboxValue(item) !== false
+}
+
 const isItemClickable = computed(() => {
+  if (isSelectable.value) return true
   if (props.clickable !== null) {
     return props.clickable && !props.btn && !slots.btn
   }
   return hasClick.value && !props.btn && !slots.btn
 })
+
+function onItemClick(item) {
+  if (isSelectable.value) {
+    toggleItem(item)
+  }
+  if (hasClick.value) {
+    emit('click', item)
+  }
+}
 
 const contentArray = computed(() => {
   if (props.content && Array.isArray(props.content)) {
@@ -287,9 +322,6 @@ const contentArray = computed(() => {
   })
 })
 
-// A layout entry may also BE a component, in which case it wraps the resolved value in
-// place of MainLabel/MainCaption — `layout: ['caption', MyRowWrapper]`. Distinct from a
-// component-valued *content* entry, which replaces the cell entirely rather than wrapping it.
 function getComponentType(contentIndex) {
   const rowType = props.layout[contentIndex]
   if (isComponentDef(rowType)) return rowType
@@ -300,9 +332,6 @@ function getComponentType(contentIndex) {
 
 function resolveProp(prop, item) {
   if (prop === null || prop === undefined || prop === '') return ''
-  // A component-valued prop is returned as-is. Rendering it is Renderable's job; the
-  // callers left here (hasMeta/hasBtn/hasIcon) only need it to read as truthy, and the
-  // `prop in item` branch below would otherwise stringify it into a bogus key lookup.
   if (isComponentDef(prop)) return prop
   if (typeof prop === 'function') return prop(item)
   return (item && typeof item === 'object' && prop in item) ? item[prop] : prop
@@ -345,6 +374,59 @@ const iconBgColor = computed(() => (item) => {
   return lighten(iconColor.value(item))
 })
 
+const resolveCheckboxColor = computed(() => (item) => {
+  return resolveProp(props.checkboxColor || props.color, item) || 'primary'
+})
+
+function getItemVal(item) {
+  if (props.val !== null) {
+    return resolveProp(props.val, item)
+  }
+  if (props.itemKey) {
+    const keyVal = resolveProp(props.itemKey, item)
+    if (keyVal !== undefined && keyVal !== null && keyVal !== '') {
+      return keyVal
+    }
+  }
+  return item
+}
+
+function isChecked(item) {
+  const itemVal = getItemVal(item)
+  if (Array.isArray(props.modelValue)) {
+    return props.modelValue.includes(itemVal)
+  }
+  if (props.modelValue === props.trueValue) return true
+  if (itemVal !== undefined && props.modelValue === itemVal) return true
+  return false
+}
+
+function onCheckboxUpdate(val) {
+  emit('update:modelValue', val)
+  emit('update:model-value', val)
+  emit('update:selected', val)
+}
+
+function toggleItem(item) {
+  if (!isItemSelectable(item)) return
+
+  const itemVal = getItemVal(item)
+  if (Array.isArray(props.modelValue)) {
+    const exists = props.modelValue.includes(itemVal)
+    const next = exists
+      ? props.modelValue.filter(v => v !== itemVal)
+      : [...props.modelValue, itemVal]
+    onCheckboxUpdate(next)
+  } else if (props.modelValue !== undefined) {
+    const next = isChecked(item)
+      ? props.falseValue
+      : (props.val !== null ? itemVal : props.trueValue)
+    onCheckboxUpdate(next)
+  } else {
+    onCheckboxUpdate([itemVal])
+  }
+}
+
 const isHighlighted = computed(() => {
   if (props.highlightColor && String(props.highlightColor).trim() !== "") return true
   const val = props.highlight
@@ -360,7 +442,6 @@ const highlightColor = computed(() => (item) => {
     return col
   }
 })
-
 
 const btnColor = computed(() => (item) => {
   return resolveProp(props.btnColor || props.color, item) || 'primary'

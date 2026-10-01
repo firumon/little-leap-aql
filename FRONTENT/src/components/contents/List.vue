@@ -21,6 +21,8 @@
         :page="resourceRecord?.currentPage?.value"
         @click="handleItemClick"
         @update:page="handlePageUpdate"
+        @update:model-value="handleModelValueUpdate"
+        @update:selected="handleSelectedUpdate"
       />
     </div>
   </Transition>
@@ -65,6 +67,14 @@ const props = defineProps({
   highlight: { type: [Boolean, String], default: undefined },
   highlightColor: { type: [String, Function], default: undefined },
   clickable: { type: Boolean, default: undefined },
+  selectable: { type: [Boolean, String], default: undefined },
+  checkbox: { type: [Boolean, String, Function, Object], default: undefined },
+  modelValue: { type: [Array, Boolean, String, Number, Object], default: undefined },
+  val: { type: [String, Function], default: undefined },
+  trueValue: { default: undefined },
+  falseValue: { default: undefined },
+  indeterminateValue: { default: undefined },
+  checkboxColor: { type: [String, Function], default: undefined },
   itemClass: { type: [String, Array, Object], default: undefined },
   align: { type: String, default: undefined },
 
@@ -269,7 +279,24 @@ function handleItemClick(item) {
   nav.goTo('view', { code: item?.Code ?? item })
 }
 
+const emit = defineEmits([
+  'update:page',
+  'update:modelValue',
+  'update:model-value',
+  'update:selected'
+])
+
 function handlePageUpdate(page) {
   if (resourceRecord?.currentPage) resourceRecord.currentPage.value = page
+  emit('update:page', page)
+}
+
+function handleModelValueUpdate(val) {
+  emit('update:modelValue', val)
+  emit('update:model-value', val)
+}
+
+function handleSelectedUpdate(val) {
+  emit('update:selected', val)
 }
 </script>

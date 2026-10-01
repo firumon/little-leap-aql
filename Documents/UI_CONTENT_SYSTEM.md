@@ -1,4 +1,4 @@
-﻿# AQL Content Layout & Customization System
+# AQL Content Layout & Customization System
 
 This document is the complete reference guide for the AQL Content Customization System. It explains the `contents:` page contract, the `Content.vue` orchestrator, `useContentResolver.js` resolution rules, the built-in `List` content component, and how to create per-resource or per-active-view overrides without rewriting full HTML/Vue templates.
 
@@ -108,6 +108,7 @@ Every prop defaults to `undefined` so `useListStrategy` stays authoritative unle
 - **Leading icon/avatar**: `icon`, `iconColor`, `avatar`, `avatarLabel`, `avatarColor`, `avatarSize`
 - **Main content**: `layout`, `content` (Array — column list; forwarded only when it's a real Array, since the same prop name also carries the content-resolver's string identity), `label`, `labelClass`, `caption`, `captionClass`
 - **Meta side section**: `meta`, `metaLayout`, `metaColor`, `metaLabel`, `metaCaption`, `chip`, `chipColor`, `chipOutline`, `chipTextColor`, `badge`, `badgeColor`, `badgeTextColor`, `badgeOutline`
+- **Selection & Checkbox**: `selectable` (Boolean | `'left'` | `'right'`, default `false`), `checkbox` (Boolean | String | Function | Object, default `null`), `modelValue` (Array | Boolean | String | Number | Object), `val` (String | Function, value to track in Array; falls back to `itemKey`), `trueValue`, `falseValue`, `indeterminateValue`, `checkboxColor`. Uses `Renderable` with `QCheckbox` and supports `#checkbox` / `#select` slot overrides.
 - **Row action**: `btn`, `btnColor`
 - **Pagination**: `paginate` (Boolean, defaults to `true` in `abstract/List.vue`), `perPage` (Number, default `25`), `threshold` (Number, default `35`), `page` (Number, controlled current page synced with `resourceRecord.currentPage`)
 

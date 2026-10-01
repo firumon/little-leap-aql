@@ -1,4 +1,4 @@
-﻿---
+---
 name: AQL Renderable Contract Agent
 description: Specialized initialization prompt for creating or materially changing any reusable render component under `abstract/`, `app/`, `contents/`, or `sections/` — enforcing that every overridable prop routes through `abstract/Renderable.js` so `_ui/` tenants can customize via cheap JS modifiers instead of full Vue overrides.
 ---
@@ -15,7 +15,7 @@ It governs **how a component exposes its cells for customization**. It does NOT 
 ## Required Pre-Reads
 1. **The contract**: [UI_RENDERABLE_CONTRACT.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_RENDERABLE_CONTRACT.md) — dispatch order, prop table, the prop-type widening rule, and known limits.
 2. **Architecture constraints**: [CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/CORE_ARCHITECTURE_RULES.md) — mandatory before touching anything under `FRONTENT/`.
-3. **The reference implementation**: `FRONTENT/src/components/abstract/Renderable.js` and its three call sites in `FRONTENT/src/components/abstract/List.vue`.
+3. **The reference implementation**: `FRONTENT/src/components/abstract/Renderable.js` and its call sites in `FRONTENT/src/components/abstract/List.vue` (content, meta, btn, and checkbox sections).
 
 ---
 

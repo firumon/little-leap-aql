@@ -1,4 +1,4 @@
-﻿# AQL Renderable Contract
+# AQL Renderable Contract
 
 **Canonical spec for `FRONTENT/src/components/abstract/Renderable.js`** — the single dispatch point for slot-shaped props across `abstract/`, `app/`, `contents/` and `sections/` components.
 
@@ -175,7 +175,7 @@ const props = defineProps({ item: { type: Object, required: true } })
 
 | Component | Sites |
 |---|---|
-| `abstract/List.vue` | content loop, meta loop, btn section |
+| `abstract/List.vue` | content loop, meta loop, btn section, checkbox sections (left & right) |
 
 `components/shared/AqlList.vue` is a near-duplicate of `abstract/List.vue` (its own `getComponentType`) that has **not** adopted this contract, and still backs the `#content2`/`#empty` slots on several pages. Its list props are deliberately left un-widened so they don't advertise support it lacks. Converging the two is open work.
 

@@ -55,12 +55,11 @@ function checkSingleAction(resConfig, action) {
   // Dynamic action checks - resolving directly from permissions.
   // A workflow action (Approve, MarkDelivered, Reallocate) is only a column in the
   // permissions sheet when someone added one. With no column at all the flag is
-  // `undefined`, not `false` — so fall back to update/write instead of failing closed
-  // and blocking a user the sheet never meant to block.
+  // `undefined`, so fail closed instead of granting an unlisted action.
   const pascalAction = cleanAction.charAt(0).toUpperCase() + cleanAction.slice(1)
   const flag = resConfig.permissions?.[`can${pascalAction}`]
   if (flag !== undefined && flag !== null && flag !== '') return !!flag
-  return !!(resConfig.permissions?.canUpdate || resConfig.permissions?.canWrite)
+  return false
 }
 
 function checkActionsList(resConfig, actions) {
@@ -175,6 +174,7 @@ function checkActionAllowedOnResource(resConfig, action, recordOrCode, auth) {
 // Grammar (one rule per string):
 //   'update'                 -> action on the active resource
 //   'OutletRestocks:create'  -> action on a named resource
+//   'OutletRestocks'         -> the named resource must exist
 //
 // Record-scoped rules ('Resource:action:$Field') are NOT implemented yet. A third
 // segment is ignored, never enforced, so do not write one expecting it to gate.
@@ -183,8 +183,13 @@ export function parsePermissionRule (rule) {
   const raw = String(rule || '').trim()
   if (!raw) return null
   const [first, second] = raw.split(':').map((part) => part.trim())
-  if (!second) return { resource: '', action: first }
-  return { resource: first, action: second }
+  if (second !== undefined) {
+    return { resource: first, action: second }
+  }
+  if (findResourceConfig(first)) {
+    return { resource: first, action: '' }
+  }
+  return { resource: '', action: first }
 }
 
 // The rules NOT granted, as `[{ rule, resource, action }]`. Reactive when read
@@ -198,11 +203,22 @@ export function explainMissingRules (rules, context = {}) {
 
   for (const rule of list) {
     const parsed = parsePermissionRule(rule)
-    if (!parsed || !parsed.action) continue
+    if (!parsed) continue
 
     const resConfig = parsed.resource
       ? findResourceConfig(parsed.resource)
       : (unref(context.config) || null)
+
+    if (!parsed.action) {
+      if (!resConfig) {
+        gaps.push({
+          rule: String(rule),
+          resource: parsed.resource || '(active)',
+          action: 'exists'
+        })
+      }
+      continue
+    }
 
     if (!resConfig || !checkSingleAction(resConfig, parsed.action)) {
       gaps.push({
@@ -281,7 +297,13 @@ export function useResourceConfig(resourceNameOverride) {
   const permissions = computed(() => activeConfig.value?.permissions || {})
 
   const allowed = (query, targetResourceName, recordOrCode) => {
-    if (!query) return false
+    if (!query) {
+      if (hasOverride || targetResourceName) {
+        const res = targetResourceName ? findResourceConfig(targetResourceName) : activeConfig.value
+        return !!res
+      }
+      return false
+    }
 
     // 1. Multi-Resource Map (Object Query)
     if (typeof query === 'object' && !Array.isArray(query)) {
@@ -346,6 +368,13 @@ export function useResourceConfig(resourceNameOverride) {
   // APP.Resources.DefaultValues — backend-authored seed values for this resource.
   const defaultValues = computed(() => activeConfig.value?.defaultValues || {})
 
+  const exists = (targetResourceName) => {
+    if (targetResourceName) {
+      return !!findResourceConfig(targetResourceName)
+    }
+    return !!activeConfig.value
+  }
+
   return {
     config: activeConfig,
     scope,
@@ -359,6 +388,7 @@ export function useResourceConfig(resourceNameOverride) {
     additionalActions,
     permissions,
     allowed,
+    exists,
     missing,
     evalRules: (rules, context = {}) =>
       evalPermissionRules(rules, { config: activeConfig, ...context }),

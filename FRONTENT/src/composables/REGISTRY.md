@@ -141,4 +141,17 @@ Design principle:
   * **Signature 2 (Other Resource, Single Action):** `allowed('create', 'outletPayment')`
   * **Signature 3 (Current/Other Resource, Multiple Actions):** `allowed(['read', 'update'])` or `allowed(['read', 'approve'], 'outletConsumptionInvoice')`
   * **Signature 4 (Multi-Resource, Multi-Action Map):** `allowed({ outletPayment: 'create', outletConsumptionInvoice: 'update' })`
+  * **Signature 5 (Resource Existence Check):** `useResourceConfig('outletPayment').allowed()` (empty query on scoped resource or with target name) checks if the resource exists in the active tenant.
+
+### `useResourceConfig` -> `exists`
+
+* `exists(targetResourceName?)`: Reactively checks if a resource exists in the tenant's authorized resource list.
+  * `exists('OutletConsumptionInvoices')`: checks named resource.
+  * `exists()`: checks active resource.
+
+### Declarative Page Contract `permissions`
+* In page contracts (`Add.js`, `Edit.js`, etc.):
+  * `permissions: { CardName: ['ResourceName:action'] }`: checks action on named resource.
+  * `permissions: { CardName: ['action'] }`: checks action on active resource.
+  * `permissions: { CardName: ['ResourceName'] }`: bare resource name checks existence without requiring an action.
 

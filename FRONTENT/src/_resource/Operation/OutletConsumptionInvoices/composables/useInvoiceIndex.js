@@ -143,6 +143,14 @@ const build = (recordSource) => {
     const map = new Map()
     payments.value.forEach((payment) => {
       if (!countsAsPayment(payment)) return
+      let alloc = payment.allocation
+      if (!alloc && payment.Allocation) {
+        try {
+          const parsed = JSON.parse(text(payment.Allocation))
+          if (parsed && typeof parsed === 'object') alloc = parsed
+        } catch (e) {}
+      }
+      if (alloc) Object.assign(payment, { allocation: alloc })
       const codes = text(payment.OutletConsumptionInvoiceCode).split(',').map(text).filter(Boolean)
       codes.forEach((code) => {
         const bucket = map.get(code)
@@ -167,7 +175,7 @@ const build = (recordSource) => {
       const code = text(invoice.Code)
       const own = paid.get(code) || []
       const total = grandTotalOf(invoice)
-      const collected = paidTotalOf(own)
+      const collected = paidTotalOf(own, code)
       const balance = balanceDueOf(invoice, own)
       const outletCode = text(invoice.OutletCode)
       const dueIn = text(invoice.DueDate) ? -daysSince(invoice.DueDate) : null
@@ -269,7 +277,20 @@ const build = (recordSource) => {
       if (!countsAsPayment(payment) || text(payment.Date) !== today) return
       const amount = num(payment.Amount)
       total += amount
-      if (dueBefore.has(text(payment.OutletConsumptionInvoiceCode))) fromOverdue += amount
+      const codes = text(payment.OutletConsumptionInvoiceCode).split(',').map(text).filter(Boolean)
+      const overdueCodes = codes.filter(c => dueBefore.has(c))
+      if (overdueCodes.length) {
+        if (codes.length === 1) {
+          fromOverdue += amount
+        } else {
+          const alloc = payment.allocation
+          if (alloc && typeof alloc === 'object') {
+            fromOverdue += overdueCodes.reduce((s, c) => s + num(alloc[c]), 0)
+          } else {
+            fromOverdue += amount
+          }
+        }
+      }
     })
 
     const outstanding = collections.value.overdueAmount

@@ -23,6 +23,7 @@ export default function () {
 
       return [
         view('Recent', 'Recent', 'history', 'indigo-7', null),
+        view('PendingApproval', 'Pending Approval', 'schedule', 'warning', v.PendingApproval ? v.PendingApproval.length : 0),
         view('OverdueInvoices', 'Overdue Invoices', 'running_with_errors', 'negative', v.OverdueInvoices.length),
         view('Outlets', 'Outlets', 'storefront', 'deep-orange', v.Outlets.length),
         view('CompletedPayments', 'Completed Payments', 'savings', 'teal-7', null),

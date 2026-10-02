@@ -7,6 +7,7 @@
  * `TotalTaxAmount` fall out of the payable.
  */
 
+import { useRecord } from 'src/composables/resources/useRecord'
 import { useCurrencyResource } from 'src/_resource/Master/Currencies/composables/useCurrencyResource'
 import {
   grandTotalOf,
@@ -24,28 +25,55 @@ const num = (value) => {
 }
 const money = (value) => Number(num(value).toFixed(2))
 
-/** The tax-inclusive ACTUAL payable of an invoice — what a balance is measured against. */
 export function netInvoiceTotalOf (invoice = {}) {
   return grandTotalOf(asRow(invoice))
 }
 
-/**
- * Group payment rows by the invoice they credit, in ONE pass.
- *
- * Pass the result straight back into `autoDistribute` when the caller already holds an
- * index — a flat array is regrouped here rather than rescanned per invoice (§6).
- */
+export function parsePaymentAllocation (payment = {}) {
+  const row = asRow(payment)
+  const raw = text(row.Allocation)
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw)
+      if (parsed && typeof parsed === 'object') return parsed
+    } catch (e) {}
+  }
+  const codes = text(row.OutletConsumptionInvoiceCode).split(',').map(text).filter(Boolean)
+  if (codes.length === 1) return { [codes[0]]: num(row.Amount) }
+  return Object.fromEntries(codes.map((code) => [code, 0]))
+}
+
+export function paymentsForInvoice (invoiceCode, payments) {
+  const targetCode = text(invoiceCode)
+  if (!targetCode) return []
+  const list = payments !== undefined ? payments : (useRecord().rows('OutletPayments') || [])
+  return (Array.isArray(list) ? list : [])
+    .filter((payment) => {
+      const row = asRow(payment)
+      if (!countsAsPayment(row)) return false
+      const codes = text(row.OutletConsumptionInvoiceCode).split(',').map(text).filter(Boolean)
+      return codes.includes(targetCode)
+    })
+    .map((payment) => {
+      const row = asRow(payment)
+      const allocation = parsePaymentAllocation(row)
+      return Object.assign(row, { allocation })
+    })
+}
+
 export function indexPaymentsByInvoice (payments = []) {
   if (payments instanceof Map) return payments
   const map = new Map()
   for (const payment of (Array.isArray(payments) ? payments : [])) {
     const row = asRow(payment)
     if (!countsAsPayment(row)) continue
+    const allocation = parsePaymentAllocation(row)
+    const entry = Object.assign(row, { allocation })
     const codes = text(row.OutletConsumptionInvoiceCode).split(',').map(text).filter(Boolean)
     for (const code of codes) {
       const bucket = map.get(code)
-      if (bucket) bucket.push(row)
-      else map.set(code, [row])
+      if (bucket) bucket.push(entry)
+      else map.set(code, [entry])
     }
   }
   return map

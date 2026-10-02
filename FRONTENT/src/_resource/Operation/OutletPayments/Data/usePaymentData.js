@@ -1,10 +1,11 @@
 /**
- * Money collected against invoices, collections per day, collector rankings, and cancelled payments.
+ * Payment collections, approval work, collector rankings, and cancelled payments.
  * Only payments where countsAsPayment is true are counted, except in cancelledPayments.
  *
  * Reads:
  *   OutletPayments: Date, OutletCode, OutletConsumptionInvoiceCode, Amount, Mode,
- *                   Username, Progress, ProgressCancelledAt, Status
+ *                   Username, Progress, ProgressSubmittedAt, ProgressApprovedAt,
+ *                   ProgressCancelledAt, Status
  *   Outlets (through useOutletResource): Code, Name
  *
  * Exposes:
@@ -17,6 +18,9 @@
  *   collectionsPerDay       - money per day, last 30 days
  *   topPayingOutlets        - top 8 outlets by money collected inside chosen outletRange
  *   collectionsByPerson     - money by Username inside chosen personRange
+ *   pendingApproval         - count and amount of active submitted payments
+ *   userWisePendingAmount   - pending amount grouped by Username
+ *   approvalPerformance     - approved count and average approval time in hours
  *   cancelledThisMonthCount - cancelled payments by ProgressCancelledAt (fallback Date) this month
  *   cancelledLastMonthCount - cancelled payments by ProgressCancelledAt (fallback Date) last month
  *   outletRange             - ref holding chosen range word for outlets
@@ -48,7 +52,7 @@ const RANGES = ['$last7Days', '$last30Days', '$last90Days', '$thisMonth', '$last
 
 export default function usePaymentData () {
   const { rows, isLoading, remember } = useRecord()
-  const { daysSince, inRange, rangeLabel, topN } = useDataContext()
+  const { daysSince, inRange, rangeLabel, topN, hoursBetween } = useDataContext()
   const { getOutlet } = useOutletResource()
 
   const sumTo = (map, key, n) => map.set(key, (map.get(key) || 0) + n)
@@ -60,6 +64,34 @@ export default function usePaymentData () {
     const activeRows = computed(() => rawRows.value.filter(isActiveRow))
     const validPayments = computed(() => activeRows.value.filter(countsAsPayment))
     const countedPaymentsCount = computed(() => validPayments.value.length)
+    const pendingRows = computed(() => activeRows.value.filter((p) =>
+      String(p.Progress || '').toUpperCase() === 'SUBMITTED'))
+    const pendingApproval = computed(() => ({
+      count: pendingRows.value.length,
+      amount: Number(pendingRows.value.reduce((sum, p) => sum + (Number(p.Amount) || 0), 0).toFixed(2))
+    }))
+    const userWisePendingAmount = computed(() => {
+      const amounts = new Map()
+      for (const payment of pendingRows.value) {
+        const user = String(payment.Username || '').trim() || '(Unassigned)'
+        sumTo(amounts, user, Number(payment.Amount) || 0)
+      }
+      return topN(amounts, 8).map((item) => ({
+        label: item.label,
+        value: Number(item.value.toFixed(2))
+      }))
+    })
+    const approvalPerformance = computed(() => {
+      const durations = activeRows.value
+        .filter((p) => String(p.Progress || '').toUpperCase() === 'APPROVED')
+        .map((p) => hoursBetween(p.ProgressSubmittedAt, p.ProgressApprovedAt))
+        .filter((hours) => Number.isFinite(hours) && hours >= 0)
+      const totalHours = durations.reduce((sum, hours) => sum + hours, 0)
+      return {
+        approvedCount: durations.length,
+        averageHours: durations.length ? Number((totalHours / durations.length).toFixed(1)) : 0
+      }
+    })
 
     // Collections today vs yesterday by Date
     const collectedToday = computed(() => {
@@ -198,6 +230,9 @@ export default function usePaymentData () {
       collectionsPerDay,
       topPayingOutlets,
       collectionsByPerson,
+      pendingApproval,
+      userWisePendingAmount,
+      approvalPerformance,
       cancelledThisMonthCount,
       cancelledLastMonthCount,
       outletRange,

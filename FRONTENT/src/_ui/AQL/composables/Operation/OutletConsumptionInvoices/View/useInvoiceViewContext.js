@@ -2,6 +2,7 @@ import { inject, computed } from 'vue'
 import { evaluateProp } from 'src/composables/resources/useSectionResolver'
 import { useAQLConfig } from 'src/_ui/AQL/composables/useAQLConfig'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
+import { useRecord } from 'src/composables/resources/useRecord'
 import { useCurrencyResource } from 'src/_resource/Master/Currencies/composables/useCurrencyResource'
 import { useSkuResource } from 'src/_resource/Master/SKUs/composables/useSkuResource'
 import { useInvoiceIndex } from 'src/_resource/Operation/OutletConsumptionInvoices/composables/useInvoiceIndex'
@@ -47,6 +48,7 @@ export function useInvoiceViewContext () {
   // (UI_RESOURCE_DOMAIN_LOGIC.md §3.3).
   const { skuLabelOf } = useSkuResource()
   const { rowByCode, outletNameByCode, invoiceRows } = useInvoiceIndex()
+  const recordSource = useRecord()
 
   const record = computed(() => resourceRecord?.record?.value || null)
   const code = computed(() => String(record.value?.Code || '').trim())
@@ -90,6 +92,15 @@ export function useInvoiceViewContext () {
       .slice(0, 5)
   })
 
+  const outletPendingPayments = computed(() => {
+    const outletCode = String(record.value?.OutletCode || '').trim()
+    if (!outletCode) return []
+    return (recordSource.rows('OutletPayments') || [])
+      .filter((payment) => String(payment?.Status || '').toUpperCase() !== 'ARCHIVED')
+      .filter((payment) => String(payment?.Progress || '').toUpperCase() === 'SUBMITTED')
+      .filter((payment) => String(payment?.OutletCode || '').trim() === outletCode)
+  })
+
   const currencyCode = computed(() => invoiceCurrencyOf(record.value?.PriceListCode))
   const money = (value) => _C(Number(value) || 0, true, currencyCode.value)
 
@@ -107,6 +118,8 @@ export function useInvoiceViewContext () {
     outletName,
     outletInvoices,
     outletPayments,
+    outletPendingPayments,
+    hasPendingOutletPayments: computed(() => outletPendingPayments.value.length > 0),
     money,
     skuLabelOf,
 
@@ -134,4 +147,3 @@ export function useInvoiceViewContext () {
     }
   }
 }
-

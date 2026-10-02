@@ -216,27 +216,29 @@ export function countsAsPayment (payment = {}) {
   return isActiveRow(row) && text(row.Progress).toUpperCase() === 'APPROVED'
 }
 
-/** The total collected against an invoice, from that invoice's own payment rows. */
-export function paidTotalOf (payments = []) {
+export function paidTotalOf (payments = [], invoiceCode = '') {
+  const target = text(invoiceCode)
   return (Array.isArray(payments) ? payments : [])
     .filter(countsAsPayment)
-    .reduce((sum, payment) => sum + num(asRow(payment).Amount), 0)
+    .reduce((sum, payment) => {
+      const row = asRow(payment)
+      let alloc = row.allocation
+      if (!alloc && row.Allocation) {
+        try {
+          const parsed = JSON.parse(text(row.Allocation))
+          if (parsed && typeof parsed === 'object') alloc = parsed
+        } catch (e) {}
+      }
+      if (alloc && typeof alloc === 'object' && target && alloc[target] !== undefined) {
+        return sum + num(alloc[target])
+      }
+      return sum + num(row.Amount)
+    }, 0)
 }
 
-/**
- * What is still owed on an invoice — the ACTUAL payable less what has been collected.
- *
- * FLOORED AT ZERO. An overpayment is a credit to be handled on the outlet's account, never
- * a negative balance that would show as money the business owes the outlet on this row and
- * would flip every "highest balance first" sort on its head.
- *
- * `payments` is the invoice's OWN payment rows, already filtered by code — the caller does
- * the join, because doing it here would mean scanning every payment in the tenant once per
- * invoice, which is the O(n×m) render-loop scan §6 forbids. `useInvoiceIndex.js` builds
- * that map in one pass.
- */
 export function balanceDueOf (row = {}, payments = []) {
-  return Math.max(0, grandTotalOf(row) - paidTotalOf(payments) - settledOffOf(row))
+  const invoice = asRow(row)
+  return Math.max(0, grandTotalOf(invoice) - paidTotalOf(payments, invoice.Code) - settledOffOf(invoice))
 }
 
 /**

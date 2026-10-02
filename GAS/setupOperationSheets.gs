@@ -306,15 +306,15 @@ function setup_getOperationSchemas() {
         },
         {
             resourceName: CONFIG.OPERATION_SHEETS.OUTLET_PAYMENTS,
-            headers: ['Code', 'Date', 'OutletCode', 'OutletConsumptionInvoiceCode', 'Amount', 'Mode', 'Reference', 'Username', 'Progress',
+            headers: ['Code', 'Date', 'OutletCode', 'OutletConsumptionInvoiceCode', 'Allocation', 'Amount', 'Mode', 'Reference', 'Username', 'Progress',
                       'ProgressSubmittedAt', 'ProgressSubmittedBy', 'ProgressSubmittedComment',
                       'ProgressApprovedAt', 'ProgressApprovedBy', 'ProgressApprovedComment',
                       'ProgressCancelledAt', 'ProgressCancelledBy', 'ProgressCancelledComment',
                       'Status', 'AccessRegion'].concat(commonAuditColumns),
             statusDefault: 'Active',
-            defaults: { Status: 'Active', Amount: 0, Progress: 'SUBMITTED' },
+            defaults: { Status: 'Active', Amount: 0, Progress: 'SUBMITTED', Allocation: '' },
             columnWidths: {
-                Code: 150, Date: 130, OutletCode: 140, OutletConsumptionInvoiceCode: 220, Amount: 120, Mode: 130, Reference: 180, Username: 170, Progress: 140,
+                Code: 150, Date: 130, OutletCode: 140, OutletConsumptionInvoiceCode: 220, Allocation: 200, Amount: 120, Mode: 130, Reference: 180, Username: 170, Progress: 140,
                 ProgressSubmittedAt: 160, ProgressSubmittedBy: 150, ProgressSubmittedComment: 200,
                 ProgressApprovedAt: 160, ProgressApprovedBy: 150, ProgressApprovedComment: 200,
                 ProgressCancelledAt: 160, ProgressCancelledBy: 150, ProgressCancelledComment: 200,

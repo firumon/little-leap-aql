@@ -23,6 +23,7 @@ export default {
     'PageHeader',
     'InvoiceHeader',
     'SettlementDetails',
+    'PendingPaymentsNotice',
     'BilledItems',
     'BillingSummary',
     'InvoicePayments',
@@ -36,6 +37,7 @@ export default {
   permissions: {
     InvoicePayments: ['OutletPayments:read'],
     RecentPayments: ['OutletPayments:read'],
+    PendingPaymentsNotice: ['OutletPayments:read', 'OutletPayments:approve'],
     OtherInvoices: ['OutletConsumptionInvoices:read']
   },
 

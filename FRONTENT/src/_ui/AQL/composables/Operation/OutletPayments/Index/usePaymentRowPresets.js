@@ -1,4 +1,5 @@
 import { useCurrencyResource } from 'src/_resource/Master/Currencies/composables/useCurrencyResource'
+import { hoursFromNow } from 'src/utils/dateHelpers'
 
 const text = (value) => (value == null ? '' : String(value).trim())
 
@@ -15,6 +16,18 @@ function overdueText (row) {
   if (days === null || days === undefined) return 'No due date'
   if (days >= 0) return 'Due today'
   return `Due ${Math.abs(days)} days ago`
+}
+
+function humanizedTimeAgo (row) {
+  const hours = Math.max(0, -hoursFromNow(row?.ProgressSubmittedAt ?? row?.date))
+  if (Number.isNaN(hours) || hours < 1) return 'Just now'
+  if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`
+
+  const days = Math.floor(hours / 24)
+  if (days <= 99) return `${days} day${days === 1 ? '' : 's'} ago`
+
+  const months = Math.floor(days / 30)
+  return `${months} month${months === 1 ? '' : 's'} ago`
 }
 
 // Payment receipt rows — Recent, Completed and Cancelled all read the same way.
@@ -34,9 +47,39 @@ export function paymentRowPreset (rows = []) {
 
     metaLayout: ['chip'],
     chip: (row) => _C(row.amount, true),
-    chipColor: (row) => (row.isCancelled ? 'grey-7' : 'teal-7'),
+    chipColor: (row) => {
+      const p = String(row.progress || row.Progress || '').toUpperCase()
+      if (row.isCancelled || p === 'CANCELLED') return 'grey-7'
+      if (row.isApproved || p === 'APPROVED') return 'positive'
+      return 'warning'
+    },
     chipOutline: true,
 
+    clickable: true
+  }
+}
+
+export function pendingPaymentPreset (rows = [], { onApprove } = {}) {
+  const { _C } = useCurrencyResource()
+
+  return {
+    items: Array.isArray(rows) ? rows : [],
+    itemKey: 'code',
+
+    layout: ['caption', 'label', 'caption'],
+    content: [
+      (row) => [row.date, row.mode, row.username].filter(Boolean).join(' • '),
+      (row) => text(row.outletName) || text(row.outletCode),
+      (row) => humanizedTimeAgo(row)
+    ],
+
+    metaLayout: ['chip'],
+    chip: (row) => _C(row.amount, true),
+    chipColor: 'warning',
+    chipOutline: true,
+    btn: () => 'check_circle',
+    btnColor: () => 'positive',
+    onActionClick: (row) => onApprove?.(row),
     clickable: true
   }
 }

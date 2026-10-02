@@ -1,149 +1,106 @@
 <template>
-  <div :class="gutterClass">
-    <SectionDividerLabel label="OUTLET" />
-
+  <div v-if="outletCode && outletInvoices.length" :class="gutterClass">
+    <SectionDividerLabel label="OPEN INVOICES" />
     <q-card flat bordered :class="ui.cardClass">
-      <q-card-section :class="gutterClass">
-        <!-- The primary, flow-anchoring field of this step — never `dense`
-             (UI_MODULE_DEVELOPER_GUIDE.md §10.4). -->
-        <component
-          :is="SelectField"
-          :model-value="outletCode"
-          :record="{}"
-          :config="{ options: outletOptions, label: 'Outlet', clearable: false }"
-          header="OutletCode"
-          @update:model-value="pickOutlet"
+      <q-card-section class="row items-center justify-end q-py-xs q-px-sm">
+        <q-btn
+          flat
+          dense
+          no-caps
+          color="primary"
+          label="Invert selection"
+          @click="invertSelection"
+        />
+      </q-card-section>
+      <q-separator />
+      <q-card-section>
+        <AppList
+          v-model="selectedCodes"
+          :items="outletInvoices"
+          item-key="code"
+          clickable
+          selectable
+          itemClass="bg-transparent"
+          :layout="['caption', 'label', 'caption']"
+          :content="[
+          (row) => `${row.code} · ${row.date}`,
+          (row) => `${row.username || 'System'} · ${formatDueText(row)}`,
+          (row) => `Billed: ${_C(row.total, true)} · Paid: ${_C(row.collected, true)}`
+        ]"
+          :meta-layout="['chip']"
+          :chip="(row) => _C(row.balance, true)"
+          :chip-color="(row) => (row.isOverdue ? 'negative' : 'primary')"
+          :chip-outline="true"
         />
       </q-card-section>
     </q-card>
-
-    <template v-if="outletCode">
-      <SectionDividerLabel label="OPEN INVOICES" />
-
-      <q-card flat bordered :class="ui.cardClass">
-        <q-card-section v-if="!outletInvoices.length" class="text-center q-py-lg">
-          <q-icon name="task_alt" :size="ui.emptyIconSize" :color="ui.emptyIconColor" class="q-mb-sm block q-mx-auto" />
-          <div :class="ui.emptyTitleClass">Nothing outstanding</div>
-          <div :class="ui.emptyCaptionClass">
-            This outlet has no open invoices. Pick another outlet to record a collection.
-          </div>
-        </q-card-section>
-
-        <template v-else>
-          <q-card-section class="row items-center justify-between no-wrap q-py-sm">
-            <div class="text-caption text-grey-8">
-              {{ outletInvoices.length }} open invoice{{ outletInvoices.length === 1 ? '' : 's' }} ·
-              {{ money(outletBalance) }} outstanding
-            </div>
-            <q-btn
-              flat no-caps
-              color="primary"
-              :label="isAllSelected ? 'Clear all' : 'Select all'"
-              @click="pickAll"
-            />
-          </q-card-section>
-
-          <q-separator />
-
-          <q-list separator>
-            <q-item v-for="row in outletInvoices" :key="row.code" v-ripple tag="label" clickable>
-              <q-item-section side top>
-                <q-checkbox
-                  :model-value="selectedCodes.includes(row.code)"
-                  @update:model-value="pickInvoice(row.code)"
-                />
-              </q-item-section>
-
-              <q-item-section :class="ui.flexWrapTextClass">
-                <q-item-label class="text-weight-medium">{{ row.code }}</q-item-label>
-                <q-item-label caption>{{ row.date }} · {{ dueText(row) }}</q-item-label>
-                <q-item-label caption>
-                  {{ money(row.total) }} billed · {{ money(row.collected) }} received
-                </q-item-label>
-              </q-item-section>
-
-              <q-item-section side>
-                <q-chip
-                  dense square outline
-                  :color="row.isOverdue ? 'negative' : 'primary'"
-                  class="q-my-none"
-                >
-                  {{ money(row.balance) }}
-                </q-chip>
-              </q-item-section>
-            </q-item>
-          </q-list>
-        </template>
-      </q-card>
-
-      <!-- THE FIGURE THIS STEP EXISTS TO PRODUCE. Live, because ticking an invoice is a
-           financial decision and the running total is the only feedback that makes it one. -->
-      <q-card v-if="selectedCodes.length" flat bordered :class="ui.cardClass">
-        <q-card-section class="row items-center justify-between q-py-sm">
-          <div class="text-subtitle2 text-weight-bold">
-            Payable now
-            <div class="text-caption text-grey-7 text-weight-regular">
-              {{ selectedCodes.length }} invoice{{ selectedCodes.length === 1 ? '' : 's' }} selected
-            </div>
-          </div>
-          <div class="text-h6 text-weight-bolder text-primary">{{ money(selectedBalance) }}</div>
-        </q-card-section>
-      </q-card>
-    </template>
   </div>
 </template>
 
 <script setup>
-/**
- * OutletPayments › Add › Step 1 — the paying outlet, and what this collection settles.
- *
- * ── WHY THE INVOICES ARE A MULTI-SELECT ──
- * An outlet handing over cash rarely hands it over per document. One envelope settles
- * whatever is outstanding, and forcing one payment per invoice would make the collector
- * re-enter the same mode, reference and date three times for one real-world event. Step 2
- * splits the single amount back across whatever is ticked here.
- *
- * Rows carry no leading icon: every row in this list is an invoice, so a receipt glyph
- * repeated down the column is decoration in the space the balance needs.
- *
- * The outlet field mounts through `resolveFieldComponent` rather than as a raw `q-select`, so
- * it inherits the app's field behaviour instead of restating it (§2.4). It is not `dense` —
- * it is the primary input of this step.
- *
- * Spacing comes from `pageProps.gutter` via `$attrs` — never a hardcoded margin (§10.2).
- *
- * No `<style>` block (ARCHITECTURE RULES §7).
- */
-import { computed, onMounted, useAttrs } from 'vue'
+import { computed, useAttrs, watch } from 'vue'
+import AppList from 'components/app/AppList.vue'
 import SectionDividerLabel from 'components/shared/SectionDividerLabel.vue'
-import { resolveFieldComponent } from 'src/_fields/useFieldResolver'
 import { useOutletPaymentAddContext } from 'src/_ui/AQL/composables/Operation/OutletPayments/Add/useOutletPaymentAddContext'
-import { dueText } from 'src/_ui/AQL/composables/Operation/OutletPayments/Index/usePaymentRowPresets'
+import { useCurrencyResource } from 'src/_resource/Master/Currencies/composables/useCurrencyResource'
 
 defineOptions({ name: 'OutletPaymentsAddSelectInvoices', inheritAttrs: false })
 
 const attrs = useAttrs()
-const gutterClass = computed(() => `q-gutter-y-${attrs.gutter || 'sm'}`)
+const gutterClass = computed(() => 'q-gutter-y-' + (attrs.gutter || 'sm'))
 
-const SelectField = resolveFieldComponent('select', 'add')
+const node = 'OutletPayments'
+const { pageState, ui, outletInvoices } = useOutletPaymentAddContext()
+const { _C, roundToDecimals } = useCurrencyResource()
 
-const {
-  ui, money, outletCode, outletOptions, outletInvoices, outletBalance,
-  selectedCodes, selectedBalance, isAllSelected,
-  toggleInvoice, toggleSelectAll,
-  initNode, loadSources, reseedAmount
-} = useOutletPaymentAddContext()
+const outletCode = pageState.useRecord('OutletCode', node)
+const selectedCodes = pageState.useControls('SelectedInvoices', [], node)
 
-const pickInvoice = (code) => toggleInvoice(code)
-const pickAll = () => toggleSelectAll()
-const pickOutlet = (value) => { outletCode.value = value }
+function formatDueText (row) {
+  const days = row?.dueInDays
+  if (days === null || days === undefined) return 'No due date'
+  if (days < 0) return `Due ${Math.abs(days)} days ago`
+  if (days === 0) return 'Due today'
+  return `Due in ${days} days`
+}
 
-// This card always mounts first, so it creates the page node the sticky bar validates, then
-// fetches. `reseedAmount` fills the default a seeded invoice could not supply while the
-// aggregate was still empty.
-onMounted(async () => {
-  initNode()
-  await loadSources()
-  reseedAmount()
+function updatePayingAmount () {
+  const selectedSet = new Set(selectedCodes.value || [])
+  const sum = outletInvoices.value
+    .filter(inv => selectedSet.has(String(inv.code)))
+    .reduce((acc, inv) => acc + (Number(inv.balance) || 0), 0)
+  pageState.setRecord('Amount', roundToDecimals(sum), node)
+}
+
+function invertSelection () {
+  const selected = new Set(selectedCodes.value)
+  selectedCodes.value = outletInvoices.value
+    .map(inv => (selected.has(String(inv.code)) ? null : String(inv.code)))
+    .filter(Boolean)
+}
+
+watch(selectedCodes, () => {
+  updatePayingAmount()
+}, { deep: true })
+
+watch(outletCode, (value) => {
+  if (!value) {
+    selectedCodes.value = []
+    return
+  }
+  selectedCodes.value = outletInvoices.value.map(inv => String(inv.code))
+}, { immediate: true })
+
+watch(outletInvoices, (rows) => {
+  if (!rows.length) {
+    selectedCodes.value = []
+    return
+  }
+  if (!selectedCodes.value || selectedCodes.value.length === 0) {
+    selectedCodes.value = rows.map(inv => String(inv.code))
+    return
+  }
+  const present = new Set(rows.map(inv => String(inv.code)))
+  selectedCodes.value = selectedCodes.value.filter(code => present.has(code))
 })
 </script>

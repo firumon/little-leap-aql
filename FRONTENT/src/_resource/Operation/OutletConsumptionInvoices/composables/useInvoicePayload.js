@@ -11,6 +11,7 @@ import {
 } from 'src/_resource/Operation/OutletReturns/composables/useReturnPayload'
 import { calculateConsumptionInvoice, makeLineTaxResolver } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionInvoice'
 import { priceOf, priceListForOutlet } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionStock'
+import { toDateTime24 } from 'src/utils/dateHelpers'
 import { dueDateFrom } from './useInvoiceCalculation'
 import { useOutletOperatingRulesResource } from 'src/_resource/Master/OutletOperatingRules/composables/useOutletOperatingRulesResource'
 import {
@@ -29,7 +30,9 @@ import {
   transitionForBalance,
   PENDING_PAYMENT,
   PAID,
-  CANCELLED
+  PARTIALLY_PAID,
+  CANCELLED,
+  progressOf
 } from './useInvoiceWorkflow'
 import { nodePayloadForParent } from 'src/_resource/Operation/OutletConsumptionInvoiceItems/composables/useInvoiceItemPayload'
 const INVOICES = 'OutletConsumptionInvoices'
@@ -387,25 +390,51 @@ export function buildInvoiceGenerationNodes ({
 
 // ─── 2. The state walk a balance implies ─────────────────────────────────────
 
-// The invoice's own transition, for whoever moved the balance. No transition yields no
-// node - re-stamping ProgressPaidAt would overwrite the real settlement time.
+// The invoice's own transition, for whoever moved the balance.
 export function buildInvoiceBalanceTransitionNodes ({
   record = {},
   balance = 0,
   actorName = '',
-  comment = ''
+  comment = '',
+  amount = 0
 } = {}) {
   const invoice = asRow(record)
-  const code = text(invoice.Code)
+  const code = text(invoice.Code || invoice.code)
   if (!code) return [{ valid: false, message: 'The invoice could not be identified.' }]
 
-  const transition = transitionForBalance(invoice, balance)
+  const numBal = num(balance)
+  const numAmt = num(amount)
+  const actor = text(actorName) || 'System'
+  const entry = toDateTime24(new Date()) + ' - Amount: ' + numAmt.toFixed(2) + ' by ' + actor + ', Balance: ' + numBal.toFixed(2)
+
+  const transition = transitionForBalance(invoice, numBal)
+
+  if (!transition && progressOf(invoice) === PARTIALLY_PAID && numBal > 0) {
+    const existing = text(invoice.ProgressPartiallyPaidComment)
+    const combined = existing ? (existing + '\n' + entry) : entry
+    return [{
+      resource: INVOICES,
+      code: textOrRef(code),
+      record: {
+        Progress: PARTIALLY_PAID,
+        ProgressPartiallyPaidAt: toDateTime24(new Date()),
+        ProgressPartiallyPaidBy: actor,
+        ProgressPartiallyPaidComment: combined
+      },
+      reload: [INVOICES]
+    }]
+  }
+
   if (!transition) return []
 
-  const stamp = stampFields(transition.stamp, actorName, text(comment) || transition.comment)
+  const commentKey = transition.stamp + 'Comment'
+  const existing = text(invoice[commentKey])
+  const combined = existing ? (existing + '\n' + entry) : entry
+  const stamp = {
+    ...stampFields(transition.stamp, actor, combined),
+    [commentKey]: combined
+  }
 
-  // Only the walk to PAID is an audited action; the sheet registers no action for the other
-  // two, so they are written straight onto the record.
   if (transition.columnValue !== PAID) {
     return [{
       resource: INVOICES,

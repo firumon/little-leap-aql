@@ -1835,6 +1835,7 @@ function initAppResourcesCodeConfig() {
             { header: 'Date', label: 'Date', type: 'date' },
             { header: 'OutletCode', label: 'Outlet Code', type: 'text' },
             { header: 'OutletConsumptionInvoiceCode', label: 'Outlet Consumption Invoice Code', type: 'text' },
+            { header: 'Allocation', label: 'Allocation', type: 'text' },
             { header: 'Amount', label: 'Amount', type: 'currency' },
             { header: 'Mode', label: 'Mode', type: 'select' },
             { header: 'Reference', label: 'Reference', type: 'text' },

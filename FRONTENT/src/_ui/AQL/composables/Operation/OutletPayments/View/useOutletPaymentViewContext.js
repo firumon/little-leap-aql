@@ -6,6 +6,7 @@ import { usePageRecord } from 'src/composables/resources/usePageRecord'
 import { useCurrencyResource } from 'src/_resource/Master/Currencies/composables/useCurrencyResource'
 import { useOutletPaymentIndex } from 'src/_resource/Operation/OutletPayments/composables/useOutletPaymentIndex'
 import {
+  isApproved,
   isCancelled,
   progressMetaOf
 } from 'src/_resource/Operation/OutletPayments/composables/useOutletPaymentProgress'
@@ -91,6 +92,7 @@ export function useOutletPaymentViewContext () {
 
   const progressMeta = computed(() => progressMetaOf(record.value))
   const isPaymentCancelled = computed(() => !!record.value && isCancelled(record.value))
+  const isPaymentApproved = computed(() => !!record.value && isApproved(record.value))
 
   // ── The credited invoice ────────────────────────────────────────────────────
 
@@ -151,6 +153,7 @@ export function useOutletPaymentViewContext () {
     outletName,
     progressMeta,
     isPaymentCancelled,
+    isPaymentApproved,
 
     invoice,
     invoiceRow,

@@ -12,9 +12,13 @@
  */
 
 import { textOrRef } from 'src/utils/appHelpers'
+import { resourceRow } from 'src/composables/resources/useResourceConfig'
+import { useAuth } from 'src/composables/core/useAuth'
 import {
   canCreatePayment,
-  canCancelPayment
+  canCancelPayment,
+  canApprovePayment,
+  progressOf
 } from './useOutletPaymentProgress'
 import {
   netInvoiceTotalOf,
@@ -22,7 +26,8 @@ import {
   countsAsPayment,
   isWaiverEligible,
   waiverCommentOf,
-  indexPaymentsByInvoice
+  indexPaymentsByInvoice,
+  paymentsForInvoice
 } from './useOutletPaymentAllocation'
 import { buildInvoiceBalanceTransitionNodes, buildSettlementNodes } from 'src/_resource/Operation/OutletConsumptionInvoices/composables/useInvoicePayload'
 
@@ -41,21 +46,39 @@ const num = (value) => {
 }
 const todayISO = () => new Date().toISOString().slice(0, 10)
 
+export function buildOutletPaymentInitNodes ({ actorName = '', outletCode = '' } = {}) {
+  const { user } = useAuth()
+  return [{
+    resource: PAYMENTS,
+    record: resourceRow(PAYMENTS, {
+      Date: todayISO(),
+      Username: text(actorName) || text(user.value?.name || user.value?.email),
+      OutletCode: text(outletCode),
+      Mode: 'Cash',
+      Amount: 0,
+      Progress: 'SUBMITTED',
+      Status: 'Active'
+    })
+  }]
+}
+
 
 /**
  * The columns EVERY receipt row of one collection shares. One Mode, one Reference and one
  * collector are fanned across N rows here, so no screen writes a payment column itself.
  */
-export function paymentRowFields ({ mode = 'Cash', reference = '', username = '', actorName = '', comment = '', date = '' } = {}) {
+export function paymentRowFields ({ mode = 'Cash', reference = '', username = '', actorName = '', comment = '', date = '', progress = 'SUBMITTED' } = {}) {
   const payMode = text(mode) || 'Cash'
   const user = text(username) || text(actorName) || 'Unknown'
+  const note = text(comment)
   return {
     Date: text(date) || todayISO(),
     Mode: payMode,
     Reference: text(reference),
     Username: user,
-    Progress: 'SUBMITTED',
-    ...stampFields('ProgressSubmitted', actorName || user, text(comment) || `Payment received via ${payMode}.`),
+    Progress: progress,
+    ...stampFields('ProgressSubmitted', actorName || user, note || `Payment received via ${payMode}.`),
+    ...(progress === 'APPROVED' ? stampFields('ProgressApproved', actorName || user, note || 'Payment auto-approved.') : {}),
     Status: 'Active'
   }
 }
@@ -83,8 +106,7 @@ export function stampPaymentRowsInPageState (pageState, options = {}) {
 export function buildOutletPaymentCreationNodes ({
   selectedOutletCode = '',
   selectedInvoices = [],
-  // The receipt rows the PAGE holds, `[{ OutletConsumptionInvoiceCode, Amount }]`. They are
-  // read, never restated: `withRows: false` leaves them where the user put them.
+  // The receipt rows the page holds, `[{ OutletConsumptionInvoiceCode, Amount }]`.
   rows = [],
   totalAmount = 0,
   mode = 'Cash',
@@ -96,7 +118,7 @@ export function buildOutletPaymentCreationNodes ({
   waiveResidual = false,
   waiverReason = '',
   waiverComment = '',
-  withRows = true
+  autoApprove = false
 } = {}) {
   if (!canCreatePayment()) {
     return [{ valid: false, message: 'You do not have permission to submit payments.' }]
@@ -107,17 +129,33 @@ export function buildOutletPaymentCreationNodes ({
     return [{ valid: false, message: 'Select an outlet to record payment.' }]
   }
 
-  const invoices = (Array.isArray(selectedInvoices) ? selectedInvoices : []).map(asRow)
-  if (!invoices.length) {
-    return [{ valid: false, message: 'Select at least one invoice to pay.' }]
-  }
-
   const amount = num(totalAmount)
   if (amount <= 0) {
     return [{ valid: false, message: 'Payment amount must be greater than zero.' }]
   }
 
   const payMode = text(mode) || 'Cash'
+  const shared = paymentRowFields({ mode: payMode, reference, username, actorName, comment, progress: autoApprove ? 'APPROVED' : 'SUBMITTED' })
+
+  if (!autoApprove) {
+    return [{
+      resource: PAYMENTS,
+      record: {
+        OutletCode: outletCode,
+        OutletConsumptionInvoiceCode: '',
+        Amount: amount,
+        ...shared
+      },
+      reload: [PAYMENTS],
+      permissions: { create: 'You are not allowed to record a payment.' },
+      successMsg: PAYMENT_RECORDED_MESSAGE
+    }]
+  }
+
+  const invoices = (Array.isArray(selectedInvoices) ? selectedInvoices : []).map(asRow)
+  if (!invoices.length) {
+    return [{ valid: false, message: 'Select at least one invoice to pay.' }]
+  }
 
   const allocated = new Map((Array.isArray(rows) ? rows : []).map(asRow)
     .map((row) => [text(row.OutletConsumptionInvoiceCode), num(row.Amount)]))
@@ -141,25 +179,21 @@ export function buildOutletPaymentCreationNodes ({
 
   const nodes = []
   const paymentsByInvoice = indexPaymentsByInvoice(existingPayments)
-  const shared = paymentRowFields({ mode: payMode, reference, username, actorName, comment })
-
-  if (withRows) {
-    nodes.push({
-      resource: PAYMENTS,
-      many: true,
-      records: activeAllocations.map(({ code, allocated }) => ({
-        OutletCode: outletCode,
-        OutletConsumptionInvoiceCode: code,
-        Amount: allocated,
-        ...shared
-      })),
-      reload: [PAYMENTS],
-      permissions: { create: 'You are not allowed to record a payment.' },
-      successMsg: PAYMENT_RECORDED_MESSAGE
-    })
-  } else {
-    nodes.push({ resource: PAYMENTS, merge: true, record: {}, reload: [PAYMENTS], permissions: { create: 'You are not allowed to record a payment.' }, successMsg: PAYMENT_RECORDED_MESSAGE })
-  }
+  nodes.push({
+    resource: PAYMENTS,
+    record: {
+      OutletCode: outletCode,
+      OutletConsumptionInvoiceCode: activeAllocations.map(({ code }) => code).join(','),
+      Allocation: activeAllocations.length > 1
+        ? JSON.stringify(Object.fromEntries(activeAllocations.map(({ code, allocated }) => [code, allocated])))
+        : '',
+      Amount: amount,
+      ...shared
+    },
+    reload: [PAYMENTS],
+    permissions: { create: 'You are not allowed to record a payment.' },
+    successMsg: PAYMENT_RECORDED_MESSAGE
+  })
 
   for (const { invoice, code, allocated } of activeAllocations) {
     // Derive Invoice State Transition
@@ -199,6 +233,151 @@ export function buildOutletPaymentCreationNodes ({
     }
   }
 
+  return nodes
+}
+
+export function buildOutletPaymentAllocationNodes (allocations = {}, existingRecord = {}, options = {}) {
+  const row = asRow(existingRecord)
+  const actor = text(options.actorName || options.username)
+  const amount = num(row.Amount)
+  const autoApprove = options.autoApprove !== undefined ? !!options.autoApprove : true
+
+  const entries = Array.isArray(allocations)
+    ? allocations.map(a => [text(a.code || a.OutletConsumptionInvoiceCode), num(a.amount || a.Amount)])
+    : Object.entries(allocations || {}).map(([c, a]) => [text(c), num(a)])
+  const active = entries.filter(([code, val]) => code && val > 0)
+  const activeCodes = active.map(([code]) => code)
+  const allocatedSum = active.reduce((sum, [_, val]) => sum + val, 0)
+
+  const isFullyAllocated = autoApprove && amount > 0 && Math.abs(amount - allocatedSum) < 0.01
+  const nextProgress = isFullyAllocated ? 'APPROVED' : 'SUBMITTED'
+  const stamps = isFullyAllocated
+    ? {
+        ...stampFields('ProgressSubmitted', actor, row.ProgressSubmittedComment || text(options.comment) || 'Payment submitted.'),
+        ...stampFields('ProgressApproved', actor, text(options.comment) || 'Payment auto-approved.')
+      }
+    : {
+        ProgressApprovedAt: '',
+        ProgressApprovedBy: '',
+        ProgressApprovedComment: '',
+        ...stampFields('ProgressSubmitted', actor, row.ProgressSubmittedComment || text(options.comment) || 'Payment submitted.')
+      }
+
+  const paymentNode = {
+    resource: PAYMENTS,
+    merge: true,
+    reload: [PAYMENTS, 'OutletConsumptionInvoices'],
+    record: {
+      ...row,
+      Date: row.Date || todayISO(),
+      Mode: row.Mode || 'Cash',
+      Username: row.Username || actor,
+      Status: row.Status || 'Active',
+      Amount: amount,
+      OutletConsumptionInvoiceCode: autoApprove ? activeCodes.join(',') : '',
+      Allocation: autoApprove && activeCodes.length > 1 ? JSON.stringify(Object.fromEntries(active)) : '',
+      Progress: nextProgress,
+      ...stamps
+    }
+  }
+
+  const invoiceNodes = []
+  if (isFullyAllocated) {
+    const invoiceList = Array.isArray(options.invoices) ? options.invoices : []
+    for (const [code, allocated] of active) {
+      const rawInv = invoiceList.find(i => text(i.code || i.Code) === code) || { Code: code }
+      const inv = { ...rawInv, Code: text(rawInv.Code || rawInv.code) }
+      const currentBal = inv.balance !== undefined
+        ? num(inv.balance)
+        : balanceDueOf(inv, options.existingPayments || [])
+      const rem = Math.max(0, Number((currentBal - allocated).toFixed(2)))
+      const note = text(options.comment) || (rem <= 0
+        ? ('Payment of ' + allocated + ' allocated. Invoice fully paid.')
+        : ('Payment of ' + allocated + ' allocated; balance remaining: ' + rem.toFixed(2) + '.'))
+      const walk = buildInvoiceBalanceTransitionNodes({
+        record: inv,
+        balance: rem,
+        amount: allocated,
+        actorName: actor,
+        comment: note
+      })
+      if (walk[0]?.valid !== false) {
+        for (const node of walk) {
+          invoiceNodes.push({ ...node, role: code })
+        }
+      }
+    }
+  }
+
+  return [paymentNode, ...invoiceNodes]
+}
+
+export function buildOutletPaymentApprovalNodes ({
+  paymentRecord = {},
+  selectedInvoices = [],
+  rows = [],
+  totalAmount = 0,
+  actorName = '',
+  comment = '',
+  waiveResidual = false,
+  waiverReason = '',
+  waiverComment = '',
+  existingPayments = []
+} = {}) {
+  const payment = asRow(paymentRecord)
+  const paymentCode = text(payment.Code)
+  if (!canApprovePayment(payment)) return [{ valid: false, message: 'You do not have permission to approve this payment.' }]
+  if (!paymentCode) return [{ valid: false, message: 'Payment record is missing identifier.' }]
+
+  const invoices = (Array.isArray(selectedInvoices) ? selectedInvoices : []).map(asRow)
+  if (!invoices.length) return [{ valid: false, message: 'Select at least one invoice to approve.' }]
+
+  const amount = num(totalAmount) || num(payment.Amount)
+  if (amount <= 0) return [{ valid: false, message: 'Payment amount must be greater than zero.' }]
+
+  const allocated = new Map((Array.isArray(rows) ? rows : []).map(asRow)
+    .map((row) => [text(row.OutletConsumptionInvoiceCode), num(row.Amount)]))
+  const activeAllocations = invoices
+    .map(invoice => ({ invoice, code: text(invoice.Code), allocated: num(allocated.get(text(invoice.Code))) }))
+    .filter(item => item.code && item.allocated > 0)
+  const allocatedSum = activeAllocations.reduce((sum, item) => sum + item.allocated, 0)
+  if (!activeAllocations.length || Math.abs(allocatedSum - amount) > 0.01) {
+    return [{ valid: false, message: `Sum of allocations (${allocatedSum.toFixed(2)}) does not match payment amount (${amount.toFixed(2)}).` }]
+  }
+  if (waiveResidual && !text(waiverReason)) return [{ valid: false, message: 'Please select a waiver reason for the residual balance.' }]
+
+  const nodes = [{
+    resource: PAYMENTS,
+    actions: [{
+      action: 'Approve',
+      column: 'Progress',
+      columnValue: 'APPROVED',
+      code: textOrRef(paymentCode),
+      data: { fields: {
+        OutletConsumptionInvoiceCode: activeAllocations.map(({ code }) => code).join(','),
+        Allocation: activeAllocations.length > 1
+          ? JSON.stringify(Object.fromEntries(activeAllocations.map(({ code, allocated: paid }) => [code, paid])))
+          : '',
+        ...stampFields('ProgressApproved', actorName, text(comment) || 'Payment approved.')
+      } }
+    }],
+    reload: [PAYMENTS],
+    permissions: { update: 'You are not allowed to approve this payment.' }
+  }]
+  const paymentsByInvoice = indexPaymentsByInvoice(existingPayments)
+  for (const { invoice, code, allocated: paid } of activeAllocations) {
+    const balance = balanceDueOf(invoice, paymentsByInvoice.get(code) || [])
+    const remaining = Math.max(0, Number((balance - paid).toFixed(2)))
+    if (waiveResidual && isWaiverEligible(remaining, invoice.PriceListCode)) {
+      const settlement = buildSettlementNodes({ record: invoice, reason: waiverReason, comment: text(waiverComment) || waiverCommentOf(paid, balance, invoices.length, waiverReason), mismatchAmount: remaining, balanceDue: remaining, actorName })
+      if (settlement[0]?.valid === false) return settlement
+      nodes.push(...settlement)
+    } else {
+      const walk = buildInvoiceBalanceTransitionNodes({ record: invoice, balance: remaining, actorName, comment: `Payment ${paymentCode} approved.` })
+      if (walk[0]?.valid === false) return walk
+      nodes.push(...walk)
+    }
+  }
   return nodes
 }
 
@@ -252,14 +431,16 @@ export function buildOutletPaymentCancellationNodes ({
     } }], reload: [PAYMENTS], permissions: { update: 'You are not allowed to cancel this payment.' }, successMsg: 'Payment receipt cancelled.' }
   ]
 
+  if (progressOf(payment) === 'SUBMITTED') return nodes
+
   const invoice = asRow(invoiceRecord)
   const invoiceCode = text(invoice.Code || payment.OutletConsumptionInvoiceCode)
 
   if (invoiceCode && invoice && invoice.Code) {
     const total = netInvoiceTotalOf(invoice)
-    const otherPaid = (Array.isArray(allInvoicePayments) ? allInvoicePayments : [])
-      .filter(p => text(p.OutletConsumptionInvoiceCode) === invoiceCode && text(p.Code) !== paymentCode && countsAsPayment(p))
-      .reduce((sum, p) => sum + num(p.Amount), 0)
+    const otherPaid = paymentsForInvoice(invoiceCode, allInvoicePayments)
+      .filter(p => text(p.Code) !== paymentCode)
+      .reduce((sum, p) => sum + num(p.allocation?.[invoiceCode] !== undefined ? p.allocation[invoiceCode] : p.Amount), 0)
 
     const remaining = Math.max(0, Number((total - otherPaid).toFixed(2)))
 

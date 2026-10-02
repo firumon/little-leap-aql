@@ -5,10 +5,11 @@ import {
   netInvoiceTotalOf,
   paidTotalOf,
   balanceDueOf,
-  countsAsPayment
+  countsAsPayment,
+  indexPaymentsByInvoice
 } from './useOutletPaymentAllocation'
 import { storedTaxBreakdown } from 'src/_resource/Operation/OutletConsumptionInvoices/composables/useInvoiceCalculation'
-import { CANCELLED, progressOf, isSubmitted } from './useOutletPaymentProgress'
+import { APPROVED, CANCELLED, progressOf, isApproved, isSubmitted } from './useOutletPaymentProgress'
 const text = (value) => (value == null ? '' : String(value).trim())
 const asRow = (value) => (value && typeof value === 'object' ? value : {})
 const num = (value) => {
@@ -44,19 +45,7 @@ const build = (recordSource) => {
     new Map(rawOutlets.value.map(o => [text(o.Code), text(o.Name) || text(o.Code)]))
   )
 
-  // Invoice Code -> Array of active Payments Map
-  const paymentsByInvoice = computed(() => {
-    const map = new Map()
-    rawPayments.value.forEach(payment => {
-      if (!countsAsPayment(payment)) return
-      const invCode = text(payment.OutletConsumptionInvoiceCode)
-      if (!invCode) return
-      const bucket = map.get(invCode)
-      if (bucket) bucket.push(payment)
-      else map.set(invCode, [payment])
-    })
-    return map
-  })
+  const paymentsByInvoice = computed(() => indexPaymentsByInvoice(rawPayments.value))
 
   // ── Unified Invoices Projection ─────────────────────────────────────────────
   const invoiceRows = computed(() => {
@@ -137,6 +126,7 @@ const build = (recordSource) => {
         username: text(p.Username),
         progress: pProgress,
         isSubmitted: isSubmitted(p),
+        isApproved: pProgress === APPROVED && isApproved(p),
         isCancelled: pProgress === CANCELLED,
         ageDays: daysSince(p.Date),
         search: haystack(
@@ -257,7 +247,8 @@ const build = (recordSource) => {
       Recent: [...allPayments].sort((a, b) => recencyOf(b) - recencyOf(a)).slice(0, RECENT_LIMIT),
       OverdueInvoices: open.filter(inv => inv.isOverdue).sort(byDueAsc),
       Outlets: outletDebts(open),
-      CompletedPayments: allPayments.filter(p => p.isSubmitted).sort(byDateDesc),
+      PendingApproval: allPayments.filter(p => p.isSubmitted).sort(byDateDesc),
+      CompletedPayments: allPayments.filter(p => p.isApproved).sort(byDateDesc),
       CancelledPayments: allPayments.filter(p => p.isCancelled).sort(byDateDesc)
     }
   })

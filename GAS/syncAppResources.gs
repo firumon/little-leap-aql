@@ -1828,7 +1828,8 @@ function initAppResourcesCodeConfig() {
                 "route": "/operation/outlet-payments/approve",
                 "pageTitle": "Approve Outlet Payments",
                 "pageDescription": "Review and approve executive payment collections",
-                "show": true
+                "show": true,
+                "menuAccess": { "require": "canApprove" }
             }
         ]),
         UIFields: JSON.stringify([

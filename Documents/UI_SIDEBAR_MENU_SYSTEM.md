@@ -1,4 +1,4 @@
-﻿# AQL Frontend Menu System — App.Resources.Menu
+# AQL Frontend Menu System — App.Resources.Menu
 
 > **Scope:** This document covers **only** the frontend web app sidebar menu driven by the `Menu` JSON column in `APP.Resources`. It does **not** cover the `AQL 🚀` Google Sheets toolbar menu — see `Documents/SHEET_TOOLBAR_MENU_GUIDE.md` for that.
 
@@ -61,6 +61,7 @@ Each entry inside the `Menu` JSON array:
 | `pageTitle` | `string` | No | Resource `Name` | Page title metadata (used in admin dialogs, not rendered in sidebar). |
 | `pageDescription` | `string` | No | `""` | Page description metadata (used in admin dialogs). |
 | `show` | `boolean` | No | `true` | Master visibility toggle. Set to `false` to hide an entry without deleting it from config. |
+| `exact` | `boolean` | No | `auto` | When true, link highlights only on exact route match. Automatically activates when a sibling menu item matches the current route. |
 | `menuAccess` | `object` | No | `null` | Permission gate (see §2.2 below). Absent → falls back to checking if the user has ANY permission/action on the owning resource. |
 
 ### 2.2 `menuAccess` Rule Formats
@@ -356,8 +357,8 @@ The `beforeEach` guard uses an inline version of `evaluateMenuAccess` (no Vue co
 ### 5.5 Rendering Component (`MenuTreeNode.vue`)
 
 ```vue
-<!-- Leaf node → clickable router-link -->
-<q-item :to="node.routePath" clickable v-ripple>
+<!-- Leaf node → clickable router-link with dynamic exact matching -->
+<q-item clickable v-ripple :to="node.routePath" :exact="isExact">
   <q-item-section avatar>
     <q-icon :name="node.navIcon" size="xs" />
   </q-item-section>

@@ -117,14 +117,13 @@
       <router-view />
     </q-page-container>
 
-    <!-- The single AdditionalActions input dialog. Mounted here rather than in
-         Page.vue because a AdditionalActionsButtons trigger can live anywhere,
-         including outside a resource page. One instance serves every trigger. -->
+    <!-- Single dialog serving triggers outside or inside resource pages. -->
     <AdditionalActionsDialog />
   </q-layout>
 </template>
 
 <script setup>
+import { provide } from 'vue'
 import MenuTreeNode from 'src/components/MenuTreeNode.vue'
 import AdditionalActionsDialog from 'components/app/AdditionalActionsDialog.vue'
 import { useMainLayoutNavTree } from 'src/composables/layout/useMainLayoutNavTree'
@@ -135,9 +134,12 @@ const {
   userName,
   userRoleLabel,
   visibleResourceMenuGroups,
+  allMenuRoutes,
   toggleLeftDrawer,
   handleLogout
 } = useMainLayoutNavTree()
+
+provide('allMenuRoutes', allMenuRoutes)
 </script>
 
 <style lang="scss">

@@ -34,11 +34,7 @@ function isValidRoute(routePath) {
   return typeof routePath === 'string' && routePath.trim() !== ''
 }
 
-/**
- * Resolve a role-aware field value.
- * Accepts either a primitive (backward compatible) or an object keyed by roleId / userId
- * with "default" as fallback. Priority: userId > role order > "default".
- */
+// Resolve a role-aware field value (priority: userId > roleId > default).
 function resolveRoleAwareField(value, userRoles, userId) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return value
@@ -127,7 +123,8 @@ export function useMainLayoutNavTree() {
           routePath: menu.route,
           navLabel,
           navIcon: resolvedIcon || 'list_alt',
-          order: Number(resolvedOrder || 9999)
+          order: Number(resolvedOrder || 9999),
+          exact: menu.exact !== undefined ? Boolean(menu.exact) : undefined
         })
       })
     })
@@ -152,6 +149,21 @@ export function useMainLayoutNavTree() {
     return root
   })
 
+  const allMenuRoutes = computed(() => {
+    const routes = []
+    function collect(nodes) {
+      for (const node of nodes) {
+        if (node.type === 'leaf' && node.routePath) {
+          routes.push(node.routePath)
+        } else if (node.type === 'group' && Array.isArray(node.children)) {
+          collect(node.children)
+        }
+      }
+    }
+    collect(visibleResourceMenuGroups.value)
+    return routes
+  })
+
   function toggleLeftDrawer() {
     leftDrawerOpen.value = !leftDrawerOpen.value
   }
@@ -171,6 +183,7 @@ export function useMainLayoutNavTree() {
     userName,
     userRoleLabel,
     visibleResourceMenuGroups,
+    allMenuRoutes,
     toggleLeftDrawer,
     handleLogout
   }

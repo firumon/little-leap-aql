@@ -197,7 +197,8 @@ function getResourceConfigMap() {
           pageTitle: isCustomizable(m.pageTitle) ? m.pageTitle : (m.pageTitle || name),
           pageDescription: isCustomizable(m.pageDescription) ? m.pageDescription : (m.pageDescription || ''),
           show: m.show !== undefined ? (isCustomizable(m.show) ? m.show : toBooleanCell(m.show)) : true,
-          menuAccess: m.menuAccess || null
+          menuAccess: m.menuAccess || null,
+          exact: m.exact !== undefined ? toBooleanCell(m.exact) : undefined
         };
       }),
       uiFields: parseJsonCell(readOptionalCell(row, registry.idx.UIFields, '[]'), []),

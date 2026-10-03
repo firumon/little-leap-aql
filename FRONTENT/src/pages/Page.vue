@@ -113,7 +113,7 @@ watch([pageReady, contractVersion], ([hook]) => {
   }))
   // `scope.run` only captures effects created synchronously, so a watch after an
   // await escapes it and never gets disposed.
-  if (process.env.DEV && result && typeof result.then === 'function') {
+  if (import.meta.env.DEV && result && typeof result.then === 'function') {
     console.warn('[Page] ready() is async. Create watches synchronously — effects made after an await leak.')
   }
 }, { immediate: true })
@@ -121,7 +121,7 @@ watch([pageReady, contractVersion], ([hook]) => {
 onUnmounted(stopReadyScope)
 
 // Console handle for debugging. Cleared on unmount so it is never a stale page.
-if (process.env.DEV) {
+if (import.meta.env.DEV) {
   window.pageState = pageState
   onUnmounted(() => { if (window.pageState === pageState) delete window.pageState })
 }

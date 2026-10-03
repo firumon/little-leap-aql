@@ -1,14 +1,15 @@
 // Configuration for your app
 // https://v2.quasar.dev/quasar-cli-vite/quasar-config-file
 
-import { defineConfig } from '#q-app/wrappers'
+import { defineConfig } from '#q-app'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf-8'))
 const BUILD_TIME = new Date().toISOString()
 
-export default defineConfig((/* ctx */) => {
+export default defineConfig((ctx) => {
   return {
     // https://v2.quasar.dev/quasar-cli-vite/prefetch-feature
     // preFetch: true,
@@ -42,6 +43,16 @@ export default defineConfig((/* ctx */) => {
 
     // Full list of options: https://v2.quasar.dev/quasar-cli-vite/quasar-config-file#build
     build: {
+      alias: {
+        src: fileURLToPath(new URL('./src', import.meta.url)),
+        app: fileURLToPath(new URL('.', import.meta.url)),
+        components: fileURLToPath(new URL('./src/components', import.meta.url)),
+        layouts: fileURLToPath(new URL('./src/layouts', import.meta.url)),
+        pages: fileURLToPath(new URL('./src/pages', import.meta.url)),
+        assets: fileURLToPath(new URL('./src/assets', import.meta.url)),
+        boot: fileURLToPath(new URL('./src/boot', import.meta.url)),
+        stores: fileURLToPath(new URL('./src/stores', import.meta.url))
+      },
       target: {
         browser: ['es2022', 'firefox115', 'chrome115', 'safari14'],
         node: 'node20'
@@ -56,7 +67,19 @@ export default defineConfig((/* ctx */) => {
 
       // publicPath: '/',
       // analyze: true,
-      env: {
+      define: {
+        'process.env.DEV': String(ctx.dev),
+        'process.env.PROD': String(ctx.prod),
+        'process.env.SERVER': 'false',
+        'process.env.CLIENT': 'true',
+        'process.env.NODE_ENV': JSON.stringify(ctx.dev ? 'development' : 'production'),
+        'process.env.VUE_ROUTER_MODE': JSON.stringify('history'),
+        'process.env.VUE_ROUTER_BASE': JSON.stringify(''),
+        'process.env.APP_NAME': JSON.stringify(pkg.productName),
+        'process.env.APP_VERSION': JSON.stringify(pkg.version),
+        'process.env.BUILD_TIME': JSON.stringify(BUILD_TIME)
+      },
+      defineEnv: {
         APP_NAME: pkg.productName,
         APP_VERSION: pkg.version,
         BUILD_TIME
@@ -114,8 +137,8 @@ export default defineConfig((/* ctx */) => {
     //   rootComponent: 'src/App.vue',
     //   router: 'src/router/index',
     //   store: 'src/store/index',
-    //   pwaRegisterServiceWorker: 'src-pwa/register-service-worker',
-    //   pwaServiceWorker: 'src-pwa/custom-service-worker',
+    //   pwaRegisterServiceWorker: 'src-pwa/register-sw',
+    //   pwaServiceWorker: 'src-pwa/sw/custom-sw',
     //   pwaManifestFile: 'src-pwa/manifest.json',
     //   electronMain: 'src-electron/electron-main',
     //   electronPreload: 'src-electron/electron-preload'

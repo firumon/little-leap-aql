@@ -14,9 +14,9 @@ const lastCheckedAt = ref(null)
 const lastError = ref('')
 const remoteVersion = ref('')
 
-const currentVersion = process.env.APP_VERSION || 'dev'
-const appName = process.env.APP_NAME || 'AQL'
-const buildTime = process.env.BUILD_TIME || ''
+const currentVersion = import.meta.env.APP_VERSION || (typeof process !== 'undefined' ? process.env?.APP_VERSION : '') || 'dev'
+const appName = import.meta.env.APP_NAME || (typeof process !== 'undefined' ? process.env?.APP_NAME : '') || 'AQL'
+const buildTime = import.meta.env.BUILD_TIME || (typeof process !== 'undefined' ? process.env?.BUILD_TIME : '') || ''
 
 let registration = null
 let boundRegistration = null

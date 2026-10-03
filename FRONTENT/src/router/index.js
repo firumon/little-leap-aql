@@ -1,4 +1,4 @@
-import { defineRouter } from '#q-app/wrappers'
+import { defineRouter } from '#q-app'
 import { createRouter, createMemoryHistory, createWebHistory, createWebHashHistory } from 'vue-router'
 import { isStandalone } from 'src/utils/pwa-utils'
 import routes from './routes'
@@ -64,9 +64,13 @@ function evaluateMenuAccessInline(resource, allResources, routePath) {
 }
 
 export default defineRouter(function (/* { store, ssrContext } */) {
-  const createHistory = process.env.SERVER
+  const isServer = Boolean((typeof process !== 'undefined' && process.env.SERVER) || import.meta.env.QUASAR_SERVER)
+  const routerMode = import.meta.env.QUASAR_VUE_ROUTER_MODE || (typeof process !== 'undefined' ? process.env.VUE_ROUTER_MODE : '') || 'history'
+  const routerBase = import.meta.env.QUASAR_VUE_ROUTER_BASE || (typeof process !== 'undefined' ? process.env.VUE_ROUTER_BASE : '') || ''
+
+  const createHistory = isServer
     ? createMemoryHistory
-    : (process.env.VUE_ROUTER_MODE === 'history' ? createWebHistory : createWebHashHistory)
+    : (routerMode === 'history' ? createWebHistory : createWebHashHistory)
 
   const Router = createRouter({
     scrollBehavior: () => ({ left: 0, top: 0 }),
@@ -75,11 +79,12 @@ export default defineRouter(function (/* { store, ssrContext } */) {
     // Leave this as is and make changes in quasar.conf.js instead!
     // quasar.conf.js -> build -> vueRouterMode
     // quasar.conf.js -> build -> publicPath
-    history: createHistory(process.env.VUE_ROUTER_BASE)
+    history: createHistory(routerBase)
   })
 
   Router.beforeEach((to, from) => {
-    const isProdNonStandalone = !process.env.DEV && !isStandalone()
+    const isDev = import.meta.env.DEV || (typeof process !== 'undefined' && process.env?.DEV)
+    const isProdNonStandalone = !isDev && !isStandalone()
     if (isProdNonStandalone) {
       if (to.name !== 'landing') {
         return { name: 'landing' }

@@ -9,7 +9,8 @@ const routes = [
         path: '',
         name: 'home',
         beforeEnter: (to, from) => {
-          const isProdNonStandalone = !process.env.DEV && !isStandalone()
+          const isDev = import.meta.env.DEV || (typeof process !== 'undefined' && process.env?.DEV)
+          const isProdNonStandalone = !isDev && !isStandalone()
           if (isProdNonStandalone) {
             return { name: 'landing' }
           }

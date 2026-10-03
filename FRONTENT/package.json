@@ -15,29 +15,29 @@
     "deploy": "firebase deploy --only hosting:aqlpwa"
   },
   "dependencies": {
-    "@quasar/extras": "^2.0.2",
+    "@quasar/extras": "^2.1.0",
     "axios": "1.18.1",
-    "date-fns": "^2.30.0",
+    "date-fns": "^4.4.0",
     "idb": "^8.0.3",
-    "pinia": "^3.0.4",
-    "quasar": "^2.23.3",
+    "pinia": "^4.0.3",
+    "quasar": "^2.34.0",
     "register-service-worker": "^1.7.2",
-    "vue": "^3.5.38",
-    "vue-router": "^5.1.0",
-    "workbox-background-sync": "^7.4.0"
+    "vue": "^3.5.43",
+    "vue-router": "^5.3.1",
+    "workbox-background-sync": "^7.4.1"
   },
   "devDependencies": {
-    "@quasar/app-vite": "^2.1.0",
-    "autoprefixer": "^10.4.2",
+    "@quasar/app-vite": "^3.10.1",
+    "autoprefixer": "^10.6.1",
     "postcss": "8.5.10",
-    "sass-embedded": "^1.97.3",
-    "workbox-build": "^7.4.0",
-    "workbox-cacheable-response": "^7.4.0",
-    "workbox-core": "^7.4.0",
-    "workbox-expiration": "^7.4.0",
-    "workbox-precaching": "^7.4.0",
-    "workbox-routing": "^7.4.0",
-    "workbox-strategies": "^7.4.0"
+    "sass-embedded": "^1.105.1",
+    "workbox-build": "^7.4.1",
+    "workbox-cacheable-response": "^7.4.1",
+    "workbox-core": "^7.4.1",
+    "workbox-expiration": "^7.4.1",
+    "workbox-precaching": "^7.4.1",
+    "workbox-routing": "^7.4.1",
+    "workbox-strategies": "^7.4.1"
   },
   "engines": {
     "node": "^28 || ^26 || ^24 || ^22 || ^20",

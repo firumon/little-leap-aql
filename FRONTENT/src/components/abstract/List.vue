@@ -315,7 +315,6 @@ function isItemInput(item) {
 const isSelectable = computed(() => {
   if (props.selectable === false) return false
   if (props.selectable === true || props.selectable === 'left' || props.selectable === 'right') return true
-  if (hasModel.value && !hasInput.value) return true
   return !!(props.checkbox || slots.checkbox || slots.select)
 })
 

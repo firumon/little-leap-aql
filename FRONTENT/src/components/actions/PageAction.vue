@@ -89,6 +89,8 @@ const props = defineProps({
   // component from Page.vue). Arrives from pageProps, so a page contract or page
   // JS modifier can drop just the report cluster while keeping the CRUD FABs.
   noReports: { type: Boolean, default: false },
+  // Explicit gate to render FormActions (e.g. customized in PageAction.js or page contract)
+  showFormActions: { type: [Boolean, Function], default: null },
 
   // ── Unified action handlers ────────────────────────────────────────────────
   // One handler per action key, signature `(actionName, ctx) => result`, where
@@ -150,10 +152,18 @@ const hasFormNodes = computed(() => {
   return flag === undefined || flag === null ? true : !!unref(flag)
 })
 
-// FormActions needs BOTH: the right route AND initialized nodes. Without the
-// second half the sticky submit/reset bar renders over a form that has nothing
-// to submit — pressing Submit builds an empty batch.
-const showFormActions = computed(() => isFormRoute.value && hasFormNodes.value)
+// FormActions needs BOTH: the right route AND initialized nodes, OR an explicit
+// `showFormActions` override from a PageAction.js modifier or page contract.
+const customShowForm = computed(() => {
+  const val = props.showFormActions ?? attrs.showFormActions
+  if (val === null || val === undefined) return null
+  return typeof val === 'function' ? val() : Boolean(val)
+})
+
+const showFormActions = computed(() => {
+  if (customShowForm.value !== null) return customShowForm.value
+  return isFormRoute.value && hasFormNodes.value
+})
 
 const resourceName = computed(() => resourceConfig?.resourceName?.value || '')
 
@@ -452,7 +462,7 @@ const modifierVisible = computed(() => {
 // form. Conversely a browse/view page keeps its cluster no matter what a popup
 // modal does to pageState.
 const showResourceActions = computed(() =>
-  !isFormRoute.value && modifierVisible.value
+  !isFormRoute.value && !customShowForm.value && modifierVisible.value
 )
 
 // Reports float alongside the CRUD cluster on browse/view pages. Form pages are
@@ -464,6 +474,7 @@ const showResourceActions = computed(() =>
 // prop, and the gate must hold in both cases.
 const showResourceReports = computed(() =>
   !isFormRoute.value &&
+  !customShowForm.value &&
   props.reports !== false &&
   props.noReports !== true &&
   attrs.noReports !== true

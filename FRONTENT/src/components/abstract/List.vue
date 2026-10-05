@@ -27,6 +27,7 @@
       <q-item
         v-for="(item, index) in renderedItems"
         :key="resolveKey(item, index)"
+        :tag="itemTag"
         :clickable="isItemClickable"
         v-ripple="isItemClickable"
         @click="isItemClickable && onItemClick(item)"
@@ -51,21 +52,21 @@
 
           <!-- Left Side Selectable Checkbox -->
           <q-item-section v-if="isSelectableLeft" :top="align === 'top'" side>
-            <Renderable
-              :slot-fn="slots.checkbox || slots.select"
-              :value="checkboxValue(item)"
-              :item="item"
-              :is="QCheckbox"
-              :model-value="modelValue"
-              :val="getItemVal(item)"
-              :true-value="trueValue"
-              :false-value="falseValue"
-              :indeterminate-value="indeterminateValue"
-              :color="resolveCheckboxColor(item)"
-              :dense="dense"
-              @update:model-value="onCheckboxUpdate"
-              @click.stop
-            />
+            <slot name="checkbox" :item="item" :index="index">
+              <slot name="select" :item="item" :index="index">
+                <component
+                  :is="isComponentDef(checkbox) ? checkbox : ListCheckbox"
+                  :item="item"
+                  v-model="model"
+                  :val="val"
+                  :item-key="itemKey"
+                  :true-value="trueValue"
+                  :false-value="falseValue"
+                  :color="resolveCheckboxColor(item)"
+                  :dense="dense"
+                />
+              </slot>
+            </slot>
           </q-item-section>
 
           <!-- Main Content Area -->
@@ -96,23 +97,41 @@
             />
           </q-item-section>
 
-          <!-- Right Side Selectable Checkbox OR Action Button -->
-          <q-item-section v-if="isSelectableRight" :top="align === 'top'" side>
-            <Renderable
-              :slot-fn="slots.checkbox || slots.select"
-              :value="checkboxValue(item)"
-              :item="item"
-              :is="QCheckbox"
-              :model-value="modelValue"
-              :val="getItemVal(item)"
-              :true-value="trueValue"
-              :false-value="falseValue"
-              :indeterminate-value="indeterminateValue"
-              :color="resolveCheckboxColor(item)"
-              :dense="dense"
-              @update:model-value="onCheckboxUpdate"
-              @click.stop
-            />
+          <!-- Right Side: 1. Input, 2. Checkbox, 3. Action Button -->
+          <q-item-section v-if="isItemInput(item) || slots.input" side :top="align === 'top'">
+            <slot name="input" :item="item" :index="index">
+              <component
+                :is="isComponentDef(input) ? input : ListInput"
+                :item="item"
+                v-model="model"
+                :input="input"
+                :input-props="inputProps"
+                :input-label="inputLabel"
+                :input-key="inputKey"
+                :input-value="inputValue"
+                :val="val"
+                :item-key="itemKey"
+                :dense="dense"
+                @input-change="emit('input-change', $event)"
+              />
+            </slot>
+          </q-item-section>
+          <q-item-section v-else-if="isSelectableRight" :top="align === 'top'" side>
+            <slot name="checkbox" :item="item" :index="index">
+              <slot name="select" :item="item" :index="index">
+                <component
+                  :is="isComponentDef(checkbox) ? checkbox : ListCheckbox"
+                  :item="item"
+                  v-model="model"
+                  :val="val"
+                  :item-key="itemKey"
+                  :true-value="trueValue"
+                  :false-value="falseValue"
+                  :color="resolveCheckboxColor(item)"
+                  :dense="dense"
+                />
+              </slot>
+            </slot>
           </q-item-section>
           <q-item-section v-else-if="hasBtn(item) || slots.btn" side>
             <Renderable
@@ -145,11 +164,15 @@
 
 <script setup>
 import { computed, useSlots, getCurrentInstance, ref, watch } from 'vue'
-import { QBtn, QCheckbox, colors } from 'quasar'
+import { QBtn, colors } from 'quasar'
 import Renderable, { isComponentDef } from 'components/abstract/Renderable.js'
 import { MainLabel, MainCaption, MetaLabel, MetaCaption, MetaChip, MetaBadge } from 'components/abstract/ListRenderers.js'
+import ListCheckbox, { toggleListItem } from 'components/abstract/ListCheckbox.vue'
+import ListInput from 'components/abstract/ListInput.vue'
 
 defineOptions({ name: 'List', inheritAttrs: false })
+
+const model = defineModel({ default: undefined })
 
 const props = defineProps({
   items: { type: Array, default: () => [] },
@@ -158,6 +181,11 @@ const props = defineProps({
   perPage: { type: Number, default: 25 },
   threshold: { type: Number, default: 35 },
   itemKey: { type: [String, Function], default: 'Code' },
+  input: { type: [Boolean, String, Object, Function], default: null },
+  inputProps: { type: [Object, Function], default: () => ({}) },
+  inputLabel: { type: [Number, String, Function], default: null },
+  inputKey: { type: [Number, String, Function], default: null },
+  inputValue: { type: [Number, String, Function], default: null },
   loading: { type: Boolean, default: false },
   emptyText: { type: String, default: 'No items found.' },
   emptyIcon: { type: String, default: 'inventory_2' },
@@ -171,13 +199,11 @@ const props = defineProps({
   highlight: { type: [Boolean, String], default: false },
   highlightColor: { type: [String, Function], default: null },
   clickable: { type: Boolean, default: null },
-  selectable: { type: [Boolean, String], default: false, validator: v => [true, false, 'left', 'right'].includes(v) },
+  selectable: { type: [Boolean, String], default: null, validator: v => v === null || [true, false, 'left', 'right'].includes(v) },
   checkbox: { type: [Boolean, String, Function, Object], default: null },
-  modelValue: { type: [Array, Boolean, String, Number, Object], default: undefined },
-  val: { type: [String, Function], default: null },
+  val: { type: [String, Number, Function], default: null },
   trueValue: { default: true },
   falseValue: { default: false },
-  indeterminateValue: { default: null },
   checkboxColor: { type: [String, Function], default: null },
   itemClass: { type: [String, Array, Object], default: null },
   icon: { type: [String, Function], default: null },
@@ -208,6 +234,7 @@ const props = defineProps({
   badgeOutline: { type: Boolean, default: false },
   btn: { type: [String, Function, Object], default: null },
   btnColor: { type: [String, Function], default: null },
+  tag: { type: String, default: null },
 })
 
 const emit = defineEmits([
@@ -215,7 +242,8 @@ const emit = defineEmits([
   'update:page',
   'update:modelValue',
   'update:model-value',
-  'update:selected'
+  'update:selected',
+  'input-change'
 ])
 const slots = useSlots()
 const instance = getCurrentInstance()
@@ -268,11 +296,33 @@ const hasClick = computed(() => {
   return !!(props && (props.onClick || props['on-click'] || props.onClickOnce))
 })
 
-const isSelectable = computed(() => {
-  const s = props.selectable
-  if (s === true || s === 'left' || s === 'right') return true
-  return !!(props.checkbox || slots.checkbox || slots.select);
+const hasModel = computed(() => {
+  if (model.value !== undefined) return true
+  const vnodeProps = instance?.vnode?.props
+  return !!(vnodeProps && ('modelValue' in vnodeProps || 'model-value' in vnodeProps || 'onUpdate:modelValue' in vnodeProps || 'onUpdate:model-value' in vnodeProps))
+})
 
+
+const hasInput = computed(() => !!(props.input || slots.input))
+
+function isItemInput(item) {
+  if (slots.input) return true
+  if (props.input === false || props.input === null || props.input === undefined) return false
+  if (typeof props.input === 'function') return !!props.input(item)
+  return true
+}
+
+const isSelectable = computed(() => {
+  if (props.selectable === false) return false
+  if (props.selectable === true || props.selectable === 'left' || props.selectable === 'right') return true
+  if (hasModel.value && !hasInput.value) return true
+  return !!(props.checkbox || slots.checkbox || slots.select)
+})
+
+const itemTag = computed(() => {
+  if (props.tag) return props.tag
+  if (isSelectable.value && !hasInput.value) return 'label'
+  return 'div'
 })
 
 const isSelectableRight = computed(() => {
@@ -295,6 +345,7 @@ function isItemSelectable(item) {
 }
 
 const isItemClickable = computed(() => {
+  if (hasInput.value) return false
   if (isSelectable.value) return true
   if (props.clickable !== null) {
     return props.clickable && !props.btn && !slots.btn
@@ -303,7 +354,7 @@ const isItemClickable = computed(() => {
 })
 
 function onItemClick(item) {
-  if (isSelectable.value) {
+  if (isSelectable.value && itemTag.value !== 'label') {
     toggleItem(item)
   }
   if (hasClick.value) {
@@ -378,53 +429,12 @@ const resolveCheckboxColor = computed(() => (item) => {
   return resolveProp(props.checkboxColor || props.color, item) || 'primary'
 })
 
-function getItemVal(item) {
-  if (props.val !== null) {
-    return resolveProp(props.val, item)
-  }
-  if (props.itemKey) {
-    const keyVal = resolveProp(props.itemKey, item)
-    if (keyVal !== undefined && keyVal !== null && keyVal !== '') {
-      return keyVal
-    }
-  }
-  return item
-}
-
-function isChecked(item) {
-  const itemVal = getItemVal(item)
-  if (Array.isArray(props.modelValue)) {
-    return props.modelValue.includes(itemVal)
-  }
-  if (props.modelValue === props.trueValue) return true
-  if (itemVal !== undefined && props.modelValue === itemVal) return true
-  return false
-}
-
-function onCheckboxUpdate(val) {
-  emit('update:modelValue', val)
-  emit('update:model-value', val)
-  emit('update:selected', val)
-}
-
 function toggleItem(item) {
   if (!isItemSelectable(item)) return
-
-  const itemVal = getItemVal(item)
-  if (Array.isArray(props.modelValue)) {
-    const exists = props.modelValue.includes(itemVal)
-    const next = exists
-      ? props.modelValue.filter(v => v !== itemVal)
-      : [...props.modelValue, itemVal]
-    onCheckboxUpdate(next)
-  } else if (props.modelValue !== undefined) {
-    const next = isChecked(item)
-      ? props.falseValue
-      : (props.val !== null ? itemVal : props.trueValue)
-    onCheckboxUpdate(next)
-  } else {
-    onCheckboxUpdate([itemVal])
-  }
+  model.value = toggleListItem(item, model.value, props.val, props.itemKey, props.trueValue, props.falseValue)
+  emit('update:modelValue', model.value)
+  emit('update:model-value', model.value)
+  emit('update:selected', model.value)
 }
 
 const isHighlighted = computed(() => {

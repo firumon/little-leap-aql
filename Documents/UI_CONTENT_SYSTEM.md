@@ -109,6 +109,16 @@ Every prop defaults to `undefined` so `useListStrategy` stays authoritative unle
 - **Main content**: `layout`, `content` (Array — column list; forwarded only when it's a real Array, since the same prop name also carries the content-resolver's string identity), `label`, `labelClass`, `caption`, `captionClass`
 - **Meta side section**: `meta`, `metaLayout`, `metaColor`, `metaLabel`, `metaCaption`, `chip`, `chipColor`, `chipOutline`, `chipTextColor`, `badge`, `badgeColor`, `badgeTextColor`, `badgeOutline`
 - **Selection & Checkbox**: `selectable` (Boolean | `'left'` | `'right'`, default `false`), `checkbox` (Boolean | String | Function | Object, default `null`), `modelValue` (Array | Boolean | String | Number | Object), `val` (String | Function, value to track in Array; falls back to `itemKey`), `trueValue`, `falseValue`, `indeterminateValue`, `checkboxColor`. Uses `Renderable` with `QCheckbox` and supports `#checkbox` / `#select` slot overrides.
+- **Row Input**:
+  - `input`: Boolean | String | Object | Function. Activates row input when `true` or specified as a property name (e.g. `input="Qty"`). Can also pass an object of `QInput` props.
+  - `v-model`: Object (`{ [key]: value }`). When provided, **source items are never mutated** and `v-model` holds all values.
+  - `inputKey`: String | Function (defaults to `itemKey` $\rightarrow$ `'Code'`). Determines the key in `v-model` or internal state.
+  - `inputValue` / `val`: String | Function (defaults to string `input`, or `'value'` fallback). Determines the item field to read initial values from.
+  - `inputLabel`: String | Function. Input label evaluated via `resolveProp`. Takes precedence over `inputProps.label` and `input.label`.
+  - `inputProps`: Object | Function. Direct props forwarded to `QInput` (e.g. `{ type: 'number', outlined: true }`).
+  - Precedence: `inputLabel` > `inputProps.label` > `input.label`.
+  - Event: emits `@input-change` with `{ value, item, itemKey, itemKeyValue, field }`.
+  - Mutation guard: if `v-model` is provided, source `item` is never mutated. If `v-model` is omitted, typing directly mutates `item[field]`.
 - **Row action**: `btn`, `btnColor`
 - **Pagination**: `paginate` (Boolean, defaults to `true` in `abstract/List.vue`), `perPage` (Number, default `25`), `threshold` (Number, default `35`), `page` (Number, controlled current page synced with `resourceRecord.currentPage`)
 

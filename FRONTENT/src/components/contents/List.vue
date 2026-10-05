@@ -23,6 +23,7 @@
         @update:page="handlePageUpdate"
         @update:model-value="handleModelValueUpdate"
         @update:selected="handleSelectedUpdate"
+        @input-change="emit('input-change', $event)"
       />
     </div>
   </Transition>
@@ -117,6 +118,13 @@ const props = defineProps({
   // Row action button
   btn: { type: [String, Function, Object], default: undefined },
   btnColor: { type: [String, Function], default: undefined },
+
+  // Input
+  input: { type: [Boolean, String, Object, Function], default: undefined },
+  inputProps: { type: [Object, Function], default: undefined },
+  inputLabel: { type: [String, Function], default: undefined },
+  inputKey: { type: [String, Function], default: undefined },
+  inputValue: { type: [String, Function], default: undefined },
 
   // Content-resolver identity — explicit values here (or forwarded via attrs) take
   // priority over the ambient resourceConfig context.
@@ -283,7 +291,8 @@ const emit = defineEmits([
   'update:page',
   'update:modelValue',
   'update:model-value',
-  'update:selected'
+  'update:selected',
+  'input-change'
 ])
 
 function handlePageUpdate(page) {

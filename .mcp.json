@@ -6,8 +6,16 @@
     },
     "quasar": {
       "type": "stdio",
-      "command": "npx",
-      "args": ["-y", "--fetch-retries=0", "@quasar/mcp@latest"]
+      "command": "cmd.exe",
+      "args": [
+        "/c",
+        "npx",
+        "-y",
+        "--fetch-retries=0",
+        "@quasar/mcp@latest",
+        "--project",
+        "FRONTENT"
+      ]
     }
   }
 }

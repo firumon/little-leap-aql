@@ -51,6 +51,10 @@ A file named with a leading `_` is a helper and needs no block.
 - Do not speak on behalf of AQL, the user, or any system element.
 - If a feature, function, or rule does not exist in the code, state clearly and plainly that it is missing or not implemented yet.
 
+## Quasar MCP Documentation Rule (STRICT)
+- Always use the Quasar MCP server (`quasar`) to get answers for any Quasar-related queries and implementations (components, props, slots, events, methods, directives, plugins, configs).
+- Never guess Quasar APIs or search the web when the local Quasar MCP server can answer directly from the installed packages.
+
 ## Startup Sequence
 - Read this file.
 - **Protocol check first**:

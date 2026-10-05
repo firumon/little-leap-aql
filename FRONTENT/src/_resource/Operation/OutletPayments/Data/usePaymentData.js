@@ -16,10 +16,12 @@
  *   collectedThisMonth      - money collected this month by Date
  *   collectedLastMonth      - money collected last month by Date
  *   collectionsPerDay       - money per day, last 30 days
+ *   collectionsPerDay7Days  - money per day, last 7 days
  *   topPayingOutlets        - top 8 outlets by money collected inside chosen outletRange
  *   collectionsByPerson     - money by Username inside chosen personRange
  *   pendingApproval         - count and amount of active submitted payments
  *   userWisePendingAmount   - pending amount grouped by Username
+ *   outletWisePendingAmount - pending amount grouped by Outlet, top 7
  *   approvalPerformance     - approved count and average approval time in hours
  *   cancelledThisMonthCount - cancelled payments by ProgressCancelledAt (fallback Date) this month
  *   cancelledLastMonthCount - cancelled payments by ProgressCancelledAt (fallback Date) last month
@@ -77,6 +79,17 @@ export default function usePaymentData () {
         sumTo(amounts, user, Number(payment.Amount) || 0)
       }
       return topN(amounts, 8).map((item) => ({
+        label: item.label,
+        value: Number(item.value.toFixed(2))
+      }))
+    })
+    const outletWisePendingAmount = computed(() => {
+      const amounts = new Map()
+      for (const payment of pendingRows.value) {
+        const outletCode = String(payment.OutletCode || '').trim() || '(Unassigned)'
+        sumTo(amounts, outletCode, Number(payment.Amount) || 0)
+      }
+      return topN(amounts, 7, (code) => getOutlet(code)?.name || code).map((item) => ({
         label: item.label,
         value: Number(item.value.toFixed(2))
       }))
@@ -158,6 +171,8 @@ export default function usePaymentData () {
       }))
     })
 
+    const collectionsPerDay7Days = computed(() => collectionsPerDay.value.slice(-7))
+
     // Range controls
     const outletRange = ref('$last30Days')
     const personRange = ref('$last30Days')
@@ -228,10 +243,12 @@ export default function usePaymentData () {
       collectedThisMonth,
       collectedLastMonth,
       collectionsPerDay,
+      collectionsPerDay7Days,
       topPayingOutlets,
       collectionsByPerson,
       pendingApproval,
       userWisePendingAmount,
+      outletWisePendingAmount,
       approvalPerformance,
       cancelledThisMonthCount,
       cancelledLastMonthCount,

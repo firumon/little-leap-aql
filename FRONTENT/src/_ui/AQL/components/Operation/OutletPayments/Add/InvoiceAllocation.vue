@@ -12,21 +12,20 @@
           :items="outletInvoices"
           item-key="code"
           itemClass="bg-transparent"
+          :layout="['label', 'caption', 'caption']"
+          :content="[
+            (row) => `${row.code} · ${row.date}`,
+            (row) => `${row.username || 'System'} · ${formatDueText(row)}`,
+            (row) => `Balance: ${_C(row.balance, true)}`
+          ]"
         >
-          <template #item="{ item }">
-            <q-item-section>
-              <q-item-label>{{ item.code }} · {{ item.date }}</q-item-label>
-              <q-item-label caption>{{ item.username || 'System' }} · {{ formatDueText(item) }}</q-item-label>
-              <q-item-label caption>Balance: {{ _C(item.balance, true) }}</q-item-label>
-            </q-item-section>
-            <q-item-section side>
-              <component
-                :is="CurrencyField"
-                :model-value="allocations[item.code] || 0"
-                :config="{ label: 'Applied', min: 0, max: item.balance }"
-                @update:model-value="(value) => setAllocation(item.code, value)"
-              />
-            </q-item-section>
+          <template #btn="{ item }">
+            <component
+              :is="CurrencyField"
+              :model-value="allocations[item.code] || 0"
+              :config="{ label: 'Applied', min: 0, max: item.balance }"
+              @update:model-value="(value) => setAllocation(item.code, value)"
+            />
           </template>
         </AppList>
       </q-card-section>

@@ -68,19 +68,21 @@ export function isCancelled (record) {
 const gate = () => useResourceConfig(RESOURCE_NAME)
 
 export function canCreatePayment () {
-  return !!gate().allowed({ outletPayment: 'create' })
+  return !!(gate().allowed('create') || gate().allowed('write') || gate().allowed({ OutletPayments: 'create' }) || gate().allowed({ OutletPayments: 'write' }))
 }
 
 export function canCancelPayment (record) {
   const status = text(asRow(record).Status).toUpperCase()
   const isRowActive = !status || status === 'ACTIVE'
-  return !!gate().allowed({ outletPayment: 'cancel' }, null, record) && OPEN_STATES.includes(progressOf(record)) && isRowActive
+  const permitted = gate().allowed('cancel') || gate().allowed('update') || gate().allowed({ OutletPayments: 'cancel' }) || gate().allowed({ OutletPayments: 'update' })
+  return !!permitted && OPEN_STATES.includes(progressOf(record)) && isRowActive
 }
 
 export function canApprovePayment (record) {
   const status = text(asRow(record).Status).toUpperCase()
   const isRowActive = !status || status === 'ACTIVE'
-  return !!gate().allowed({ outletPayment: 'approve' }, null, record) && isSubmitted(record) && isRowActive
+  const permitted = gate().allowed('approve') || gate().allowed('update') || gate().allowed({ OutletPayments: 'approve' }) || gate().allowed({ OutletPayments: 'update' })
+  return !!permitted && isSubmitted(record) && isRowActive
 }
 
 export function hasInvoiceResource () {

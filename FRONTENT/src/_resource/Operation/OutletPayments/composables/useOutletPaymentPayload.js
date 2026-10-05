@@ -265,6 +265,7 @@ export function buildOutletPaymentAllocationNodes (allocations = {}, existingRec
 
   const paymentNode = {
     resource: PAYMENTS,
+    ...(row.Code || options.code ? { code: text(row.Code || options.code) } : {}),
     merge: true,
     reload: [PAYMENTS, 'OutletConsumptionInvoices'],
     record: {
@@ -312,73 +313,69 @@ export function buildOutletPaymentAllocationNodes (allocations = {}, existingRec
   return [paymentNode, ...invoiceNodes]
 }
 
-export function buildOutletPaymentApprovalNodes ({
-  paymentRecord = {},
-  selectedInvoices = [],
-  rows = [],
-  totalAmount = 0,
-  actorName = '',
-  comment = '',
-  waiveResidual = false,
-  waiverReason = '',
-  waiverComment = '',
-  existingPayments = []
-} = {}) {
-  const payment = asRow(paymentRecord)
-  const paymentCode = text(payment.Code)
-  if (!canApprovePayment(payment)) return [{ valid: false, message: 'You do not have permission to approve this payment.' }]
-  if (!paymentCode) return [{ valid: false, message: 'Payment record is missing identifier.' }]
+export function buildOutletPaymentApproveNodes (allocationObj = {}, payment = {}, options = {}) {
+  const row = asRow(payment)
+  const amount = num(row.Amount)
+  const entries = Object.entries(allocationObj || {}).map(([c, a]) => [text(c), num(a)])
+  const active = entries.filter(([code, val]) => code && val > 0)
+  const activeCodes = active.map(([code]) => code)
+  const allocatedSum = active.reduce((sum, [_, val]) => sum + val, 0)
 
-  const invoices = (Array.isArray(selectedInvoices) ? selectedInvoices : []).map(asRow)
-  if (!invoices.length) return [{ valid: false, message: 'Select at least one invoice to approve.' }]
-
-  const amount = num(totalAmount) || num(payment.Amount)
-  if (amount <= 0) return [{ valid: false, message: 'Payment amount must be greater than zero.' }]
-
-  const allocated = new Map((Array.isArray(rows) ? rows : []).map(asRow)
-    .map((row) => [text(row.OutletConsumptionInvoiceCode), num(row.Amount)]))
-  const activeAllocations = invoices
-    .map(invoice => ({ invoice, code: text(invoice.Code), allocated: num(allocated.get(text(invoice.Code))) }))
-    .filter(item => item.code && item.allocated > 0)
-  const allocatedSum = activeAllocations.reduce((sum, item) => sum + item.allocated, 0)
-  if (!activeAllocations.length || Math.abs(allocatedSum - amount) > 0.01) {
-    return [{ valid: false, message: `Sum of allocations (${allocatedSum.toFixed(2)}) does not match payment amount (${amount.toFixed(2)}).` }]
+  if (amount <= 0 || Math.abs(amount - allocatedSum) >= 0.01) {
+    return [{
+      valid: false,
+      message: 'Allocated amount does not match the payment amount.'
+    }]
   }
-  if (waiveResidual && !text(waiverReason)) return [{ valid: false, message: 'Please select a waiver reason for the residual balance.' }]
 
-  const nodes = [{
+  const { user } = useAuth()
+  const actor = text(options.actorName || user.value?.name)
+  const stamps = stampFields('ProgressApproved', actor, text(options.comment) || 'Payment approved.')
+
+  const paymentNode = {
     resource: PAYMENTS,
-    actions: [{
-      action: 'Approve',
-      column: 'Progress',
-      columnValue: 'APPROVED',
-      code: textOrRef(paymentCode),
-      data: { fields: {
-        OutletConsumptionInvoiceCode: activeAllocations.map(({ code }) => code).join(','),
-        Allocation: activeAllocations.length > 1
-          ? JSON.stringify(Object.fromEntries(activeAllocations.map(({ code, allocated: paid }) => [code, paid])))
-          : '',
-        ...stampFields('ProgressApproved', actorName, text(comment) || 'Payment approved.')
-      } }
-    }],
-    reload: [PAYMENTS],
-    permissions: { update: 'You are not allowed to approve this payment.' }
-  }]
-  const paymentsByInvoice = indexPaymentsByInvoice(existingPayments)
-  for (const { invoice, code, allocated: paid } of activeAllocations) {
-    const balance = balanceDueOf(invoice, paymentsByInvoice.get(code) || [])
-    const remaining = Math.max(0, Number((balance - paid).toFixed(2)))
-    if (waiveResidual && isWaiverEligible(remaining, invoice.PriceListCode)) {
-      const settlement = buildSettlementNodes({ record: invoice, reason: waiverReason, comment: text(waiverComment) || waiverCommentOf(paid, balance, invoices.length, waiverReason), mismatchAmount: remaining, balanceDue: remaining, actorName })
-      if (settlement[0]?.valid === false) return settlement
-      nodes.push(...settlement)
-    } else {
-      const walk = buildInvoiceBalanceTransitionNodes({ record: invoice, balance: remaining, actorName, comment: `Payment ${paymentCode} approved.` })
-      if (walk[0]?.valid === false) return walk
-      nodes.push(...walk)
+    code: text(row.Code),
+    permissions: { approve: 'You are not allowed to approve payments.' },
+    record: {
+      Progress: 'APPROVED',
+      OutletConsumptionInvoiceCode: activeCodes.join(','),
+      Allocation: activeCodes.length > 1 ? JSON.stringify(Object.fromEntries(active)) : '',
+      ...stamps
     }
   }
-  return nodes
+
+  const invoiceList = Array.isArray(options.invoices) ? options.invoices : []
+  const invoiceNodes = []
+
+  for (const [invCode, allocated] of active) {
+    const rawInv = invoiceList.find(i => text(i.code || i.Code) === invCode) || { Code: invCode }
+    const inv = { ...rawInv, Code: text(rawInv.Code || rawInv.code) }
+    const currentBal = inv.balance !== undefined
+      ? num(inv.balance)
+      : balanceDueOf(inv, options.existingPayments || [])
+    const rem = Math.max(0, Number((currentBal - allocated).toFixed(2)))
+    const note = text(options.comment) || (rem <= 0
+      ? ('Payment of ' + allocated + ' allocated. Invoice fully paid.')
+      : ('Payment of ' + allocated + ' allocated; balance remaining: ' + rem.toFixed(2) + '.'))
+
+    const transitionNodes = buildInvoiceBalanceTransitionNodes({
+      record: inv,
+      balance: rem,
+      amount: allocated,
+      actorName: actor,
+      comment: note
+    })
+
+    if (transitionNodes[0]?.valid === false) {
+      return transitionNodes
+    }
+
+    for (const node of transitionNodes) {
+      invoiceNodes.push({ ...node, role: invCode })
+    }
+  }
+
+  return [paymentNode, ...invoiceNodes]
 }
 
 // ─── 2. Payment Cancellation Batch ────────────────────────────────────────────

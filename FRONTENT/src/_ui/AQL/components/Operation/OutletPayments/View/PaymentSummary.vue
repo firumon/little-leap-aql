@@ -1,18 +1,5 @@
 <template>
   <div>
-    <q-banner v-if="isPaymentCancelled" dense rounded class="bg-red-1 text-red-10 q-mb-sm">
-      <template #avatar>
-        <q-icon name="block" color="negative" />
-      </template>
-      <div class="text-weight-bold">This receipt was cancelled — no money is credited by it.</div>
-      <div v-if="record?.ProgressCancelledComment" class="text-caption q-mt-xs">
-        &ldquo;{{ record.ProgressCancelledComment }}&rdquo;
-      </div>
-      <div v-if="record?.ProgressCancelledBy" class="text-caption text-grey-8 q-mt-xs">
-        {{ record.ProgressCancelledBy }}<span v-if="record.ProgressCancelledAt"> &bull; {{ record.ProgressCancelledAt }}</span>
-      </div>
-    </q-banner>
-
     <SectionDividerLabel label="Payment" />
 
     <q-card :class="ui.cardClass">
@@ -98,30 +85,6 @@ const details = computed(() => {
   ]
   const reference = String(entry.Reference || entry.reference || '').trim()
   if (reference) lines.push({ key: 'reference', label: 'Reference', value: reference })
-
-  if (isPaymentApproved.value) {
-    if (entry.ProgressApprovedBy || entry.ProgressApprovedAt) {
-      lines.push({
-        key: 'approvedBy',
-        label: 'Approved by',
-        value: [entry.ProgressApprovedBy || 'System', entry.ProgressApprovedAt].filter(Boolean).join(' • ')
-      })
-    }
-    if (entry.ProgressApprovedComment) {
-      lines.push({ key: 'approvedComment', label: 'Approval note', value: entry.ProgressApprovedComment })
-    }
-  } else if (!isPaymentCancelled.value) {
-    if (entry.ProgressSubmittedBy || entry.ProgressSubmittedAt) {
-      lines.push({
-        key: 'submittedBy',
-        label: 'Submitted by',
-        value: [entry.ProgressSubmittedBy || entry.Username, entry.ProgressSubmittedAt].filter(Boolean).join(' • ')
-      })
-    }
-    if (entry.ProgressSubmittedComment) {
-      lines.push({ key: 'submittedComment', label: 'Submission note', value: entry.ProgressSubmittedComment })
-    }
-  }
 
   return lines
 })

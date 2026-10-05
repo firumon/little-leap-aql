@@ -63,6 +63,32 @@ export function isCancelled (record) {
   return progressOf(record) === CANCELLED
 }
 
+export const WORKFLOW_STAMPS = [
+  { state: SUBMITTED, prefix: 'ProgressSubmitted', title: 'Submitted' },
+  { state: APPROVED, prefix: 'ProgressApproved', title: 'Approved' },
+  { state: CANCELLED, prefix: 'ProgressCancelled', title: 'Cancelled' }
+]
+
+export function workflowStamps (record) {
+  const row = asRow(record)
+  return WORKFLOW_STAMPS
+    .map((stamp) => {
+      const at = text(row[`${stamp.prefix}At`])
+      const meta = PROGRESS_META[stamp.state] || {}
+      return {
+        state: stamp.state,
+        title: stamp.title,
+        by: text(row[`${stamp.prefix}By`]),
+        at,
+        comment: text(row[`${stamp.prefix}Comment`]),
+        icon: meta.icon || 'schedule',
+        color: meta.color || 'grey-6',
+        label: meta.label || stamp.state
+      }
+    })
+    .filter((event) => event.by || event.at)
+}
+
 // ─── Permission Gates ─────────────────────────────────────────────────────────
 
 const gate = () => useResourceConfig(RESOURCE_NAME)

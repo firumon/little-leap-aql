@@ -8,7 +8,8 @@ import { useOutletPaymentIndex } from 'src/_resource/Operation/OutletPayments/co
 import {
   isApproved,
   isCancelled,
-  progressMetaOf
+  progressMetaOf,
+  workflowStamps
 } from 'src/_resource/Operation/OutletPayments/composables/useOutletPaymentProgress'
 import {
   netInvoiceTotalOf,
@@ -154,6 +155,17 @@ export function useOutletPaymentViewContext () {
     progressMeta,
     isPaymentCancelled,
     isPaymentApproved,
+
+    events: computed(() => workflowStamps(record.value)),
+    formatStampDate: (value) => {
+      const raw = (value == null ? '' : String(value)).trim()
+      if (!raw) return ''
+      const parsed = new Date(raw)
+      if (Number.isNaN(parsed.getTime())) return raw
+      return parsed.toLocaleString(undefined, {
+        day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+      })
+    },
 
     invoice,
     invoiceRow,

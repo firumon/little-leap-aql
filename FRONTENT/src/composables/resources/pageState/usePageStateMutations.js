@@ -295,7 +295,7 @@ export function usePageStateMutations ({ state, registry, hydrate, notify }) {
     const node = nodeAt(resource, role)
     if (key) node.record[key] = value
     else Object.assign(node.record, value || {})
-    return node
+    return useRecord(key, resource, role)
   }
 
   function getRecord (key = null, resource, role) {
@@ -326,7 +326,7 @@ export function usePageStateMutations ({ state, registry, hydrate, notify }) {
     const entry = list.find((c) => c.header === name)
     if (entry) entry.value = value
     else list.push({ header: name, value })
-    return value
+    return useControls(name, '', resource, role)
   }
 
   function getControls (name, fallback = null, resource, role) {
@@ -388,7 +388,7 @@ export function usePageStateMutations ({ state, registry, hydrate, notify }) {
     if (!row) return null
     if (key) row[key] = value
     else Object.assign(row, value)
-    return row
+    return useChildren(childResource, index, key, resource, role)
   }
 
   // Writable computed over one column, so a template can v-model a child row.
@@ -432,7 +432,7 @@ export function usePageStateMutations ({ state, registry, hydrate, notify }) {
     if (!row) return null
     if (key) row[key] = value
     else Object.assign(row, value)
-    return row
+    return useRecords(index, key, resource, role)
   }
 
   function useRecords (index, key = null, resource, role) {

@@ -193,6 +193,7 @@ export function usePageState (strategy = {}, options = {}) {
     hasNode: registry.hasNode,
     hasNodes: registry.hasNodes,
     removeNode: registry.removeNode,
+    detachAll: registry.detachAll,
     setReload,
     ...mutations,
     ...actions,

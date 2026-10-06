@@ -356,7 +356,7 @@ function initAppResourcesCodeConfig() {
         ]),
         UIFields: JSON.stringify([
             { header: 'Name', label: 'Name', type: 'text', required: true },
-            { header: 'ParentOutletCode', label: 'Parent Outlet', type: 'select', source: { resource: 'Outlets', field: 'Code', label: 'Name' }, required: false },
+            { header: 'ParentOutletCode', label: 'Parent Outlet', type: 'select', source: { resource: 'Outlets', value: 'Code', label: 'Name' }, required: false },
             { header: 'ContactPerson', label: 'Contact Person', type: 'text' },
             { header: 'Phone', label: 'Phone', type: 'tel' },
             { header: 'Email', label: 'Email', type: 'text' },

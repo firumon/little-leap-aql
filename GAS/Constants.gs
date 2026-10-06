@@ -112,6 +112,7 @@ const  APP_OPTIONS_SEED = {
   OutletReturnReason: ['DAMAGE', 'EXPIRED', 'SLOW_MOVING', 'RECALL', 'OVERSTOCK', 'SPECIFICATION_MISMATCH', 'OTHER'],
   OutletReturnProgress: ['SUBMITTED', 'AWAITING_INVOICE_ADJUSTMENT', 'AWAITING_WAREHOUSE_RECEIPT', 'COMPLETED', 'CANCELLED'],
   OutletReturnWarehouseAction: ['Disposed', 'Stocked'],
+  OutletReturnWarehouseActionDisposedReason: ['Damaged Beyond Repair', 'Expired / Spoiled', 'Contaminated', 'Other'],
   OutletMovementReferenceType: ['RestockDelivery', 'Consumption', 'Adjustment', 'OutletReturn'],
   OutletConsumptionProgress: ['PENDING_INVOICE_GENERATION', 'INVOICE_GENERATED', 'CANCELLED'],
   OutletConsumptionInvoiceProgress: ['PENDING_PAYMENT', 'PARTIALLY_PAID', 'PAID', 'CANCELLED'],

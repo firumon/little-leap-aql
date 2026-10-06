@@ -55,6 +55,27 @@ A file named with a leading `_` is a helper and needs no block.
 - Always use the Quasar MCP server (`quasar`) to get answers for any Quasar-related queries and implementations (components, props, slots, events, methods, directives, plugins, configs).
 - Never guess Quasar APIs or search the web when the local Quasar MCP server can answer directly from the installed packages.
 
+## UI Screen Symmetry Rule (STRICT)
+- When writing code for UI or screen display elements, always follow similar existing pages, patterns, and code.
+- Keep the exact same look, feel, and layout everywhere in the app.
+- All pages must have symmetry.
+- A design on one page that differs from another page is not supported at all.
+
+## Feature Implementation & Source of Truth Rule (STRICT)
+- **Docs First**: When implementing a feature, always read the canonical documentation for that feature first to gain sufficient knowledge.
+- **Core Feature Engine Next**: Next, read the core codebase of the feature itself (for example, the feature composables under `FRONTENT/src/composables/resources/pageState/`).
+- **Never Copy Other Implementations**:
+  - Do NOT look at how other resource pages implemented the feature to copy their code or patterns.
+  - Those existing pages might have bugs, outdated patterns, or old workarounds.
+  - You can look at other pages only to get a quick idea, but NEVER copy their code or pattern.
+  - Always write the code fresh from what you learned in the canonical docs and the core feature engine.
+- **When Docs and Code Disagree**:
+  - The actual core code is the ultimate truth.
+  - You must immediately notify the user about any mismatch between the docs and the code.
+- **Example**: Implementing `pageState` for a new Add page (like Product Add):
+  - Refer only to the `pageState` docs and the `pageState` core composables (`FRONTENT/src/composables/resources/pageState/`).
+  - Do not copy from other Add pages. Write the code directly from the docs and the core feature engine.
+
 ## Startup Sequence
 - Read this file.
 - **Protocol check first**:

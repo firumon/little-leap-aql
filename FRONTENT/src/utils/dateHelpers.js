@@ -25,18 +25,7 @@ import {
   isValid
 } from 'date-fns'
 
-/**
- * Parses a sheet value into a local Date.
- * Accepts: Date, epoch milliseconds (number or numeric string), 'YYYY-MM-DD',
- * 'YYYY-MM-DDTHH:mm[:ss]' and 'YYYY-MM-DD HH:mm[:ss]'.
- *
- * Deliberately NOT date-fns `parseISO`: the date part is built from explicit Y/M/D components
- * so the calendar date is taken literally, matching the long-standing `.slice(0, 10)` behaviour
- * in useOutletVisits. `parseISO` would honour a trailing 'Z' and shift a late-evening UTC
- * timestamp into the next local day, silently re-bucketing existing records.
- *
- * @returns {Date|null} null when the value cannot be interpreted as a date.
- */
+// Literal calendar date without timezone shift.
 export function parseAnyDate(value) {
   if (value === null || value === undefined || value === '') return null
 
@@ -52,21 +41,35 @@ export function parseAnyDate(value) {
   const raw = String(value).trim()
   if (!raw) return null
 
-  // Epoch milliseconds arriving as a string (parseISO rejects these).
   if (/^\d{11,}$/.test(raw)) {
     const fromEpoch = new Date(Number(raw))
     return isValid(fromEpoch) ? fromEpoch : null
   }
 
-  const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2})(?::(\d{2}))?)?/)
-  if (match) {
+  const ymdMatch = raw.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})(?:[T ](\d{1,2}):(\d{2})(?::(\d{2}))?)?/)
+  if (ymdMatch) {
     const parsed = new Date(
-      Number(match[1]),
-      Number(match[2]) - 1,
-      Number(match[3]),
-      Number(match[4] || 0),
-      Number(match[5] || 0),
-      Number(match[6] || 0)
+      Number(ymdMatch[1]),
+      Number(ymdMatch[2]) - 1,
+      Number(ymdMatch[3]),
+      Number(ymdMatch[4] || 0),
+      Number(ymdMatch[5] || 0),
+      Number(ymdMatch[6] || 0)
+    )
+    return isValid(parsed) ? parsed : null
+  }
+
+  const dmyMatch = raw.match(/^(\d{1,2})[-\/\.](\d{1,2})(?:[-\/\.](\d{2,4}))?(?:[T ](\d{1,2}):(\d{2})(?::(\d{2}))?)?$/)
+  if (dmyMatch) {
+    let year = dmyMatch[3] ? Number(dmyMatch[3]) : new Date().getFullYear()
+    if (year < 100) year += 2000
+    const parsed = new Date(
+      year,
+      Number(dmyMatch[2]) - 1,
+      Number(dmyMatch[1]),
+      Number(dmyMatch[4] || 0),
+      Number(dmyMatch[5] || 0),
+      Number(dmyMatch[6] || 0)
     )
     return isValid(parsed) ? parsed : null
   }

@@ -27,6 +27,7 @@ import { computed } from 'vue'
 import { useRecord } from 'src/composables/resources/useRecord'
 import { useOutletResource } from './useOutletResource'
 import { useOutletStorageResource } from 'src/_resource/Operation/OutletStorages/composables/useOutletStorageResource'
+import { toDateOnly } from 'src/utils/dateHelpers'
 import {
   VISIT_WINDOW_DAYS,
   ACTIVITY_WINDOW_DAYS,
@@ -62,11 +63,17 @@ function groupByOutlet (rows, column = 'OutletCode') {
 }
 
 /** The most recent (largest) ISO date string in a set of rows, or `''` when there is none. */
-function latestDate (rows, column) {
+const todayISO = () => new Date().toISOString().slice(0, 10)
+
+function latestDate (rows, column, fallbackColumn) {
+  const today = todayISO()
   let latest = ''
   for (const row of rows) {
-    const value = text(row[column])
-    if (value && value > latest) latest = value
+    const raw = (row[column] != null && row[column] !== '')
+      ? row[column]
+      : (fallbackColumn ? row[fallbackColumn] : '')
+    const value = toDateOnly(raw)
+    if (value && value <= today && value > latest) latest = value
   }
   return latest
 }
@@ -174,8 +181,13 @@ const build = (recordSource) => {
       let lastActivityAt = ''
 
       for (const stream of ACTIVITY_STREAMS) {
-        const streamRows = maps[stream.key]?.get(code) || []
-        const last = latestDate(streamRows, stream.dateColumn)
+        const streamRows = (maps[stream.key]?.get(code) || []).filter((row) => {
+          const progress = upper(row.Progress)
+          if (progress === 'CANCELLED' || progress === 'REJECTED') return false
+          if (stream.key === 'visit') return progress === VISIT_COMPLETED
+          return true
+        })
+        const last = latestDate(streamRows, stream.dateColumn, stream.fallbackDateColumn)
         streams[stream.key] = { count: streamRows.length, lastAt: last }
         if (last && last > lastActivityAt) lastActivityAt = last
       }

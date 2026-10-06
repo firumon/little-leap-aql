@@ -53,11 +53,11 @@ export const ACTIVITY_WINDOW_DAYS = 30
 // `MovementDate`. Adding a sixth stream is one entry here, not a sweep through the widgets.
 
 export const ACTIVITY_STREAMS = [
-  { key: 'visit', resource: 'OutletVisits', dateColumn: 'Date', label: 'Visit', icon: 'event_available' },
-  { key: 'restock', resource: 'OutletRestocks', dateColumn: 'Date', label: 'Restock', icon: 'inventory_2' },
-  { key: 'consumption', resource: 'OutletConsumptions', dateColumn: 'Date', label: 'Consumption', icon: 'point_of_sale' },
-  { key: 'invoice', resource: 'OutletConsumptionInvoices', dateColumn: 'Date', label: 'Invoice', icon: 'receipt_long' },
-  { key: 'payment', resource: 'OutletPayments', dateColumn: 'Date', label: 'Payment', icon: 'payments' }
+  { key: 'visit', resource: 'OutletVisits', dateColumn: 'ProgressCompletedAt', fallbackDateColumn: 'RespondDate', label: 'Visit', icon: 'event_available' },
+  { key: 'restock', resource: 'OutletRestocks', dateColumn: 'UpdatedAt', fallbackDateColumn: 'Date', label: 'Restock', icon: 'inventory_2' },
+  { key: 'consumption', resource: 'OutletConsumptions', dateColumn: 'UpdatedAt', fallbackDateColumn: 'Date', label: 'Consumption', icon: 'point_of_sale' },
+  { key: 'invoice', resource: 'OutletConsumptionInvoices', dateColumn: 'UpdatedAt', fallbackDateColumn: 'Date', label: 'Invoice', icon: 'receipt_long' },
+  { key: 'payment', resource: 'OutletPayments', dateColumn: 'UpdatedAt', fallbackDateColumn: 'Date', label: 'Payment', icon: 'payments' }
 ]
 
 /** The stream keys, in the order an outlet's life actually runs through them. */

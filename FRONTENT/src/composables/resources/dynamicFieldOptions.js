@@ -86,8 +86,8 @@ export function resolveDynamicFieldOptions (field, { resourceName, dataStore, au
   const targetResource = isObj ? (source.resource || source.name) : source
   if (targetResource && typeof targetResource === 'string') {
     const records = dataStore?.getRecords?.(targetResource) || []
-    const valCol = (isObj ? (source.value || source.valueField) : null) || field.sourceValue || 'Code'
-    const labelCol = (isObj ? (source.label || source.labelField) : null) || field.sourceLabel || valCol
+    const valCol = (isObj ? source.value : null) || field.sourceValue || 'Code'
+    const labelCol = (isObj ? source.label : null) || field.sourceLabel || valCol
     const filterRule = (isObj ? source.filter : null) || field.sourceFilter
 
     let filtered = records

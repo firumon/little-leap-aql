@@ -79,6 +79,9 @@ export default defineConfig((ctx) => {
         'process.env.APP_VERSION': JSON.stringify(pkg.version),
         'process.env.BUILD_TIME': JSON.stringify(BUILD_TIME)
       },
+      env: {
+        clientPrefix: ['QCLI_', 'VITE_']
+      },
       defineEnv: {
         APP_NAME: pkg.productName,
         APP_VERSION: pkg.version,

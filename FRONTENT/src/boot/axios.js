@@ -26,18 +26,18 @@ export default boot(async ({ app }) => {
         })
 
         // Expecting a plain text URL string from the Master
-        const returnedUrl = typeof response.data === 'string' 
-          ? response.data.trim() 
+        const returnedUrl = typeof response.data === 'string'
+          ? response.data.trim()
           : response.data?.url
 
         if (returnedUrl && returnedUrl.startsWith('https://')) {
           activeUrl = returnedUrl
           activeTenant = tParam
-          
+
           // Save to local storage for long-term persistence
           localStorage.setItem('aql_tenant_url', activeUrl)
           localStorage.setItem('aql_tenant_code', activeTenant)
-          
+
           console.log(`[Tenant Resolver] Successfully resolved and cached tenant "${tParam}": ${activeUrl}`)
         } else {
           console.error('[Tenant Resolver] Invalid URL returned from Master Apps Script:', response.data)

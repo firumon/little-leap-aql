@@ -67,7 +67,7 @@ and maps each survivor to a control **by schema signal, in this priority**:
 5. Toggle-shaped (`type: 'toggle'`/`'boolean'`, or a 2-option Yes/No-style `options` array)
    → a toggle switch.
 6. Header `status` or `type: 'status'` → the status control (chip-styled select).
-7. `type: 'select'`/`'dropdown'` → a select populated from `field.options`.
+7. `type: 'openselect'`, `type: 'select'`, `type: 'multiselect'`, `plainselect`, `menuselect`, `chipselect` → select control populated dynamically from `field.source` (`Existing`, `AppOption`, `AppOption & Existing`, or cross-resource lookup) or static `field.options`.
 8. Otherwise, a declared cross-reference (`APP.Resources.Relations`) → a relation picker.
 9. Otherwise → a generic text-family input, typed further by type normalization.
 

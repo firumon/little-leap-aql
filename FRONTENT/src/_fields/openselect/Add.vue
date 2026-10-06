@@ -10,6 +10,17 @@
       <q-item>
         <q-item-section class="text-grey-6">No matching options</q-item-section>
       </q-item>
+      <q-separator />
+      <q-item
+        v-close-popup
+        clickable
+        @click="openPrompt"
+      >
+        <q-item-section avatar>
+          <q-icon name="edit_note" color="primary" />
+        </q-item-section>
+        <q-item-section class="text-primary">{{ freeTextLabel }}</q-item-section>
+      </q-item>
     </template>
 
     <template #after-options>
@@ -129,9 +140,12 @@ const selectBindings = computed(() => ({
     : { useInput: false })
 }))
 
+const lastFilterTerm = ref('')
+
 function onFilter (needle, update) {
   update(() => {
-    const term = String(needle || '').trim().toLowerCase()
+    lastFilterTerm.value = String(needle || '').trim()
+    const term = lastFilterTerm.value.toLowerCase()
     filteredOptions.value = term
       ? baseOptions.value.filter((option) => labelOf(option).toLowerCase().includes(term))
       : baseOptions.value
@@ -143,7 +157,7 @@ const draft = ref('')
 const draftError = ref('')
 
 function openPrompt () {
-  draft.value = ''
+  draft.value = lastFilterTerm.value || ''
   draftError.value = ''
   prompting.value = true
 }

@@ -65,9 +65,25 @@ This document is the canonical meaning reference for `APP.Resources` columns.
 ## UI Field Types (`UIFields[].type`)
 
 `UIFields[].type` is not free text — it names a component directory under
-`FRONTENT/src/_fields/<type>/`. Registered types today: `currency`,
-`date`, `datetime`, `file`, `link`, `number`, `select`, `status`, `tel`, `text`,
-`textarea`, `toggle`.
+`FRONTENT/src/_fields/<type>/`. Registered types:
+- `text` (fallback for unknown or missing types)
+- `textarea` (multiline text box; keep rows 4 or more)
+- `number` (numeric input)
+- `currency` (money input with currency symbol)
+- `date` (date picker)
+- `datetime` (date and 24-hour time picker)
+- `select` (standard dropdown list)
+- `openselect` (dropdown list that also lets users type and add a new value)
+- `multiselect` (dropdown that lets users pick multiple items)
+- `status` (chip-style status toggle or dropdown)
+- `toggle` (simple on/off switch)
+- `toggleitem` (titled row with description and on/off switch)
+- `tel` (phone number input)
+- `link` (web link / URL input)
+- `file` (file uploader and preview card)
+- `plainselect` (clean button toggle row)
+- `menuselect` (dropdown button with menu list)
+- `chipselect` (clickable chip buttons)
 
 > **Maintainer rule (mandatory).** Introducing a NEW `type` value in `UIFields`
 > metadata is a two-file change, never one. You must also:
@@ -87,6 +103,45 @@ This document is the canonical meaning reference for `APP.Resources` columns.
 workflow stamp, and the shape the `$dateTime` action token resolves to (`$now`
 stays epoch milliseconds). `{column}{Value}By` stamps store the user's display name
 (`auth.user.Name || auth.user.UserID`), not the raw UserID.
+
+## Dynamic Option Sources (`UIFields[].source`)
+
+Dropdown fields (`openselect`, `select`, `multiselect`, `plainselect`, `menuselect`, `chipselect`)
+can get their choices dynamically using the `source` property.
+
+Supported `source` values:
+
+1. **`Existing`**
+   - Scans rows in the current table.
+   - Collects unique, non-blank values already entered in this column.
+   - Sorts them in alphabetical order.
+   - Example: `{ header: 'Province', label: 'Province', type: 'openselect', source: 'Existing' }`
+
+2. **`AppOption`**
+   - Reads choices from app options (`authStore.appOptionsMap`).
+   - Group names follow the rule `<ResourceName><FieldHeader>` (for example, `LeadsType`, `PurchaseRequisitionPriority`).
+   - If the group uses a custom name, specify `appOptionGroup: 'MyCustomGroup'`.
+   - Example: `{ header: 'Type', label: 'Type', type: 'select', source: 'AppOption' }`
+
+3. **`AppOption & Existing`** (or **`Existing & AppOption`**)
+   - Combines choices from both AppOptions and existing rows.
+   - Removes duplicate choices automatically.
+   - Example: `{ header: 'Category', label: 'Category', type: 'openselect', source: 'AppOption & Existing' }`
+
+4. **Cross-Resource Lookup (`Resource` or Object)**
+   - Pulls choices from another table.
+   - Can be a resource name string: `"Warehouses"`.
+   - Or a full configuration object:
+     ```json
+     {
+       "resource": "Outlets",
+       "value": "Code",
+       "label": "Name",
+       "filter": { "Status": "Active" }
+     }
+     ```
+   - Filters support dynamic tokens like `$today` and `$userOutlet`.
+
 
 ## File Type Columns (Field Type: "file")
 

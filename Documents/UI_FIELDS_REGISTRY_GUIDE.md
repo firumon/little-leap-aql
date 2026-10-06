@@ -19,17 +19,24 @@ src/_fields/
 ├── README.md
 ├── index.js                  # re-exports the resolver API
 ├── useFieldResolver.js       # central dynamic resolver
+├── chipselect/{Add,Edit,View}.vue
 ├── currency/{Add,Edit,View}.vue
 ├── date/{Add,Edit,View}.vue
+├── datetime/{Add,Edit,View}.vue
 ├── file/{Add,Edit,View}.vue
 ├── link/{Add,Edit,View}.vue
+├── menuselect/{Add,Edit,View}.vue
+├── multiselect/{Add,Edit,View}.vue
 ├── number/{Add,Edit,View}.vue
+├── openselect/{Add,Edit,View}.vue
+├── plainselect/{Add,Edit,View}.vue
 ├── select/{Add,Edit,View}.vue
 ├── status/{Add,Edit,View}.vue
 ├── tel/{Add,Edit,View}.vue
 ├── text/{Add,Edit,View}.vue    ← FALLBACK TYPE, must always exist
 ├── textarea/{Add,Edit,View}.vue
-└── toggle/{Add,Edit,View}.vue
+├── toggle/{Add,Edit,View}.vue
+└── toggleitem/{Add,Edit,View}.vue
 ```
 
 | File | Mode | Rendered by |
@@ -71,15 +78,29 @@ Every `Add.vue` / `Edit.vue` / `View.vue` implements exactly this surface, with 
 | `textarea` | `q-input type="textarea"` autogrow | multiline text (`white-space: pre-line`) |
 | `status` | `AqlStatusToggle`, or `q-select` when `config.options` exists | coloured `QChip`, map overridable via `config.statusColors` |
 | `select` | `q-select` with `use-input` local filtering | resolved option label |
+| `openselect` | `q-select` with options + "Enter a new value" popup dialog | resolved label, or raw value if outside options |
+| `multiselect` | `q-select multiple` with chips/tags | comma-joined label list |
 | `date` | `components/app/Date.vue` | `toLocaleDateString('en-GB', …)` |
+| `datetime` | `q-input` with date & time popups (`YYYY-MM-DD HH:mm:ss`) | formatted datetime span |
 | `number` | `q-input type="number"` | `toLocaleString` |
-| `currency` | `q-input type="number"` prefixed with the dynamic symbol from `useCurrency` | `_C(value)` |
-| `toggle` | `q-toggle` | outlined `QChip`, positive when the value matches the column's `true-value` |
+| `currency` | `q-input type="number"` prefixed with dynamic symbol | `_C(value)` |
+| `toggle` | `q-toggle` | outlined `QChip`, positive when true |
+| `toggleitem` | titled row with description and `q-toggle` | titled row with square state chip |
 | `plainselect` | `q-btn-toggle` (flat, dense, no-caps, toggle-color="primary") | resolved option label |
 | `menuselect` | `q-btn-dropdown` (flat, dense, no-caps, auto-close) displaying picked label, opening `q-list` menu | resolved option label |
 | `chipselect` | small clickable `q-chip` options with `q-gutter-xs`, filled primary for picked | resolved option label |
 
 `status` picks its control from `config.options`: absent ⇒ classic Active/Inactive column ⇒ `AqlStatusToggle`; present ⇒ `q-select`. This reproduces `mapField`'s two pre-existing status branches without a hardcoded header check in the component.
+
+### 15.3.1 Dynamic Option Sources (`field.source`)
+
+Dropdown-family controls (`openselect`, `select`, `multiselect`, etc.) can dynamically populate their options via `field.source` in `APP.Resources.UIFields`:
+
+- **`Existing`**: Collects distinct values already saved in this column from current resource rows in the local data store.
+- **`AppOption`**: Fetches option items from `authStore.appOptionsMap` matching `<ResourceName><FieldHeader>` (e.g. `LeadsType`). Or use `field.appOptionGroup` to override the group key.
+- **`AppOption & Existing`** (or **`Existing & AppOption`**): Merges AppOption choices and values from existing rows, deduplicating choices.
+- **`Resource` / Object**: Fetches options from a foreign resource (e.g. `"Warehouses"` or `{ resource: "Outlets", value: "Code", label: "Name", filter: { Status: "Active" } }`). Supports dynamic tokens.
+
 
 ### 15.4 Resolver API (`useFieldResolver.js`)
 

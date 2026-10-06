@@ -77,7 +77,7 @@ Once approved by the user:
 2. **Ensure Audit Columns**: The setup script must append `CreatedAt`, `UpdatedAt`, `CreatedBy`, `UpdatedBy` to the header array of any primary resource sheet.
 3. **Update Sync Config**: Locate the resource config within `initAppResourcesCodeConfig()` in `GAS/syncAppResources.gs`:
    * Update `RequiredHeaders` and `UniqueHeaders` if validation rules changed.
-   * Update the `UIFields` JSON array to reflect the new form input fields, labels, hints, and types for the frontend rendering.
+   * Update the `UIFields` JSON array to reflect the new form input fields, labels, hints, and types for the frontend rendering. If a select/dropdown field needs dynamic choices, set `source` to `'Existing'`, `'AppOption'`, `'AppOption & Existing'`, or a cross-resource config object `{ resource, value, label, filter }`.
    * Verify that the column name string and casing match exactly between the setup headers and the sync metadata UIFields.
 
 ### Step 3: Frontend & Resource Domain Logic Modifications

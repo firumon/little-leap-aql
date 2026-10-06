@@ -1,4 +1,4 @@
-﻿---
+---
 name: AQL Create & Update Content Customization
 description: Initialization prompt for creating custom UI overrides (Vue SFC, JS object, JS function) for the Create and Update content systems (Create.vue, Update.vue, FormRecord.vue, FormChild.vue) and for extending pageState-bound form/child-entry behavior, including Update hydration and child soft-deletion.
 ---
@@ -34,7 +34,7 @@ Before writing an override, pick the layer that matches the intent:
 | Adjust props of **one field on one resource** | `fieldProps` (§2.1c) — preferred — or a `FormField<Header>.js` modifier when it must be tenant-scoped |
 | Change how **a field type renders everywhere** (all currency inputs, all file uploads) | Edit `src/_fields/<type>/Add.vue` — never a per-resource override |
 | Add a **new field type** | New `_fields/<type>/{Add,Edit,View}.vue` folder, a `TYPE_ALIASES` entry if the schema spells it differently, and a `mapField` branch stamping `fieldType` if props need preparing |
-| A column renders as a plain text input but should be a date/select/currency | Fix the column's `type` in `APP.Resources.UIFields` — do **not** patch it with a per-resource override, or the form and the View page will disagree |
+| A column renders as a plain text input but should be a date/select/currency/openselect | Fix the column's `type` (and `source` if dynamic options are needed: `'Existing'`, `'AppOption'`, `'AppOption & Existing'`, or cross-resource) in `APP.Resources.UIFields` — do **not** patch it with a per-resource override, or the form and the View page will disagree |
 
 ### 3-Tier Precedence Chain
 

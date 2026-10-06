@@ -210,8 +210,12 @@ selects it. Its own type rather than a flag on `select`, because `select` guaran
 stored value is one of the listed options and callers rely on that.
 
 Use it where a column has a known vocabulary that users must still be able to extend without
-a schema change — `Leads.Type`, seeded from the `LeadType` AppOptions group. `config.options`
-seeds the list from either source (`field.options` or the AppOptions group `mapField` resolves).
+a schema change — e.g. `Leads.Province` seeded from existing rows, or `Leads.Type` seeded from `LeadType`.
+`field.source` configures the options:
+- `'Existing'`: scans existing rows of this table for distinct non-empty values.
+- `'AppOption'`: pulls from `authStore.appOptionsMap` via `<ResourceName><FieldHeader>` (e.g. `LeadsType`).
+- `'AppOption & Existing'` (or `'Existing & AppOption'`): combines both and deduplicates.
+- `{ resource, value, label, filter }` (or resource name string): pulls from another resource, with optional token-evaluated filters.
 `config.freeTextLabel` renames the prompt row.
 
 A value already stored outside the list is appended to the options so it renders as selected

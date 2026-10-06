@@ -5,6 +5,7 @@ import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { useRecord } from 'src/composables/resources/useRecord'
 import { singularize, pluralize } from 'src/utils/appHelpers'
 import { normalizeFieldType } from 'src/_fields/useFieldResolver'
+import { resolveDynamicFieldOptions } from './dynamicFieldOptions'
 import AqlFileUpload from 'components/shared/AqlFileUpload.vue'
 import AppDate from 'components/app/Date.vue'
 import AqlStatusToggle from 'components/abstract/StatusToggle.vue'
@@ -30,13 +31,6 @@ function resolvePath(source, path) {
   return path.split('.').reduce((acc, key) => (acc == null ? acc : acc[key]), source)
 }
 
-/**
- * Renders an `APP.Resources.Relations` `labelHeader` against a target row.
- * A plain target column name resolves directly; anything containing a `$`
- * parent path is interpolated against the enriched record so nested getters
- * (`$product`, `$supplier`, `$parent`) resolve reactively.
- * Returns null when nothing in the expression resolved.
- */
 function renderLabelExpression(expr, row, targetResource, targetHeaders, dataStore) {
   if (targetHeaders.includes(expr)) return row[expr] ?? null
 
@@ -66,38 +60,9 @@ export function isToggleField(field) {
   return false
 }
 
-/**
- * Maps one schema field definition to its render descriptor.
- *
- * Every returned descriptor carries a `fieldType` — the normalized presentation
- * type that `_fields/useFieldResolver.js` maps to `_fields/<type>/<Mode>.vue`.
- * It is deliberately NOT named `type`, because `type` is already a QInput prop
- * inside the returned props bag; keeping them separate lets containers strip
- * `fieldType` before binding the rest onto a control.
- *
- * `component` / `componentName` remain for the legacy direct-render consumers
- * (`_common/sections/Content/Form.vue`); FormRecord no longer reads them.
- */
-/**
- * The AppOptions group backing one column, as `{label,value}` pairs, or `[]`.
- * Probes `<ResourceName><Column>` with the resource name as-is, singular and plural
- * (Products/Type → ProductsType, ProductType). First hit wins.
- */
-export function appOptionGroupFor (optionsMap = {}, resourceName = '', header = '') {
-  const name = String(resourceName || '').trim()
-  const column = String(header || '').trim()
-  if (!name || !column) return []
+export { appOptionGroupFor, resolveDynamicFieldOptions } from './dynamicFieldOptions'
 
-  for (const variant of new Set([name, singularize(name), pluralize(name)])) {
-    const group = optionsMap[`${variant}${column}`]
-    if (Array.isArray(group) && group.length) {
-      return group.map((value) => ({ label: String(value), value }))
-    }
-  }
-  return []
-}
-
-export function mapField(field, { resourceName, linkRefs = {}, crossRefOptions = {}, appOptions = {} } = {}) {
+export function mapField(field, { resourceName, linkRefs = {}, crossRefOptions = {}, appOptions = {}, dynamicOptions = {} } = {}) {
   const baseProps = {
     label: field.label || field.header,
     hint: field.hint || undefined,
@@ -196,16 +161,13 @@ export function mapField(field, { resourceName, linkRefs = {}, crossRefOptions =
     }
   }
 
-  // An open-ended list: the AppOptions group seeds it, and the control lets the user
-  // add a value the group does not carry yet. Sits above `select` so the explicit
-  // type is not swallowed by it.
   if (normalizeFieldType(field.type) === 'openselect') {
     return {
       header: field.header,
       fieldType: 'openselect',
       componentName: 'q-select',
       ...baseProps,
-      options: field.options || appOptions[field.header] || [],
+      options: dynamicOptions[field.header] || field.options || appOptions[field.header] || [],
       emitValue: true,
       mapOptions: true,
       clearable: !field.required
@@ -218,16 +180,12 @@ export function mapField(field, { resourceName, linkRefs = {}, crossRefOptions =
       fieldType: 'select',
       componentName: 'q-select',
       ...baseProps,
-      // A schema `select` that names no options is asking for the column's AppOptions
-      // group — without this it renders an empty dropdown.
-      options: field.options || appOptions[field.header] || crossRefOptions[field.header] || [],
+      options: dynamicOptions[field.header] || field.options || appOptions[field.header] || crossRefOptions[field.header] || [],
       emitValue: true,
       mapOptions: true
     }
   }
 
-  // AppOptions-driven select — a matching `<ResourceName><Column>` option group was
-  // found in authStore.appOptionsMap (resolved to {label,value} pairs upstream).
   if (Array.isArray(appOptions[field.header]) && appOptions[field.header].length) {
     return {
       header: field.header,
@@ -254,18 +212,27 @@ export function mapField(field, { resourceName, linkRefs = {}, crossRefOptions =
     }
   }
 
-  // Everything else is a text-family input. `normalizeFieldType` collapses the
-  // schema's spelling (url/website → link, money/price → currency, ...) onto the
-  // `_fields/` folder that owns the presentation.
   const resolvedType = normalizeFieldType(field.type)
+
+  if (resolvedType === 'multiselect') {
+    return {
+      header: field.header,
+      fieldType: 'multiselect',
+      componentName: 'q-select',
+      ...baseProps,
+      options: dynamicOptions[field.header] || field.options || appOptions[field.header] || crossRefOptions[field.header] || [],
+      emitValue: true,
+      mapOptions: true,
+      multiple: true,
+      clearable: !field.required
+    }
+  }
 
   const inputType = resolvedType === 'number' || resolvedType === 'currency' ? 'number'
     : resolvedType === 'textarea' ? 'textarea'
       : resolvedType === 'link' ? 'url'
         : resolvedType === 'tel' ? 'tel' : 'text'
 
-  // Textareas deliberately get no `autogrow` (nor `dense`/`rows`) — each collapses the
-  // control toward a single-line height, making it read as a plain text field.
   return {
     header: field.header,
     fieldType: resolvedType,
@@ -359,6 +326,30 @@ export function useFormFields(resourceName) {
     return map
   })
 
+  const dynamicOptionsMap = computed(() => {
+    const map = {}
+    const cfg = config.value
+    if (!cfg) return map
+
+    const uiFields = Array.isArray(cfg.ui?.fields) ? cfg.ui.fields : []
+    const resName = resolvedName.value
+    const appOpts = appOptionsMap.value
+
+    for (const field of uiFields) {
+      if (!field?.header || !field?.source) continue
+      const options = resolveDynamicFieldOptions(field, {
+        resourceName: resName,
+        dataStore,
+        authStore,
+        appOptions: appOpts
+      })
+      if (options && options.length) {
+        map[field.header] = options
+      }
+    }
+    return map
+  })
+
   const formFields = computed(() => {
     const cfg = config.value
     if (!cfg) return []
@@ -381,13 +372,10 @@ export function useFormFields(resourceName) {
         resourceName: resolvedName.value,
         linkRefs: linkRefs.value,
         crossRefOptions: crossRefOptionsMap.value,
-        appOptions: appOptionsMap.value
+        appOptions: appOptionsMap.value,
+        dynamicOptions: dynamicOptionsMap.value
       }))
   })
 
-  // `crossRefOptions` is exposed so a custom UI can NARROW a relation picker without
-  // re-deriving its option shape. The `labelHeader` rendering (`Name (Code)`, parent
-  // paths, templates) lives here; a caller that rebuilt the list itself would drift
-  // from it the moment a Relations config changed. Filter the exposed array instead.
-  return { formFields, mapField, crossRefOptions: crossRefOptionsMap }
+  return { formFields, mapField, crossRefOptions: crossRefOptionsMap, dynamicOptions: dynamicOptionsMap }
 }

@@ -16,101 +16,151 @@ The **Payment Report** generates a detailed payment receipt document for a speci
 
 ```excel
 =LET(
-  OutletFileID, VLOOKUP("OutletFileID", Config!A:B, 2, 0),
-  MasterFileID, VLOOKUP("masterFileID", Config!A:B, 2, 0),
+  MasterFileID, IFERROR(VLOOKUP("MasterFileID", Config!A:B, 2, 0), VLOOKUP("masterFileID", Config!A:B, 2, 0)),
+  OutletFileID, IFERROR(VLOOKUP("OutletFileID", Config!A:B, 2, 0), VLOOKUP("OperationFileID", Config!A:B, 2, 0)),
 
-  RawPayments, IMPORTRANGE(OutletFileID, "OutletPayments!A2:Q"),
-  RawInvoices, IMPORTRANGE(OutletFileID, "OutletConsumptionInvoices!A2:AB"),
-  RawOutlets, IMPORTRANGE(MasterFileID, "Outlets!A2:Q"),
+  RawPayments, IMPORTRANGE(OutletFileID, "OutletPayments!A1:U"),
+  RawInvoices, IMPORTRANGE(OutletFileID, "OutletConsumptionInvoices!A1:AD"),
+  RawOutlets, IMPORTRANGE(MasterFileID, "Outlets!A1:V"),
 
   RowFn, LAMBDA(idx_val_pairs, MAP(SEQUENCE(1, 39), LAMBDA(col_idx, IFERROR(VLOOKUP(col_idx, idx_val_pairs, 2, FALSE), "")))),
-  FormatEpochDateOnly, LAMBDA(val, LET(num, IFERROR(VALUE(val), 0), IF(num > 100000000000, TEXT(25569 + num / 86400000, "yyyy-mm-dd"), val))),
+  FormatEpochDateOnly, LAMBDA(val, LET(num, IFERROR(VALUE(val), 0), IF(TRIM(val) = "", "", IF(num > 100000000000, TEXT(25569 + num / 86400000, "yyyy-mm-dd"), IFERROR(TEXT(INT(val), "yyyy-mm-dd"), IFERROR(TEXT(DATEVALUE(LEFT(val, 10)), "yyyy-mm-dd"), val)))))),
   ToTextAmt, LAMBDA(val, LET(num, IFERROR(VALUE(val), 0), TEXT(num, "0.00"))),
 
-  PaymentCodes, TOCOL(CHOOSECOLS(RawPayments, 1)),
-  OutletCodes, TOCOL(CHOOSECOLS(RawOutlets, 1)),
-  InvoiceCodes, TOCOL(CHOOSECOLS(RawInvoices, 1)),
+  PayHeaders, CHOOSEROWS(RawPayments, 1),
+  Col_Pay_Code, IFERROR(MATCH("Code", PayHeaders, 0), 1),
+  Col_Pay_Date, IFERROR(MATCH("Date", PayHeaders, 0), 2),
+  Col_Pay_Outlet, IFERROR(MATCH("OutletCode", PayHeaders, 0), 3),
+  Col_Pay_Invoice, IFERROR(MATCH("OutletConsumptionInvoiceCode", PayHeaders, 0), 4),
+  Col_Pay_Amount, IFERROR(MATCH("Amount", PayHeaders, 0), 6),
+  Col_Pay_Mode, IFERROR(MATCH("Mode", PayHeaders, 0), 7),
+  Col_Pay_Ref, IFERROR(MATCH("Reference", PayHeaders, 0), 8),
+  Col_Pay_User, IFERROR(MATCH("Username", PayHeaders, 0), 9),
+  Col_Pay_Progress, IFERROR(MATCH("Progress", PayHeaders, 0), 10),
+  Col_Pay_Status, IFERROR(MATCH("Status", PayHeaders, 0), 20),
 
-  MatchIdx, IFERROR(MATCH($AB$6, PaymentCodes, 0), 0),
-  HasPayment, MatchIdx > 0,
+  InvHeaders, CHOOSEROWS(RawInvoices, 1),
+  Col_Inv_Code, IFERROR(MATCH("Code", InvHeaders, 0), 1),
+  Col_Inv_Date, IFERROR(MATCH("Date", InvHeaders, 0), 3),
+  Col_Inv_Subtotal, IFERROR(MATCH("Subtotal", InvHeaders, 0), 8),
+  Col_Inv_Discount, IFERROR(MATCH("Discount", InvHeaders, 0), 9),
+  Col_Inv_TaxAmount, IFERROR(MATCH("TotalTaxAmount", InvHeaders, 0), 11),
+  Col_Inv_ReturnDeduction, IFERROR(MATCH("ReturnDeductionTotal", InvHeaders, 0), 14),
+  Col_Inv_Progress, IFERROR(MATCH("Progress", InvHeaders, 0), 17),
+  Col_Inv_Status, IFERROR(MATCH("Status", InvHeaders, 0), 30),
 
-  PaymentRow, IF(HasPayment, CHOOSEROWS(RawPayments, MatchIdx), MAKEARRAY(1, 17, LAMBDA(r, c, ""))),
+  OutHeaders, CHOOSEROWS(RawOutlets, 1),
+  Col_Out_Code, IFERROR(MATCH("Code", OutHeaders, 0), 1),
+  Col_Out_Name, IFERROR(MATCH("Name", OutHeaders, 0), 2),
+  Col_Out_Contact, IFERROR(MATCH("ContactPerson", OutHeaders, 0), 4),
+  Col_Out_Phone, IFERROR(MATCH("Phone", OutHeaders, 0), 5),
+  Col_Out_Email, IFERROR(MATCH("Email", OutHeaders, 0), 6),
+  Col_Out_Country, IFERROR(MATCH("Country", OutHeaders, 0), 7),
+  Col_Out_Province, IFERROR(MATCH("Province", OutHeaders, 0), 8),
+  Col_Out_City, IFERROR(MATCH("City", OutHeaders, 0), 9),
+  Col_Out_Area, IFERROR(MATCH("Area", OutHeaders, 0), 10),
+  Col_Out_Address, IFERROR(MATCH("CommunicationAddress", OutHeaders, 0), 11),
+  Col_Out_TRN, IFERROR(MATCH("TaxRegistrationNumber", OutHeaders, 0), 19),
+  Col_Out_TRName, IFERROR(MATCH("TaxRegistrationName", OutHeaders, 0), 20),
 
-  PaymentDate, CHOOSEROWS(CHOOSECOLS(PaymentRow, 2), 1),
-  OutletCode, CHOOSEROWS(CHOOSECOLS(PaymentRow, 3), 1),
-  InvoiceCode, CHOOSEROWS(CHOOSECOLS(PaymentRow, 4), 1),
-  PaymentAmt, CHOOSEROWS(CHOOSECOLS(PaymentRow, 5), 1),
-  PaymentMode, CHOOSEROWS(CHOOSECOLS(PaymentRow, 6), 1),
-  PaymentRef, CHOOSEROWS(CHOOSECOLS(PaymentRow, 7), 1),
-  CollectedBy, CHOOSEROWS(CHOOSECOLS(PaymentRow, 8), 1),
-  PaymentProgress, CHOOSEROWS(CHOOSECOLS(PaymentRow, 9), 1),
+  CleanInput, TRIM($AB$6),
+  PaymentCodes, TOCOL(CHOOSECOLS(RawPayments, Col_Pay_Code)),
+  MatchIdx, IF(CleanInput <> "", IFERROR(MATCH(CleanInput, PaymentCodes, 0), 0), 0),
+  HasPayment, MatchIdx > 1,
 
-  OutletRow, IF(HasPayment, XLOOKUP(OutletCode, OutletCodes, RawOutlets, MAKEARRAY(1, 17, LAMBDA(r, c, ""))), MAKEARRAY(1, 17, LAMBDA(r, c, ""))),
-  OutletName, CHOOSEROWS(CHOOSECOLS(OutletRow, 2), 1),
-  ContactPerson, CHOOSEROWS(CHOOSECOLS(OutletRow, 3), 1),
-  Phone, CHOOSEROWS(CHOOSECOLS(OutletRow, 4), 1),
-  Email, CHOOSEROWS(CHOOSECOLS(OutletRow, 5), 1),
-  Country, CHOOSEROWS(CHOOSECOLS(OutletRow, 6), 1),
-  Province, CHOOSEROWS(CHOOSECOLS(OutletRow, 7), 1),
-  City, CHOOSEROWS(CHOOSECOLS(OutletRow, 8), 1),
-  Area, CHOOSEROWS(CHOOSECOLS(OutletRow, 9), 1),
-  TaxRegistrationNumber, CHOOSEROWS(CHOOSECOLS(OutletRow, 16), 1),
-  TaxRegistrationName, CHOOSEROWS(CHOOSECOLS(OutletRow, 17), 1),
+  PaymentRow, IF(HasPayment, CHOOSEROWS(RawPayments, MatchIdx), MAKEARRAY(1, COLUMNS(RawPayments), LAMBDA(r, c, ""))),
 
-  AddressString, TEXTJOIN(", ", TRUE, Area, City, Province, Country),
+  PaymentDate, INDEX(PaymentRow, 1, Col_Pay_Date),
+  OutletCode, INDEX(PaymentRow, 1, Col_Pay_Outlet),
+  InvoiceCode, INDEX(PaymentRow, 1, Col_Pay_Invoice),
+  PaymentAmt, INDEX(PaymentRow, 1, Col_Pay_Amount),
+  PaymentMode, INDEX(PaymentRow, 1, Col_Pay_Mode),
+  PaymentRef, INDEX(PaymentRow, 1, Col_Pay_Ref),
+  CollectedBy, INDEX(PaymentRow, 1, Col_Pay_User),
+  PaymentProgress, INDEX(PaymentRow, 1, Col_Pay_Progress),
+
+  OutletCodes, TOCOL(CHOOSECOLS(RawOutlets, Col_Out_Code)),
+  OutletMatchIdx, IF(AND(HasPayment, OutletCode <> ""), IFERROR(MATCH(OutletCode, OutletCodes, 0), 0), 0),
+  HasOutlet, OutletMatchIdx > 1,
+  OutletRow, IF(HasOutlet, CHOOSEROWS(RawOutlets, OutletMatchIdx), MAKEARRAY(1, COLUMNS(RawOutlets), LAMBDA(r, c, ""))),
+
+  OutletName, INDEX(OutletRow, 1, Col_Out_Name),
+  ContactPerson, INDEX(OutletRow, 1, Col_Out_Contact),
+  Phone, INDEX(OutletRow, 1, Col_Out_Phone),
+  Email, INDEX(OutletRow, 1, Col_Out_Email),
+  Country, INDEX(OutletRow, 1, Col_Out_Country),
+  Province, INDEX(OutletRow, 1, Col_Out_Province),
+  City, INDEX(OutletRow, 1, Col_Out_City),
+  Area, INDEX(OutletRow, 1, Col_Out_Area),
+  Address, INDEX(OutletRow, 1, Col_Out_Address),
+  TaxRegistrationNumber, INDEX(OutletRow, 1, Col_Out_TRN),
+  TaxRegistrationName, INDEX(OutletRow, 1, Col_Out_TRName),
+
+  AddressString, IF(Address <> "", Address, TEXTJOIN(", ", TRUE, Area, City, Province, Country)),
   ContactString, IF(ContactPerson <> "", "Contact Person: " & ContactPerson, ""),
   PhoneString, IF(Phone <> "", "Phone: " & Phone, ""),
   EmailString, IF(Email <> "", "Email: " & Email, ""),
-  TaxString, IF(AND(TaxRegistrationName <> "", TaxRegistrationNumber <> ""), TaxRegistrationName & ": " & TaxRegistrationNumber, ""),
+  TaxString, IF(AND(TaxRegistrationName <> "", TaxRegistrationNumber <> ""), TaxRegistrationName & ": " & TaxRegistrationNumber, IF(TaxRegistrationNumber <> "", "TRN: " & TaxRegistrationNumber, "")),
   OutletInfoString, TEXTJOIN(CHAR(10), TRUE, OutletName, AddressString, ContactString, PhoneString, EmailString, TaxString),
 
-  InvoiceMatchIdx, IFERROR(MATCH(InvoiceCode, InvoiceCodes, 0), 0),
-  HasInvoice, InvoiceMatchIdx > 0,
-  InvoiceRow, IF(HasInvoice, CHOOSEROWS(RawInvoices, InvoiceMatchIdx), MAKEARRAY(1, 28, LAMBDA(r, c, ""))),
+  InvoiceCodes, TOCOL(CHOOSECOLS(RawInvoices, Col_Inv_Code)),
+  InvoiceMatchIdx, IF(AND(HasPayment, InvoiceCode <> ""), IFERROR(MATCH(InvoiceCode, InvoiceCodes, 0), 0), 0),
+  HasInvoice, InvoiceMatchIdx > 1,
+  InvoiceRow, IF(HasInvoice, CHOOSEROWS(RawInvoices, InvoiceMatchIdx), MAKEARRAY(1, COLUMNS(RawInvoices), LAMBDA(r, c, ""))),
 
-  InvoiceDate, CHOOSEROWS(CHOOSECOLS(InvoiceRow, 3), 1),
-  InvoiceSubtotal, CHOOSEROWS(CHOOSECOLS(InvoiceRow, 8), 1),
-  InvoiceDiscount, CHOOSEROWS(CHOOSECOLS(InvoiceRow, 9), 1),
-  InvoiceProgress, CHOOSEROWS(CHOOSECOLS(InvoiceRow, 15), 1),
+  InvoiceDate, INDEX(InvoiceRow, 1, Col_Inv_Date),
+  InvoiceSubtotal, INDEX(InvoiceRow, 1, Col_Inv_Subtotal),
+  InvoiceDiscount, INDEX(InvoiceRow, 1, Col_Inv_Discount),
+  InvoiceTaxAmt, INDEX(InvoiceRow, 1, Col_Inv_TaxAmount),
+  InvoiceReturnDeduction, INDEX(InvoiceRow, 1, Col_Inv_ReturnDeduction),
+  InvoiceProgress, INDEX(InvoiceRow, 1, Col_Inv_Progress),
 
   InvoiceSubtotalVal, IFERROR(VALUE(InvoiceSubtotal), 0),
   InvoiceDiscountVal, IFERROR(VALUE(InvoiceDiscount), 0),
-  InvoicePayableVal, InvoiceSubtotalVal - InvoiceDiscountVal,
+  InvoiceTaxVal, IFERROR(VALUE(InvoiceTaxAmt), 0),
+  InvoiceReturnVal, IFERROR(VALUE(InvoiceReturnDeduction), 0),
+  InvoicePayableVal, MAX(0, InvoiceSubtotalVal - InvoiceDiscountVal + InvoiceTaxVal - InvoiceReturnVal),
 
-  RawPaymentsStatus, TOCOL(CHOOSECOLS(RawPayments, 16)),
-  RawPaymentsInvoiceCode, TOCOL(CHOOSECOLS(RawPayments, 4)),
-  RawPaymentsCode, TOCOL(CHOOSECOLS(RawPayments, 1)),
-  RawPaymentsProgress, TOCOL(CHOOSECOLS(RawPayments, 9)),
+  RawPaymentsInvoiceCode, TOCOL(CHOOSECOLS(RawPayments, Col_Pay_Invoice)),
+  RawPaymentsCode, TOCOL(CHOOSECOLS(RawPayments, Col_Pay_Code)),
+  RawPaymentsStatus, TOCOL(CHOOSECOLS(RawPayments, Col_Pay_Status)),
 
-  OtherPayments, IFERROR(
-    FILTER(RawPayments, (RawPaymentsInvoiceCode = InvoiceCode) * (RawPaymentsCode <> $AB$6) * (RawPaymentsStatus = "Active")),
-    MAKEARRAY(1, 17, LAMBDA(r, c, ""))
+  OtherPayments, IF(
+    AND(HasInvoice, InvoiceCode <> ""),
+    IFERROR(
+      FILTER(
+        RawPayments,
+        (RawPaymentsInvoiceCode = InvoiceCode) *
+        (RawPaymentsCode <> CleanInput) *
+        (RawPaymentsCode <> "Code") *
+        ((RawPaymentsStatus = "Active") + (RawPaymentsStatus = ""))
+      ),
+      ""
+    ),
+    ""
   ),
-
-  HasOtherPayments, AND(HasInvoice, CHOOSEROWS(CHOOSECOLS(OtherPayments, 1), 1) <> ""),
-
-  DummyRow, RowFn({0, "DUMMY"}),
-
-  OtherPaymentRows, REDUCE(DummyRow, SEQUENCE(IF(HasOtherPayments, ROWS(OtherPayments), 1)), LAMBDA(acc, k, LET(
-    row_val, CHOOSEROWS(OtherPayments, k),
-    o_code, CHOOSEROWS(CHOOSECOLS(row_val, 1), 1),
-    o_date, CHOOSEROWS(CHOOSECOLS(row_val, 2), 1),
-    o_amt, CHOOSEROWS(CHOOSECOLS(row_val, 5), 1),
-    o_mode, CHOOSEROWS(CHOOSECOLS(row_val, 6), 1),
-    o_user, CHOOSEROWS(CHOOSECOLS(row_val, 8), 1),
-    o_progress, CHOOSEROWS(CHOOSECOLS(row_val, 9), 1),
-
-    FormattedODate, FormatEpochDateOnly(o_date),
-    
-    Line_A, RowFn({4, o_code; 15, o_user; 27, ToTextAmt(o_amt)}),
-    Line_B, RowFn({4, FormattedODate; 15, o_mode & IF(o_progress = "CANCELLED", " (CANCELLED)", "")}),
-    
-    VSTACK(acc, Line_A, Line_B, RowFn({0, ""}))
-  ))),
+  HasOtherPayments, AND(INDEX(OtherPayments, 1, 1) <> "", INDEX(OtherPayments, 1, 1) <> "#N/A"),
 
   CleanOtherPayments, IF(
     HasOtherPayments,
-    CHOOSEROWS(OtherPaymentRows, SEQUENCE(ROWS(OtherPaymentRows) - 1, 1, 2)),
+    REDUCE("", SEQUENCE(ROWS(OtherPayments)), LAMBDA(acc, k, LET(
+      row_val, CHOOSEROWS(OtherPayments, k),
+      o_code, INDEX(row_val, 1, Col_Pay_Code),
+      o_date, INDEX(row_val, 1, Col_Pay_Date),
+      o_amt, INDEX(row_val, 1, Col_Pay_Amount),
+      o_mode, INDEX(row_val, 1, Col_Pay_Mode),
+      o_user, INDEX(row_val, 1, Col_Pay_User),
+      o_progress, INDEX(row_val, 1, Col_Pay_Progress),
+
+      FormattedODate, FormatEpochDateOnly(o_date),
+
+      Line_A, RowFn({4, o_code; 15, o_user; 27, ToTextAmt(o_amt)}),
+      Line_B, RowFn({4, FormattedODate; 15, o_mode & IF(o_progress = "CANCELLED", " (CANCELLED)", "")}),
+
+      OtherBlock, VSTACK(Line_A, Line_B, RowFn({0, ""})),
+
+      IF(k = 1, OtherBlock, VSTACK(acc, OtherBlock))
+    ))),
     RowFn({4, "No other payments found for this invoice."})
   ),
 
@@ -153,49 +203,47 @@ The **Payment Report** generates a detailed payment receipt document for a speci
 
 ## Source Sheets & Column Dependencies
 
-The formula imports data from three spreadsheets (using `masterFileID` and `OutletFileID` keys from Config):
-1. **`OutletPayments`** (`OutletPayments!A2:Q` in Outlet Spreadsheet):
-   - Column 1 (`A`): Payment Code (matches `$AB$6`)
-   - Column 2 (`B`): Payment Date
-   - Column 3 (`C`): Outlet Code
-   - Column 4 (`D`): Outlet Consumption Invoice Code
-   - Column 5 (`E`): Payment Amount
-   - Column 6 (`F`): Payment Mode
-   - Column 7 (`G`): Payment Reference
-   - Column 8 (`H`): Username
-   - Column 9 (`I`): Progress (`"SUBMITTED"`, `"CANCELLED"`)
-   - Column 16 (`P`): Status (`"Active"`)
-2. **`OutletConsumptionInvoices`** (`OutletConsumptionInvoices!A2:AB` in Outlet Spreadsheet):
-   - Column 1 (`A`): Invoice Code
-   - Column 3 (`C`): Invoice Date
-   - Column 4 (`D`): Due Date *(not read by this report)*
-   - Column 8 (`H`): Subtotal
-   - Column 9 (`I`): Discount
-   - Column 15 (`O`): Progress status (`"PENDING_PAYMENT"`, `"PARTIALLY_PAID"`, `"PAID"`, `"CANCELLED"`)
-   - Column 28 (`AB`): Status (`"Active"`)
-3. **`Outlets`** (`Outlets!A2:Q` in Master Spreadsheet):
-   - Column 1 (`A`): Outlet Code
-   - Column 2 (`B`): Outlet Name
-   - Column 3 (`C`): Contact Person
-   - Column 4 (`D`): Phone
-   - Column 5 (`E`): Email
-   - Column 6 (`F`): Country
-   - Column 7 (`G`): Province
-   - Column 8 (`H`): City
-   - Column 9 (`I`): Area
-   - Column 16 (`P`): Tax Registration Number
-   - Column 17 (`Q`): Tax Registration Name
+The formula imports data from three spreadsheets (using `MasterFileID` / `masterFileID` and `OutletFileID` / `OperationFileID` keys from Config):
+1. **`OutletPayments`** (`OutletPayments!A1:U` in Outlet Spreadsheet):
+   - `Code` (matches `$AB$6`)
+   - `Date` (Payment Date)
+   - `OutletCode` (Outlet Code)
+   - `OutletConsumptionInvoiceCode` (Linked Invoice Code)
+   - `Amount` (Payment Amount)
+   - `Mode` (Payment Mode: Cash, Bank, Cheque, etc.)
+   - `Reference` (Payment Reference ID)
+   - `Username` (Collected By User)
+   - `Progress` (Payment Progress status)
+   - `Status` (Record status: `"Active"`)
+2. **`OutletConsumptionInvoices`** (`OutletConsumptionInvoices!A1:AD` in Outlet Spreadsheet):
+   - `Code` (Invoice Code)
+   - `Date` (Invoice Date)
+   - `Subtotal` (Invoice Subtotal)
+   - `Discount` (Invoice Discount)
+   - `TotalTaxAmount` (Total Tax Amount)
+   - `ReturnDeductionTotal` (Return Deduction Total)
+   - `Progress` (Invoice Progress status)
+   - `Status` (Record status: `"Active"`)
+3. **`Outlets`** (`Outlets!A1:V` in Master Spreadsheet):
+   - `Code` (Outlet Code)
+   - `Name` (Outlet Name)
+   - `ContactPerson` (Contact Person)
+   - `Phone` (Phone Number)
+   - `Email` (Email Address)
+   - `Country`, `Province`, `City`, `Area`, `CommunicationAddress` (Address Details)
+   - `TaxRegistrationNumber`, `TaxRegistrationName` (Tax Details)
 
 ---
 
 ## Detailed Logic Breakdown
 
-1. **Payment Search**: Matches the Payment Code in `$AB$6` with `OutletPayments` columns.
-2. **Outlet Details Resolution**: Resolves full outlet address and tax details from `Outlets!A2:Q` based on the payment's `OutletCode`.
-3. **Invoice Matching**: Looks up the invoice row matching the payment's `OutletConsumptionInvoiceCode` in `OutletConsumptionInvoices` to show original subtotal, discount, progress, and payable amount.
-4. **Other Payments Retrieval**: Filters `OutletPayments` for all other active, non-cancelled payment rows matching the same invoice code (excluding the current code `$AB$6`).
-5. **Other Payments Loop (`REDUCE`)**: Stacks detailed logs for each other payment:
-   - Line A (2nd line): Code at Col D (index 4), Username at Col O (index 15), Amount at Col AA (index 27).
-   - Line B (3rd line): Date at Col D (index 4), Mode at Col O (index 15).
+1. **Header-Name Resolution**: Uses `MATCH` on row 1 headers of all source sheets. This ensures resilient mapping regardless of column re-ordering.
+2. **Payment Search**: Matches the Payment Code in cell `$AB$6` with `OutletPayments` codes.
+3. **Outlet Details Resolution**: Resolves full outlet address and tax details from `Outlets` based on the payment's `OutletCode`.
+4. **Invoice Matching**: Looks up the invoice row matching the payment's `OutletConsumptionInvoiceCode` in `OutletConsumptionInvoices` to display original subtotal, discount, progress, and net payable amount.
+5. **Other Payments Retrieval**: Filters `OutletPayments` for all other active payment rows matching the same invoice code (excluding the current payment code `$AB$6`).
+6. **Other Payments Loop (`REDUCE`)**: Stacks detailed logs for each other payment without dummy placeholder rows:
+   - Line A: Code at Col D (index 4), Username at Col O (index 15), Amount at Col AA (index 27).
+   - Line B: Date at Col D (index 4), Mode & Progress at Col O (index 15).
    - Blank row between payment blocks.
-6. **Final Array Stacking**: Combines all sections into a unified 39-column layout.
+7. **Final Array Stacking**: Combines all sections into a unified 39-column layout.

@@ -19,100 +19,116 @@ The **PaymentRecords Report** provides a filtered search and checklist log for O
 
 ```excel
 =LET(
-  OutletFileID, VLOOKUP("OutletFileID", Config!A:B, 2, 0),
-  MasterFileID, VLOOKUP("masterFileID", Config!A:B, 2, 0),
+  MasterFileID, IFERROR(VLOOKUP("MasterFileID", Config!A:B, 2, 0), VLOOKUP("masterFileID", Config!A:B, 2, 0)),
+  OutletFileID, IFERROR(VLOOKUP("OutletFileID", Config!A:B, 2, 0), VLOOKUP("OperationFileID", Config!A:B, 2, 0)),
 
-  RawPayments, IMPORTRANGE(OutletFileID, "OutletPayments!A2:Q"),
+  RawPayments, IMPORTRANGE(OutletFileID, "OutletPayments!A2:U"),
   RawOutlets, IMPORTRANGE(MasterFileID, "Outlets!A2:B"),
 
   RowFn, LAMBDA(idx_val_pairs, MAP(SEQUENCE(1, 39), LAMBDA(col_idx, IFERROR(VLOOKUP(col_idx, idx_val_pairs, 2, FALSE), "")))),
-  FormatEpochDateOnly, LAMBDA(val, LET(num, IFERROR(VALUE(val), 0), IF(num > 100000000000, TEXT(25569 + num / 86400000, "yyyy-mm-dd"), val))),
+  FormatEpochDateOnly, LAMBDA(val, LET(num, IFERROR(VALUE(val), 0), IF(TRIM(val) = "", "", IF(num > 100000000000, TEXT(25569 + num / 86400000, "yyyy-mm-dd"), IFERROR(TEXT(INT(val), "yyyy-mm-dd"), IFERROR(TEXT(DATEVALUE(LEFT(val, 10)), "yyyy-mm-dd"), val)))))),
   ToTextAmt, LAMBDA(val, LET(num, IFERROR(VALUE(val), 0), TEXT(num, "0.00"))),
 
-  DateFilter, IF(OR($J$11 = "", $J$11 = "All Date"), "", $J$11),
-  UserFilter, IF(OR($J$12 = "", $J$12 = "Any User"), "", $J$12),
-  ModeFilter, IF(OR($J$13 = "", $J$13 = "Every Mode"), "", $J$13),
+  DateInput, TRIM($J$11),
+  UserInput, TRIM($J$12),
+  ModeInput, TRIM($J$13),
+
+  DateFilter, IF(OR(DateInput = "", DateInput = "All Date", DateInput = "Any Date"), "", DateInput),
+  UserFilter, IF(OR(UserInput = "", UserInput = "Any User", UserInput = "All User"), "", UserInput),
+  ModeFilter, IF(OR(ModeInput = "", ModeInput = "Every Mode", ModeInput = "All Mode", ModeInput = "Any Mode"), "", ModeInput),
 
   HasInput, OR(DateFilter <> "", UserFilter <> "", ModeFilter <> ""),
 
-  PaymentsCode, TOCOL(CHOOSECOLS(RawPayments, 1)),
-  PaymentsDate, TOCOL(CHOOSECOLS(RawPayments, 2)),
-  PaymentsOutletCode, TOCOL(CHOOSECOLS(RawPayments, 3)),
-  PaymentsAmount, TOCOL(CHOOSECOLS(RawPayments, 5)),
-  PaymentsMode, TOCOL(CHOOSECOLS(RawPayments, 6)),
-  PaymentsUser, TOCOL(CHOOSECOLS(RawPayments, 8)),
-  PaymentsStatus, TOCOL(CHOOSECOLS(RawPayments, 16)),
+  FilterDateSerial, IF(DateFilter = "", 0, LET(num, IFERROR(VALUE(DateFilter), 0), IF(num > 100000000000, INT(25569 + num / 86400000), IFERROR(INT(DateFilter), IFERROR(DATEVALUE(LEFT(DateFilter, 10)), 0))))),
 
   OutletCodes, TOCOL(CHOOSECOLS(RawOutlets, 1)),
   OutletNames, TOCOL(CHOOSECOLS(RawOutlets, 2)),
 
-  ParsedDates, MAP(PaymentsDate, LAMBDA(d, IFERROR(IF(ISNUMBER(d), d, DATEVALUE(LEFT(d, 10))), 0))),
-  ParsedDateFilter, IFERROR(IF(ISNUMBER(DateFilter), DateFilter, DATEVALUE(LEFT(DateFilter, 10))), 0),
+  PaymentsWithData, IFERROR(FILTER(RawPayments, INDEX(RawPayments, 0, 1) <> ""), ""),
+  HasAnyPayments, AND(INDEX(PaymentsWithData, 1, 1) <> "", INDEX(PaymentsWithData, 1, 1) <> "#N/A"),
 
-  Filtered, IFERROR(
-    FILTER(
-      RawPayments,
-      (PaymentsStatus = "Active") *
-      (IF(
-        HasInput,
-        ((UserFilter = "") + (PaymentsUser = UserFilter)) *
-        ((DateFilter = "") + (ParsedDates = ParsedDateFilter)) *
-        ((ModeFilter = "") + (PaymentsMode = ModeFilter)),
-        SEQUENCE(ROWS(RawPayments))*0 + 1
-      ))
-    ),
-    MAKEARRAY(1, 17, LAMBDA(r, c, ""))
+  AllTrue, IF(HasAnyPayments, MAP(INDEX(PaymentsWithData, 0, 1), LAMBDA(x, TRUE)), TRUE),
+
+  UserMatch, IF(
+    NOT(HasAnyPayments),
+    TRUE,
+    IF(
+      UserFilter = "",
+      AllTrue,
+      MAP(INDEX(PaymentsWithData, 0, 9), LAMBDA(u, UPPER(TRIM(u)) = UPPER(UserFilter)))
+    )
   ),
 
-  FirstCell, CHOOSEROWS(CHOOSECOLS(Filtered, 1), 1),
-  HasData, AND(NOT(ISERR(Filtered)), FirstCell <> ""),
-
-  F_Date, IF(HasData, TOCOL(CHOOSECOLS(Filtered, 2)), TODAY()),
-  F_ParsedDate, MAP(F_Date, LAMBDA(d, IFERROR(IF(ISNUMBER(d), d, DATEVALUE(LEFT(d, 10))), TODAY()))),
-
-  F_Indices, SEQUENCE(ROWS(Filtered)),
-  F_Data, HSTACK(F_Indices, F_ParsedDate),
-  SortedData, SORT(F_Data, 2, FALSE),
-
-  LimitRows, IF(HasInput, ROWS(SortedData), MIN(15, ROWS(SortedData))),
-  SortedDataLimited, CHOOSEROWS(SortedData, SEQUENCE(LimitRows)),
-
-  S_Idx, TOCOL(CHOOSECOLS(SortedDataLimited, 1)),
-
-  DummyRow, RowFn({0, "DUMMY"}),
-
-  DynamicPart, REDUCE(DummyRow, SEQUENCE(LimitRows), LAMBDA(acc, k, LET(
-    idx, CHOOSEROWS(S_Idx, k),
-    row_arr, CHOOSEROWS(Filtered, idx),
-
-    PaymentCode, CHOOSEROWS(CHOOSECOLS(row_arr, 1), 1),
-    PaymentDate, CHOOSEROWS(CHOOSECOLS(row_arr, 2), 1),
-    OutletCode, CHOOSEROWS(CHOOSECOLS(row_arr, 3), 1),
-    Amount, CHOOSEROWS(CHOOSECOLS(row_arr, 5), 1),
-    Mode, CHOOSEROWS(CHOOSECOLS(row_arr, 6), 1),
-    Username, CHOOSEROWS(CHOOSECOLS(row_arr, 8), 1),
-
-    OutletName, IFERROR(XLOOKUP(OutletCode, OutletCodes, OutletNames, "Unknown Outlet"), "Unknown Outlet"),
-    FormattedDate, FormatEpochDateOnly(PaymentDate),
-
-    Record_Row_1, RowFn({4, FormattedDate & " / " & PaymentCode; 27, ToTextAmt(Amount)}),
-    Record_Row_2, RowFn({4, OutletName; 27, Mode & " by " & Username}),
-
-    VSTACK(
-      acc,
-      Record_Row_1,
-      Record_Row_2,
-      RowFn({0, ""})
+  DateMatch, IF(
+    NOT(HasAnyPayments),
+    TRUE,
+    IF(
+      DateFilter = "",
+      AllTrue,
+      MAP(INDEX(PaymentsWithData, 0, 2), LAMBDA(d, LET(num, IFERROR(VALUE(d), 0), d_serial, IF(num > 100000000000, INT(25569 + num / 86400000), IFERROR(INT(d), IFERROR(DATEVALUE(LEFT(d, 10)), -1))), d_serial = FilterDateSerial)))
     )
-  ))),
+  ),
+
+  ModeMatch, IF(
+    NOT(HasAnyPayments),
+    TRUE,
+    IF(
+      ModeFilter = "",
+      AllTrue,
+      MAP(INDEX(PaymentsWithData, 0, 7), LAMBDA(m, UPPER(TRIM(m)) = UPPER(ModeFilter)))
+    )
+  ),
+
+  StatusMatch, IF(
+    NOT(HasAnyPayments),
+    TRUE,
+    MAP(INDEX(PaymentsWithData, 0, 20), LAMBDA(st, OR(TRIM(st) = "", UPPER(TRIM(st)) = "ACTIVE")))
+  ),
+
+  Filtered, IF(
+    HasAnyPayments,
+    IF(
+      HasInput,
+      IFERROR(FILTER(PaymentsWithData, StatusMatch, UserMatch, DateMatch, ModeMatch), ""),
+      IFERROR(FILTER(PaymentsWithData, StatusMatch), "")
+    ),
+    ""
+  ),
+  HasData, AND(INDEX(Filtered, 1, 1) <> "", INDEX(Filtered, 1, 1) <> "#N/A"),
+
+  SortedData, IF(HasData, IFERROR(SORT(Filtered, 2, FALSE), Filtered), Filtered),
+  LimitRows, IF(NOT(HasData), 0, IF(HasInput, ROWS(SortedData), MIN(15, ROWS(SortedData)))),
+  SortedDataLimited, IF(LimitRows > 0, CHOOSEROWS(SortedData, SEQUENCE(LimitRows)), SortedData),
 
   FallbackText, IF(HasInput, "No payment records matched the selected filters.", "No active payment records found."),
 
-  ReportData, IF(
+  DynamicPart, IF(
     HasData,
-    CHOOSEROWS(DynamicPart, SEQUENCE(MAX(1, ROWS(DynamicPart) - 1), 1, 2)),
+    REDUCE("", SEQUENCE(LimitRows), LAMBDA(acc, k, LET(
+      row_arr, CHOOSEROWS(SortedDataLimited, k),
+
+      PaymentCode, INDEX(row_arr, 1, 1),
+      PaymentDate, INDEX(row_arr, 1, 2),
+      OutletCode, INDEX(row_arr, 1, 3),
+      Amount, INDEX(row_arr, 1, 6),
+      Mode, INDEX(row_arr, 1, 7),
+      Username, INDEX(row_arr, 1, 9),
+
+      OutletNameLookup, IFERROR(XLOOKUP(OutletCode, OutletCodes, OutletNames, OutletCode), OutletCode),
+      OutletName, IF(TRIM(OutletNameLookup) = "", OutletCode, OutletNameLookup),
+      FormattedDate, FormatEpochDateOnly(PaymentDate),
+
+      Record_Row_1, RowFn({4, FormattedDate & " / " & PaymentCode; 27, ToTextAmt(Amount)}),
+      Record_Row_2, RowFn({4, OutletName; 27, Mode & " by " & Username}),
+
+      RecordBlock, VSTACK(Record_Row_1, Record_Row_2, RowFn({0, ""})),
+
+      IF(k = 1, RecordBlock, VSTACK(acc, RecordBlock))
+    ))),
     RowFn({4, FallbackText})
   ),
+
+  ReportData, DynamicPart,
 
   ReportData
 )
@@ -122,15 +138,15 @@ The **PaymentRecords Report** provides a filtered search and checklist log for O
 
 ## Source Sheets & Column Dependencies
 
-The formula queries data from two spreadsheet files (`OutletFileID` and `masterFileID` keys from Config):
-1. **`OutletPayments`** (`OutletPayments!A2:Q` in Outlet Spreadsheet):
+The formula queries data from two spreadsheet files (using `MasterFileID` / `masterFileID` and `OutletFileID` / `OperationFileID` keys from Config):
+1. **`OutletPayments`** (`OutletPayments!A2:U` in Outlet Spreadsheet):
    - Column 1 (`A`): Code
    - Column 2 (`B`): Date (compared to `$J$11`)
    - Column 3 (`C`): Outlet Code
-   - Column 5 (`E`): Payment Amount
-   - Column 6 (`F`): Payment Mode (compared to `$J$13`)
-   - Column 8 (`H`): Username (compared to `$J$12`)
-   - Column 16 (`P`): Status (`"Active"`)
+   - Column 6 (`F`): Payment Amount
+   - Column 7 (`G`): Payment Mode (compared to `$J$13`)
+   - Column 9 (`I`): Username (compared to `$J$12`)
+   - Column 20 (`T`): Status (`"Active"`)
 2. **`Outlets`** (`Outlets!A2:B` in Master Spreadsheet):
    - Column 1 (`A`): Outlet Code
    - Column 2 (`B`): Outlet Name
@@ -141,14 +157,14 @@ The formula queries data from two spreadsheet files (`OutletFileID` and `masterF
 
 1. **User Filter Inputs**: Resolves search filters from cells `$J$11` (Date), `$J$12` (Username), and `$J$13` (Payment Mode). Default parameters (`"All Date"`, `"Any User"`, or `"Every Mode"`) are evaluated as blank.
 2. **Dynamic Filtering**:
-   - Compares record statuses to ensure only `"Active"` payments are evaluated.
-   - Filters the table dynamically using cross-multiplication (`*`) for active conditions.
+   - Parses dates into uniform serial format.
+   - Filters `OutletPayments` where record status is `"Active"` (or blank) and matches all active criteria.
 3. **Sorting & Slicing**:
    - Sorts results descending by payment date.
    - Limits output results to the **latest 15 rows** if no filters are active.
 4. **Stacked Record Reduction**:
-   - Loops through each matching payment transaction.
+   - Loops through each matching payment transaction without dummy placeholder rows.
    - `Record_Row_1`: Date and Payment Code at Column D (index 4), and Amount at Column AA (index 27).
-   - `Record_Row_2`: Outlet Name starting at Column D (index 4), and Payment Mode + collector username string (e.g. `"Cash by firumon"`) at Column AA (index 27).
+   - `Record_Row_2`: Outlet Name at Column D (index 4), and Mode with collector username (e.g., `"Cash by firumon"`) at Column AA (index 27).
    - Separates each payment log card with a spacer row.
 5. **Final Output Assembly**: Outputs only the dynamic records, omitting any report heading strings.

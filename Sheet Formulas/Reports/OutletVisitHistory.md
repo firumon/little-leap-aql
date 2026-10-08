@@ -19,9 +19,27 @@ Retrieves and formats basic outlet registry details (Name, Address details, Cont
 ```excel
 =LET(
   MasterFileID, VLOOKUP("MasterFileID", Config!A:B, 2, 0),
-  RawOutlets, IMPORTRANGE(MasterFileID, "Outlets!A2:J"),
-  Outlet,FILTER(RawOutlets, CHOOSECOLS(RawOutlets, 1) = $H$11),
-  TEXTJOIN(", ",TRUE,CHOOSECOLS(Outlet,2,9,8,7,6)) & CHAR(10) & "Contact Person: " & INDEX(Outlet,1,3) & CHAR(10) & "Phone: " & INDEX(Outlet,1,4)
+  RawOutlets, IMPORTRANGE(MasterFileID, "Outlets!A2:K"),
+  MatchingOutlets, IFERROR(FILTER(RawOutlets, INDEX(RawOutlets, 0, 1) = $H$11), ""),
+
+  IF(
+    OR($H$11 = "", INDEX(MatchingOutlets, 1, 1) = ""),
+    "Please select a valid Outlet Code in H11",
+    LET(
+      name, INDEX(MatchingOutlets, 1, 2),
+      contact, INDEX(MatchingOutlets, 1, 4),
+      phone, INDEX(MatchingOutlets, 1, 5),
+      country, INDEX(MatchingOutlets, 1, 7),
+      province, INDEX(MatchingOutlets, 1, 8),
+      city, INDEX(MatchingOutlets, 1, 9),
+      area, INDEX(MatchingOutlets, 1, 10),
+      address_parts, TEXTJOIN(", ", TRUE, area, city, province, country),
+
+      name & IF(address_parts <> "", " - " & address_parts, "") & 
+      IF(contact <> "", CHAR(10) & "Contact Person: " & contact, "") & 
+      IF(phone <> "", CHAR(10) & "Phone: " & phone, "")
+    )
+  )
 )
 ```
 
@@ -32,21 +50,17 @@ Calculates the count of visits assigned to different progress stages for the act
   ```excel
   =LET(
     OutletFileID, VLOOKUP("OutletFileID", Config!A:B, 2, 0),
-    RawVisits, IMPORTRANGE(OutletFileID, "OutletVisits!A2:X"),
-    Progress, "PLANNED",
-    VisitsOutletCode, TOCOL(CHOOSECOLS(RawVisits, 2)),
-    VisitsProgress, TOCOL(CHOOSECOLS(RawVisits, 5)),
-    VisitsStatus, TOCOL(CHOOSECOLS(RawVisits, 18)),
-    Ones, MAP(VisitsOutletCode, LAMBDA(x, 1)),
-    SUM(IFERROR(FILTER(Ones, (VisitsOutletCode = $H$11) * (VisitsProgress = Progress) * (VisitsStatus = "Active")), 0))
+    RawVisits, IMPORTRANGE(OutletFileID, "OutletVisits!A2:R"),
+    Matching, IFERROR(FILTER(INDEX(RawVisits, 0, 1), INDEX(RawVisits, 0, 2) = $H$11, INDEX(RawVisits, 0, 5) = "PLANNED", INDEX(RawVisits, 0, 18) = "Active"), ""),
+    IF(OR($H$11 = "", INDEX(Matching, 1, 1) = ""), 0, ROWS(Matching))
   )
   ```
 - **Postponed Visits (Cell `U15`)**:
-  *Identical to `U10`, but sets `Progress, "POSTPONED"`.*
-- **Cancelled Visits (Cell `AD15`)**:
-  *Identical to `U10`, but sets `Progress, "CANCELLED"`.*
+  *Identical to `U10`, but filters for `INDEX(RawVisits, 0, 5) = "POSTPONED"`.*
 - **Completed Visits (Cell `AD10`)**:
-  *Identical to `U10`, but sets `Progress, "COMPLETED"`.*
+  *Identical to `U10`, but filters for `INDEX(RawVisits, 0, 5) = "COMPLETED"`.*
+- **Cancelled Visits (Cell `AD15`)**:
+  *Identical to `U10`, but filters for `INDEX(RawVisits, 0, 5) = "CANCELLED"`.*
 
 ### 3. Chronological Visit Timeline (Cell `A20`)
 Generates a formatted chronological timeline of visits, calculating relative days (e.g. `"X Days Ago"`, `"Today"`, `"In X Days"`) and displaying phase-specific comments.
@@ -58,103 +72,79 @@ Generates a formatted chronological timeline of visits, calculating relative day
 
   RowFn, LAMBDA(idx_val_pairs, MAP(SEQUENCE(1, 39), LAMBDA(col_idx, IFERROR(VLOOKUP(col_idx, idx_val_pairs, 2, FALSE), "")))),
 
-  VisitsOutletCode, TOCOL(CHOOSECOLS(RawVisits, 2)),
-  VisitsDate, TOCOL(CHOOSECOLS(RawVisits, 3)),
-  VisitsProgress, TOCOL(CHOOSECOLS(RawVisits, 5)),
-  VisitsStatus, TOCOL(CHOOSECOLS(RawVisits, 18)),
+  FilteredVisits, IFERROR(FILTER(RawVisits, INDEX(RawVisits, 0, 2) = $H$11, INDEX(RawVisits, 0, 18) = "Active"), {"", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""}),
+  HasData, AND($H$11 <> "", INDEX(FilteredVisits, 1, 1) <> ""),
 
-  ParsedDates, MAP(VisitsDate, LAMBDA(d, IFERROR(IF(ISNUMBER(d), d, DATEVALUE(LEFT(d, 10))), 0))),
+  SortedVisits, IF(HasData, IFERROR(SORT(FilteredVisits, 3, TRUE), FilteredVisits), FilteredVisits),
 
-  Filtered, IFERROR(
-    FILTER(
-      RawVisits,
-      (VisitsOutletCode = $H$11) * (VisitsStatus = "Active") * (ParsedDates > 0)
-    ),
-    MAKEARRAY(1, 18, LAMBDA(r, c, ""))
-  ),
-
-  FirstCell, CHOOSEROWS(CHOOSECOLS(Filtered, 1), 1),
-  HasData, AND(NOT(ISERR(Filtered)), FirstCell <> ""),
-
-  F_Date, IF(HasData, TOCOL(CHOOSECOLS(Filtered, 3)), TODAY()),
-  F_Progress, IF(HasData, TOCOL(CHOOSECOLS(Filtered, 5)), ""),
-  F_ParsedDate, MAP(F_Date, LAMBDA(d, IFERROR(IF(ISNUMBER(d), d, DATEVALUE(LEFT(d, 10))), TODAY()))),
-
-  F_Indices, SEQUENCE(ROWS(Filtered)),
-  F_Data, HSTACK(F_Indices, F_ParsedDate),
-  SortedData, SORT(F_Data, 2, TRUE),
-
-  S_Idx, TOCOL(CHOOSECOLS(SortedData, 1)),
-  S_ParsedDate, TOCOL(CHOOSECOLS(SortedData, 2)),
-
-  DummyRow, RowFn({0, "DUMMY"}),
-
-  DynamicPart, REDUCE(DummyRow, SEQUENCE(ROWS(SortedData)), LAMBDA(acc, k, LET(
-    idx, CHOOSEROWS(S_Idx, k),
-    current_date, CHOOSEROWS(S_ParsedDate, k),
-    
-    HeaderText, IF(
-      current_date > TODAY(),
+  DynamicPart, REDUCE(
+    IFERROR(1/0, ""),
+    SEQUENCE(ROWS(SortedVisits)),
+    LAMBDA(acc, k,
       LET(
-        future_diff, current_date - TODAY(),
-        "In " & future_diff & " Day" & IF(future_diff = 1, "", "s")
-      ),
-      IF(
-        current_date = TODAY(),
-        "Today",
-        IF(
-          k = 1,
+        vdate_raw, INDEX(SortedVisits, k, 3),
+        current_date, IFERROR(INT(vdate_raw), IFERROR(DATEVALUE(LEFT(vdate_raw, 10)), TODAY())),
+        FormattedDate, TEXT(current_date, "yyyy-mm-dd"),
+
+        HeaderText, IF(
+          current_date > TODAY(),
           LET(
-            past_diff, TODAY() - current_date,
-            past_diff & " Day" & IF(past_diff = 1, "", "s") & " Ago"
+            future_diff, current_date - TODAY(),
+            "In " & future_diff & " Day" & IF(future_diff = 1, "", "s")
           ),
-          LET(
-            prev_date, CHOOSEROWS(S_ParsedDate, MAX(1, k - 1)),
-            diff, current_date - prev_date,
-            IF(diff = 0, "On same day", diff & " Day" & IF(diff = 1, "", "s") & " After")
+          IF(
+            current_date = TODAY(),
+            "Today",
+            IF(
+              k = 1,
+              LET(
+                past_diff, TODAY() - current_date,
+                past_diff & " Day" & IF(past_diff = 1, "", "s") & " Ago"
+              ),
+              LET(
+                prev_date_raw, INDEX(SortedVisits, MAX(1, k - 1), 3),
+                prev_date, IFERROR(INT(prev_date_raw), IFERROR(DATEVALUE(LEFT(prev_date_raw, 10)), current_date)),
+                diff, current_date - prev_date,
+                IF(diff = 0, "On same day", diff & " Day" & IF(diff = 1, "", "s") & " After")
+              )
+            )
           )
-        )
+        ),
+
+        ItemProgress, INDEX(SortedVisits, k, 5),
+        PlannedComment, INDEX(SortedVisits, k, 8),
+        CompletedComment, INDEX(SortedVisits, k, 11),
+        PostponedComment, INDEX(SortedVisits, k, 14),
+        CancelledComment, INDEX(SortedVisits, k, 17),
+
+        ProgressComment, SWITCH(UPPER(ItemProgress), "COMPLETED", CompletedComment, "POSTPONED", PostponedComment, "CANCELLED", CancelledComment, ""),
+
+        ItemRows, IF(
+          UPPER(ItemProgress) = "PLANNED",
+          VSTACK(
+            RowFn({4, HeaderText}),
+            RowFn({6, "On: " & FormattedDate; 14, PlannedComment}),
+            RowFn({0, ""})
+          ),
+          VSTACK(
+            RowFn({4, HeaderText}),
+            RowFn({6, "On: " & FormattedDate; 14, PlannedComment}),
+            RowFn({6, ItemProgress; 14, ProgressComment}),
+            RowFn({0, ""})
+          )
+        ),
+
+        IF(k = 1, ItemRows, VSTACK(acc, ItemRows))
       )
-    ),
-    
-    row_arr, CHOOSEROWS(Filtered, idx),
-    ItemProgress, CHOOSEROWS(F_Progress, idx),
-    FormattedDate, TEXT(current_date, "yyyy-mm-dd"),
-    
-    PlannedComment, CHOOSEROWS(CHOOSECOLS(row_arr, 8), 1),
-    
-    ProgressComment, LET(
-      p, UPPER(ItemProgress),
-      IF(p = "PLANNED", CHOOSEROWS(CHOOSECOLS(row_arr, 8), 1),
-      IF(p = "COMPLETED", CHOOSEROWS(CHOOSECOLS(row_arr, 11), 1),
-      IF(p = "POSTPONED", CHOOSEROWS(CHOOSECOLS(row_arr, 14), 1),
-      IF(p = "CANCELLED", CHOOSEROWS(CHOOSECOLS(row_arr, 17), 1),
-      ""))))
-    ),
-    
-    ItemRows, IF(
-      UPPER(ItemProgress) = "PLANNED",
-      VSTACK(
-        RowFn({4, HeaderText}),
-        RowFn({6, "On: " & FormattedDate; 14, PlannedComment}),
-        RowFn({0, ""})
-      ),
-      VSTACK(
-        RowFn({4, HeaderText}),
-        RowFn({6, "On: " & FormattedDate; 14, PlannedComment}),
-        RowFn({6, ItemProgress; 14, ProgressComment}),
-        RowFn({0, ""})
-      )
-    ),
-    
-    VSTACK(acc, ItemRows)
-  ))),
+    )
+  ),
 
   ReportData, IF(
     HasData,
-    CHOOSEROWS(DynamicPart, SEQUENCE(ROWS(DynamicPart) - 1, 1, 2)),
+    DynamicPart,
     VSTACK(
-      RowFn({4, "No visit records found for this outlet."})
+      RowFn({4, "No visit records found for this outlet."}),
+      RowFn({0, ""})
     )
   ),
 
@@ -167,13 +157,14 @@ Generates a formatted chronological timeline of visits, calculating relative day
 ## Source Sheets & Column Dependencies
 
 The formulas import data from the Master Spreadsheet (`MasterFileID`) and Outlet Spreadsheet (`OutletFileID`):
-1. **`Outlets`** (`Outlets!A2:J` in Master Spreadsheet):
+1. **`Outlets`** (`Outlets!A2:K` in Master Spreadsheet):
    - Column 1 (`A`): Outlet Code (compared with `$H$11`)
    - Column 2 (`B`): Outlet Name
-   - Column 3 (`C`): Contact Person
-   - Column 4 (`D`): Phone
-   - Column 6, 7, 8, 9 (`F:I`): Address components (City, Area, Province, Country)
-2. **`OutletVisits`** (`OutletVisits!A2:X` or `A2:R` in Outlet Spreadsheet):
+   - Column 4 (`D`): Contact Person
+   - Column 5 (`E`): Phone
+   - Columns 7, 8, 9, 10 (`G:J`): Address components (Country, Province, City, Area)
+2. **`OutletVisits`** (`OutletVisits!A2:R` in Outlet Spreadsheet):
+   - Column 1 (`A`): Visit Code
    - Column 2 (`B`): Outlet Code (compared with `$H$11`)
    - Column 3 (`C`): Visit Date
    - Column 4 (`D`): Respond Date *(not read by this report)*

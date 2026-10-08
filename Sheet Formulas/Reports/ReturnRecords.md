@@ -19,148 +19,137 @@ The **ReturnRecords Report** provides a filtered search and checklist log for Ou
 
 ```excel
 =LET(
-  OutletFileID, VLOOKUP("OutletFileID", Config!A:B, 2, 0),
-  MasterFileID, VLOOKUP("masterFileID", Config!A:B, 2, 0),
-  SKUFileID, VLOOKUP("ViewFileID", Config!A:B, 2, 0),
+  MasterFileID, IFERROR(VLOOKUP("MasterFileID", Config!A:B, 2, 0), VLOOKUP("masterFileID", Config!A:B, 2, 0)),
+  OutletFileID, IFERROR(VLOOKUP("OutletFileID", Config!A:B, 2, 0), VLOOKUP("OperationFileID", Config!A:B, 2, 0)),
 
-  RawReturns, IMPORTRANGE(OutletFileID, "OutletReturns!A2:AC"),
+  RawReturns, IMPORTRANGE(OutletFileID, "OutletReturns!A2:AD"),
   RawOutlets, IMPORTRANGE(MasterFileID, "Outlets!A2:B"),
-  RawSKUs, IMPORTRANGE(SKUFileID, "SKU!A2:G"),
+  RawSKUs, IMPORTRANGE(MasterFileID, "SKUs!A2:B"),
+  RawProducts, IMPORTRANGE(MasterFileID, "Products!A2:B"),
   RawWarehouses, IMPORTRANGE(MasterFileID, "Warehouses!A2:B"),
 
   RowFn, LAMBDA(idx_val_pairs, MAP(SEQUENCE(1, 39), LAMBDA(col_idx, IFERROR(VLOOKUP(col_idx, idx_val_pairs, 2, FALSE), "")))),
-  ToYesNo, LAMBDA(val, IF(UPPER(val) = "TRUE", "Yes", "No")),
-  FormatEpochDateTime, LAMBDA(val, LET(num, IFERROR(VALUE(val), 0), IF(num > 100000000000, TEXT(25569 + num / 86400000, "yyyy-mm-dd hh:mm"), val))),
-  FormatEpochDateOnly, LAMBDA(val, LET(num, IFERROR(VALUE(val), 0), IF(num > 100000000000, TEXT(25569 + num / 86400000, "yyyy-mm-dd"), val))),
+  FormatEpochDateOnly, LAMBDA(val, LET(num, IFERROR(VALUE(val), 0), IF(TRIM(val) = "", "", IF(num > 100000000000, TEXT(25569 + num / 86400000, "yyyy-mm-dd"), IFERROR(TEXT(INT(val), "yyyy-mm-dd"), IFERROR(TEXT(DATEVALUE(LEFT(val, 10)), "yyyy-mm-dd"), val)))))),
 
-  UserFilter, IF(OR($J$11 = "", $J$11 = "Any User"), "", $J$11),
-  DateFilter, IF(OR($J$12 = "", $J$12 = "All Date"), "", $J$12),
-  ReasonFilter, IF(OR($J$13 = "", $J$13 = "Any Reason"), "", $J$13),
+  UserFilter, IF(OR($J$11 = "", $J$11 = "Any User"), "", TRIM($J$11)),
+  DateFilter, IF(OR($J$12 = "", $J$12 = "All Date", $J$12 = "Any Date"), "", $J$12),
+  ReasonFilter, IF(OR($J$13 = "", $J$13 = "Any Reason", $J$13 = "All Reason"), "", TRIM($J$13)),
 
   HasInput, OR(UserFilter <> "", DateFilter <> "", ReasonFilter <> ""),
 
-  ReturnCodes, TOCOL(CHOOSECOLS(RawReturns, 1)),
-  OutletCodesInReturns, TOCOL(CHOOSECOLS(RawReturns, 2)),
-  DatesInReturns, TOCOL(CHOOSECOLS(RawReturns, 3)),
-  UsernamesInReturns, TOCOL(CHOOSECOLS(RawReturns, 4)),
-  SKUsInReturns, TOCOL(CHOOSECOLS(RawReturns, 5)),
-  QtysInReturns, TOCOL(CHOOSECOLS(RawReturns, 6)),
-  PricesInReturns, TOCOL(CHOOSECOLS(RawReturns, 7)),
-  ReasonsInReturns, TOCOL(CHOOSECOLS(RawReturns, 8)),
-  StatusInReturns, TOCOL(CHOOSECOLS(RawReturns, 23)),
+  FilterDateSerial, IFERROR(INT(DateFilter), IFERROR(DATEVALUE(LEFT(DateFilter, 10)), 0)),
 
   OutletCodes, TOCOL(CHOOSECOLS(RawOutlets, 1)),
   OutletNames, TOCOL(CHOOSECOLS(RawOutlets, 2)),
   SKU_Codes, TOCOL(CHOOSECOLS(RawSKUs, 1)),
+  SKU_ProdCodes, TOCOL(CHOOSECOLS(RawSKUs, 2)),
+  Product_Codes, TOCOL(CHOOSECOLS(RawProducts, 1)),
+  Product_Names, TOCOL(CHOOSECOLS(RawProducts, 2)),
   WarehouseCodes, TOCOL(CHOOSECOLS(RawWarehouses, 1)),
   WarehouseNames, TOCOL(CHOOSECOLS(RawWarehouses, 2)),
 
-  ParsedDates, MAP(DatesInReturns, LAMBDA(d, IFERROR(IF(ISNUMBER(d), d, DATEVALUE(LEFT(d, 10))), 0))),
-  ParsedDateFilter, IFERROR(IF(ISNUMBER(DateFilter), DateFilter, DATEVALUE(LEFT(DateFilter, 10))), 0),
+  ReturnsWithData, IFERROR(FILTER(RawReturns, INDEX(RawReturns, 0, 1) <> ""), ""),
+  HasAnyReturns, AND(INDEX(ReturnsWithData, 1, 1) <> "", INDEX(ReturnsWithData, 1, 1) <> "#N/A"),
 
-  Filtered, IFERROR(
-    FILTER(
-      RawReturns,
-      (StatusInReturns = "Active") *
-      (IF(
-        HasInput,
-        ((UserFilter = "") + (UsernamesInReturns = UserFilter)) *
-        ((DateFilter = "") + (ParsedDates = ParsedDateFilter)) *
-        ((ReasonFilter = "") + (ReasonsInReturns = ReasonFilter)),
-        SEQUENCE(ROWS(RawReturns))*0 + 1
-      ))
+  UserMatch, IF(UserFilter = "", TRUE, MAP(INDEX(ReturnsWithData, 0, 4), LAMBDA(u, TRIM(u) = UserFilter))),
+  DateMatch, IF(DateFilter = "", TRUE, MAP(INDEX(ReturnsWithData, 0, 3), LAMBDA(d, IFERROR(INT(d), IFERROR(DATEVALUE(LEFT(d, 10)), -1)) = FilterDateSerial))),
+  ReasonMatch, IF(ReasonFilter = "", TRUE, MAP(INDEX(ReturnsWithData, 0, 8), LAMBDA(r, UPPER(TRIM(r)) = UPPER(ReasonFilter)))),
+  StatusMatch, MAP(INDEX(ReturnsWithData, 0, 24), LAMBDA(st, UPPER(TRIM(st)) = "ACTIVE")),
+
+  Filtered, IF(
+    HasAnyReturns,
+    IF(
+      HasInput,
+      IFERROR(FILTER(ReturnsWithData, StatusMatch, UserMatch, DateMatch, ReasonMatch), ""),
+      IFERROR(FILTER(ReturnsWithData, StatusMatch), "")
     ),
-    MAKEARRAY(1, 29, LAMBDA(r, c, ""))
+    ""
   ),
+  HasData, AND(INDEX(Filtered, 1, 1) <> "", INDEX(Filtered, 1, 1) <> "#N/A"),
 
-  FirstCell, CHOOSEROWS(CHOOSECOLS(Filtered, 1), 1),
-  HasData, AND(NOT(ISERR(Filtered)), FirstCell <> ""),
-
-  F_Date, IF(HasData, TOCOL(CHOOSECOLS(Filtered, 3)), TODAY()),
-  F_ParsedDate, MAP(F_Date, LAMBDA(d, IFERROR(IF(ISNUMBER(d), d, DATEVALUE(LEFT(d, 10))), TODAY()))),
-
-  F_Indices, SEQUENCE(ROWS(Filtered)),
-  F_Data, HSTACK(F_Indices, F_ParsedDate),
-  SortedData, SORT(F_Data, 2, FALSE),
-
-  LimitRows, IF(HasInput, ROWS(SortedData), MIN(15, ROWS(SortedData))),
-  SortedDataLimited, CHOOSEROWS(SortedData, SEQUENCE(LimitRows)),
-
-  S_Idx, TOCOL(CHOOSECOLS(SortedDataLimited, 1)),
-
-  DummyRow, RowFn({0, "DUMMY"}),
-
-  DynamicPart, REDUCE(DummyRow, SEQUENCE(LimitRows), LAMBDA(acc, k, LET(
-    idx, CHOOSEROWS(S_Idx, k),
-    row_arr, CHOOSEROWS(Filtered, idx),
-
-    ReturnCode, CHOOSEROWS(CHOOSECOLS(row_arr, 1), 1),
-    OutletCode, CHOOSEROWS(CHOOSECOLS(row_arr, 2), 1),
-    ReturnDate, CHOOSEROWS(CHOOSECOLS(row_arr, 3), 1),
-    Username, CHOOSEROWS(CHOOSECOLS(row_arr, 4), 1),
-    SKUCode, CHOOSEROWS(CHOOSECOLS(row_arr, 5), 1),
-    Qty, CHOOSEROWS(CHOOSECOLS(row_arr, 6), 1),
-    Price, CHOOSEROWS(CHOOSECOLS(row_arr, 7), 1),
-    Reason, CHOOSEROWS(CHOOSECOLS(row_arr, 8), 1),
-    ReasonComment, CHOOSEROWS(CHOOSECOLS(row_arr, 9), 1),
-    InvoiceAdjRequired, CHOOSEROWS(CHOOSECOLS(row_arr, 10), 1),
-    InvoiceAdjDone, CHOOSEROWS(CHOOSECOLS(row_arr, 11), 1),
-    ConsumptionInvoice, CHOOSEROWS(CHOOSECOLS(row_arr, 12), 1),
-    WhActionRequired, CHOOSEROWS(CHOOSECOLS(row_arr, 13), 1),
-    WhActionCompleted, CHOOSEROWS(CHOOSECOLS(row_arr, 14), 1),
-    WhCode, CHOOSEROWS(CHOOSECOLS(row_arr, 15), 1),
-    WhAction, CHOOSEROWS(CHOOSECOLS(row_arr, 16), 1),
-    OrderProgress, CHOOSEROWS(CHOOSECOLS(row_arr, 22), 1),
-
-    OutletName, IFERROR(XLOOKUP(OutletCode, OutletCodes, OutletNames, "Unknown Outlet"), "Unknown Outlet"),
-
-    SKU_Row, XLOOKUP(SKUCode, SKU_Codes, RawSKUs, MAKEARRAY(1, 7, LAMBDA(r, c, ""))),
-    ProdName, CHOOSEROWS(CHOOSECOLS(SKU_Row, 4), 1),
-    SKU_Code_Val, CHOOSEROWS(CHOOSECOLS(SKU_Row, 2), 1),
-    VarValues, CHOOSEROWS(CHOOSECOLS(SKU_Row, 6), 1),
-    ItemNameSuffix, IF(VarValues <> "", VarValues, SKU_Code_Val),
-    ItemDisplayName, ProdName & IF(AND(ItemNameSuffix <> "", ItemNameSuffix <> SKUCode), " - " & ItemNameSuffix, "") & " (" & SKUCode & ")",
-
-    WarehouseName, IF(WhCode <> "", IFERROR(XLOOKUP(WhCode, WarehouseCodes, WarehouseNames, WhCode), WhCode), "N/A"),
-
-    TotalValue, Qty * Price,
-    FormattedDate, FormatEpochDateOnly(ReturnDate),
-
-    Row_1, RowFn({4, FormattedDate & " / " & ReturnCode & " / " & Username; 30, OrderProgress; 37, " "}),
-    Row_2, RowFn({4, OutletName}),
-    Row_3, RowFn({5, Qty & "x"; 6, ItemDisplayName; 30, "Price: " & Price & ", Total: " & TotalValue}),
-    Row_4, RowFn({6, "Reason: " & Reason & IF(ReasonComment <> "", " / " & ReasonComment, "")}),
-
-    Fin_Row, IF(UPPER(InvoiceAdjRequired) = "TRUE",
-      RowFn({6, "Financial Adjustment Required"; 20, IF(UPPER(InvoiceAdjDone) = "TRUE", "Completed", "Pending") & IF(ConsumptionInvoice <> "", " / " & ConsumptionInvoice, "")}),
-      RowFn({1, "DUMMY"})
-    ),
-    Wh_Row, IF(UPPER(WhActionRequired) = "TRUE",
-      RowFn({6, "Warehouse Action Required"; 20, WarehouseName & " / " & IF(UPPER(WhActionCompleted) = "TRUE", "Completed", "Pending")}),
-      RowFn({1, "DUMMY"})
-    ),
-    Cond_Rows, VSTACK(Fin_Row, Wh_Row),
-    Filtered_Cond_Rows, IFERROR(FILTER(Cond_Rows, CHOOSECOLS(Cond_Rows, 1) <> "DUMMY"), RowFn({0, ""})),
-
-    VSTACK(
-      acc,
-      Row_1,
-      Row_2,
-      Row_3,
-      Row_4,
-      Filtered_Cond_Rows,
-      RowFn({0, ""})
-    )
-  ))),
+  SortedData, IF(HasData, IFERROR(SORT(Filtered, 3, FALSE), Filtered), Filtered),
+  LimitRows, IF(NOT(HasData), 0, IF(HasInput, ROWS(SortedData), MIN(15, ROWS(SortedData)))),
+  SortedDataLimited, IF(LimitRows > 0, CHOOSEROWS(SortedData, SEQUENCE(LimitRows)), SortedData),
 
   FallbackText, IF(HasInput, "No return records matched the selected filters.", "No active return records found."),
 
-  ReportData, IF(
-    HasData,
-    CHOOSEROWS(DynamicPart, SEQUENCE(MAX(1, ROWS(DynamicPart) - 1), 1, 2)),
+  DynamicPart, IF(
+    LimitRows > 0,
+    REDUCE(
+      IFERROR(1/0, ""),
+      SEQUENCE(LimitRows),
+      LAMBDA(acc, k,
+        LET(
+          row_arr, CHOOSEROWS(SortedDataLimited, k),
+
+          ReturnCode, INDEX(row_arr, 1, 1),
+          OutletCode, INDEX(row_arr, 1, 2),
+          ReturnDate_raw, INDEX(row_arr, 1, 3),
+          Username, INDEX(row_arr, 1, 4),
+          SKUCode, INDEX(row_arr, 1, 5),
+          Qty, INDEX(row_arr, 1, 6),
+          Price, INDEX(row_arr, 1, 7),
+          Reason, INDEX(row_arr, 1, 8),
+          ReasonComment, INDEX(row_arr, 1, 9),
+          InvoiceAdjRequired, INDEX(row_arr, 1, 10),
+          InvoiceAdjDone, INDEX(row_arr, 1, 11),
+          ConsumptionInvoice, INDEX(row_arr, 1, 12),
+          SourceInvoice, INDEX(row_arr, 1, 13),
+          WhActionRequired, INDEX(row_arr, 1, 14),
+          WhActionCompleted, INDEX(row_arr, 1, 15),
+          WhCode, INDEX(row_arr, 1, 16),
+          WhAction, INDEX(row_arr, 1, 17),
+          OrderProgress, INDEX(row_arr, 1, 23),
+
+          OutletName, IFERROR(XLOOKUP(OutletCode, OutletCodes, OutletNames, OutletCode), OutletCode),
+
+          p_code, IFERROR(XLOOKUP(SKUCode, SKU_Codes, SKU_ProdCodes, ""), ""),
+          p_name, IFERROR(XLOOKUP(p_code, Product_Codes, Product_Names, ""), ""),
+          ItemDisplayName, IF(p_name <> "", p_name & " (" & SKUCode & ")", SKUCode),
+
+          WarehouseName, IF(WhCode <> "", IFERROR(XLOOKUP(WhCode, WarehouseCodes, WarehouseNames, WhCode), WhCode), "N/A"),
+
+          TotalValue, IFERROR(Qty * Price, 0),
+          FormattedDate, FormatEpochDateOnly(ReturnDate_raw),
+
+          Row_1, RowFn({4, FormattedDate & " / " & ReturnCode & " / " & Username; 30, OrderProgress; 37, " "}),
+          Row_2, RowFn({4, OutletName}),
+          Row_3, RowFn({5, Qty & "x"; 6, ItemDisplayName; 30, "Price: " & Price & ", Total: " & TotalValue}),
+          Row_4, RowFn({6, "Reason: " & Reason & IF(TRIM(ReasonComment) <> "", " / " & ReasonComment, "")}),
+
+          Fin_Needed, OR(UPPER(TRIM(InvoiceAdjRequired)) = "TRUE", InvoiceAdjRequired = TRUE),
+          Wh_Needed, OR(UPPER(TRIM(WhActionRequired)) = "TRUE", WhActionRequired = TRUE),
+
+          Fin_Done, OR(UPPER(TRIM(InvoiceAdjDone)) = "TRUE", InvoiceAdjDone = TRUE),
+          Wh_Done, OR(UPPER(TRIM(WhActionCompleted)) = "TRUE", WhActionCompleted = TRUE),
+
+          Fin_Row, RowFn({6, "Financial Adjustment Required"; 20, IF(Fin_Done, "Completed", "Pending") & IF(ConsumptionInvoice <> "", " / " & ConsumptionInvoice, "")}),
+          Wh_Row, RowFn({6, "Warehouse Action Required"; 20, WarehouseName & " / " & IF(Wh_Done, "Completed", "Pending")}),
+
+          Base_Rows, VSTACK(Row_1, Row_2, Row_3, Row_4),
+
+          curr_block, IF(
+            AND(Fin_Needed, Wh_Needed),
+            VSTACK(Base_Rows, Fin_Row, Wh_Row, RowFn({0, ""})),
+            IF(
+              Fin_Needed,
+              VSTACK(Base_Rows, Fin_Row, RowFn({0, ""})),
+              IF(
+                Wh_Needed,
+                VSTACK(Base_Rows, Wh_Row, RowFn({0, ""})),
+                VSTACK(Base_Rows, RowFn({0, ""}))
+              )
+            )
+          ),
+
+          IF(k = 1, curr_block, VSTACK(acc, curr_block))
+        )
+      )
+    ),
     RowFn({4, FallbackText})
   ),
 
+  ReportData, DynamicPart,
   ReportData
 )
 ```
@@ -169,54 +158,57 @@ The **ReturnRecords Report** provides a filtered search and checklist log for Ou
 
 ## Source Sheets & Column Dependencies
 
-The formula queries data from four spreadsheet files (`OutletFileID`, `ViewFileID`, `masterFileID`):
-1. **`OutletReturns`** (`OutletReturns!A2:AC` in Outlet Spreadsheet):
+The formula queries data from two spreadsheet files (`OutletFileID` and `MasterFileID`):
+1. **`OutletReturns`** (`OutletReturns!A2:AD` in Outlet Spreadsheet):
    - Column 1 (`A`): Code
-   - Column 2 (`B`): Outlet Code
-   - Column 3 (`C`): Date
-   - Column 4 (`D`): Username
+   - Column 2 (`B`): Outlet Code (resolved to Outlet Name)
+   - Column 3 (`C`): Date (filtered against `$J$12` and sorted descending)
+   - Column 4 (`D`): Username (filtered against `$J$11`)
    - Column 5 (`E`): SKU
    - Column 6 (`F`): Qty
    - Column 7 (`G`): Price
-   - Column 8 (`H`): Reason
+   - Column 8 (`H`): Reason (filtered against `$J$13`)
    - Column 9 (`I`): Reason Comment
    - Column 10 (`J`): Invoice Adjustment Required
    - Column 11 (`K`): Invoice Adjustment Done
    - Column 12 (`L`): Consumption Invoice Code
-   - Column 13 (`M`): Warehouse Action Required
-   - Column 14 (`N`): Warehouse Action Completed
-   - Column 15 (`O`): Warehouse Code
-   - Column 16 (`P`): Warehouse Action (`"Stocked"`, `"Disposed"`)
-   - Column 22 (`V`): Progress status (`"SUBMITTED"`, `"COMPLETED"`, `"CANCELLED"`)
-   - Column 23 (`W`): Status (`"Active"`)
+   - Column 13 (`M`): Source Invoice Code
+   - Column 14 (`N`): Warehouse Action Required
+   - Column 15 (`O`): Warehouse Action Completed
+   - Column 16 (`P`): Warehouse Code
+   - Column 17 (`Q`): Warehouse Action (`"Stocked"`, `"Disposed"`)
+   - Column 23 (`W`): Progress status (`"SUBMITTED"`, `"COMPLETED"`, `"CANCELLED"`, etc.)
+   - Column 24 (`X`): Status (`"Active"`)
 2. **`Outlets`** (`Outlets!A2:B` in Master Spreadsheet):
    - Column 1 (`A`): Outlet Code
    - Column 2 (`B`): Outlet Name
-3. **`SKU`** (`SKU!A2:G` in Views Spreadsheet):
-   - Column 1 (`A`): SKU Code
-   - Column 2 (`B`): SKUCode
-   - Column 4 (`D`): Product Name
-   - Column 6 (`F`): Variant Values
-4. **`Warehouses`** (`Warehouses!A2:B` in Master Spreadsheet):
+3. **`Warehouses`** (`Warehouses!A2:B` in Master Spreadsheet):
    - Column 1 (`A`): Warehouse Code
    - Column 2 (`B`): Warehouse Name
+4. **`SKUs`** (`SKUs!A2:B` in Master Spreadsheet):
+   - Column 1 (`A`): SKU Code
+   - Column 2 (`B`): Product Code
+5. **`Products`** (`Products!A2:B` in Master Spreadsheet):
+   - Column 1 (`A`): Product Code
+   - Column 2 (`B`): Product Name
 
 ---
 
 ## Detailed Logic Breakdown
 
-1. **User Filter Inputs**: Resolves search filters from cells `$J$11` (Username), `$J$12` (Date), and `$J$13` (Reason). If set to defaults (`"Any User"`, `"All Date"`, or `"Any Reason"`), they are treated as empty.
+1. **User Filter Inputs**: Resolves search filters from cells `$J$11` (Username), `$J$12` (Date), and `$J$13` (Reason). Default values like `"Any User"`, `"All Date"`, or `"Any Reason"` are treated as inactive filters.
 2. **Dynamic Filtering**:
-   - Parses date fields into standard serial numbers.
-   - Filters `OutletReturns` where the row status is `"Active"` and matches all provided filter inputs.
-3. **Sorting & Slicing**:
-   - Sorts results descending by return date.
-   - If no search filters are active, limits the output array to the **latest 15 rows**.
+   - Cleans blank rows from `OutletReturns`.
+   - Filters active records (Col 24 = `"Active"`) matching all specified search filters with native boolean arguments.
+   - If no filters are active, all active return records are processed.
+3. **Sorting & Limits**:
+   - Sorts records descending by return date (Col 3).
+   - If search filters are active, lists all matching records. If no filters are active, limits output to the **latest 15 rows**.
 4. **Stacked Record Reduction**:
-   - Loops through each returned record.
-   - Row 1: Displays return date, transaction code, and requesting user at Column D (index 4).
-   - Row 2: Displays Outlet Name starting at Column D (index 4).
-   - Row 3: Displays item quantity at Column E (index 5), formatted display name starting at Column F (index 6), and pricing/totals at Column AD (index 30).
-   - Row 4: Displays the return reason and comments starting at Column F (index 6).
-   - Stacks financial adjustment and warehouse processing status lines conditionally.
-   - Separates each return log with a spacer row.
+   - Loops through each returned record without dummy rows:
+     - Row 1: Displays return date, transaction code, and requesting user at Column D (index 4), and Progress at Column AD (index 30).
+     - Row 2: Displays Outlet Name starting at Column D (index 4).
+     - Row 3: Displays item quantity at Column E (index 5), product display name starting at Column F (index 6), and price/totals at Column AD (index 30).
+     - Row 4: Displays the return reason and comments starting at Column F (index 6).
+     - Rows 5 & 6 (Conditional): Displays financial adjustment and warehouse action rows if required.
+     - Separates each return log with a spacer row.

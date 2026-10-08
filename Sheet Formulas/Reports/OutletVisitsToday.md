@@ -39,7 +39,7 @@ The **OutletVisitsToday Report** compiles a listing of planned outlet visits sch
         outlet_name, IFERROR(VLOOKUP(outlet_code, OutletsRaw, 2, FALSE), ""),
 
         row_1, RowFn({5, r_idx; 7, outlet_name}),
-        row_2, IF(TRIM(planned_comment) <> "",VSTACK(RowFn({8, planned_comment}),RowFn({0, ""})),RowFn({0, ""})),
+        row_2, IF(TRIM(planned_comment) <> "", VSTACK(RowFn({8, planned_comment}), RowFn({0, ""})), RowFn({0, ""})),
 
         IF(
           r_idx = 1,
@@ -56,22 +56,34 @@ The **OutletVisitsToday Report** compiles a listing of planned outlet visits sch
     SEQUENCE(ROWS(overdue_visits)),
     LAMBDA(accum, r_idx,
       LET(
-        vdate, INDEX(overdue_visits, r_idx, 3),
+        vdate_raw, INDEX(overdue_visits, r_idx, 3),
+        vdate, IFERROR(INT(vdate_raw), IFERROR(DATEVALUE(LEFT(vdate_raw, 10)), 0)),
+        prev_date_raw, IF(r_idx = 1, "", INDEX(overdue_visits, r_idx - 1, 3)),
+        prev_date, IF(r_idx = 1, 0, IFERROR(INT(prev_date_raw), IFERROR(DATEVALUE(LEFT(prev_date_raw, 10)), 0))),
+        is_new_group, (vdate <> prev_date),
+
+        days_overdue, TODAY() - vdate,
+        due_str, "Due by " & days_overdue & " Days",
+
         outlet_code, INDEX(overdue_visits, r_idx, 2),
         planned_comment, INDEX(overdue_visits, r_idx, 8),
         outlet_name, IFERROR(VLOOKUP(outlet_code, OutletsRaw, 2, FALSE), ""),
 
-        days_overdue, TODAY() - IFERROR(INT(vdate), TODAY()),
-        due_str, "Due by " & days_overdue & " Days",
+        group_head, IF(r_idx = 1, VSTACK(RowFn({5, due_str}), RowFn({0, ""})), VSTACK(RowFn({0, ""}), RowFn({5, due_str}), RowFn({0, ""}))),
 
-        row_1, RowFn({5, r_idx; 7, due_str}),
-        row_2, RowFn({7, outlet_name}),
-        row_3, IF(TRIM(planned_comment)<>"",VSTACK(RowFn({8, planned_comment}),RowFn({0, ""})),RowFn({0, ""})),
+        row_shop, RowFn({5, r_idx; 7, outlet_name}),
+        row_comment, IF(TRIM(planned_comment) <> "", VSTACK(RowFn({8, planned_comment}), RowFn({0, ""})), RowFn({0, ""})),
+
+        curr_rows, IF(
+          is_new_group,
+          VSTACK(group_head, row_shop, row_comment),
+          VSTACK(row_shop, row_comment)
+        ),
 
         IF(
           r_idx = 1,
-          VSTACK(row_1, row_2, row_3),
-          VSTACK(accum, row_1, row_2, row_3)
+          curr_rows,
+          VSTACK(accum, curr_rows)
         )
       )
     )

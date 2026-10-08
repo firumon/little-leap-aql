@@ -3,7 +3,6 @@ import axios from 'axios'
 import { apiClient } from 'src/services/ApiClientService'
 
 export default boot(async ({ app }) => {
-  // 1. Check if ?t= is present in the current URL
   const urlParams = new URLSearchParams(window.location.search)
   const tParam = (urlParams.get('t') || urlParams.get('tenant') || '').trim()
   const masterGasUrl = (import.meta.env.VITE_MASTER_GAS_URL || '').trim()
@@ -12,11 +11,12 @@ export default boot(async ({ app }) => {
   let activeTenant = localStorage.getItem('aql_tenant_code')
 
   if (tParam) {
-    // If the URL parameter matches what is already cached, just clean the URL and use it
-    if (activeTenant === tParam && activeUrl) {
-      window.history.replaceState({}, document.title, window.location.pathname)
-    } else if (masterGasUrl) {
-      // Otherwise, fetch the new tenant's URL from the Master Apps Script
+    const prevTenantCode = activeTenant
+    let targetUrl = ''
+    let targetName = tParam
+    let targetCode = tParam
+
+    if (masterGasUrl) {
       try {
         const response = await axios.post(masterGasUrl, {
           action: 'getTenantUrl',
@@ -25,36 +25,85 @@ export default boot(async ({ app }) => {
           headers: { 'Content-Type': 'text/plain' }
         })
 
-        // Expecting a plain text URL string from the Master
-        const returnedUrl = typeof response.data === 'string'
-          ? response.data.trim()
-          : response.data?.url
-
-        if (returnedUrl && returnedUrl.startsWith('https://')) {
-          activeUrl = returnedUrl
-          activeTenant = tParam
-
-          // Save to local storage for long-term persistence
-          localStorage.setItem('aql_tenant_url', activeUrl)
-          localStorage.setItem('aql_tenant_code', activeTenant)
-
-          console.log(`[Tenant Resolver] Successfully resolved and cached tenant "${tParam}": ${activeUrl}`)
-        } else {
-          console.error('[Tenant Resolver] Invalid URL returned from Master Apps Script:', response.data)
+        const resData = response.data || {}
+        if (resData.url) {
+          targetUrl = resData.url
+          targetName = resData.name || tParam
+          targetCode = resData.code || tParam
         }
       } catch (err) {
         console.error('[Tenant Resolver] Failed to contact Master Apps Script:', err)
-      } finally {
-        // Always clean the URL parameters to keep the address bar neat
-        window.history.replaceState({}, document.title, window.location.pathname)
       }
-    } else {
-      console.error('[Tenant Resolver] VITE_MASTER_GAS_URL is not set in environment variables.')
-      window.history.replaceState({}, document.title, window.location.pathname)
     }
+
+    if (!targetUrl && activeTenant && activeTenant.toUpperCase() === tParam.toUpperCase() && activeUrl) {
+      targetUrl = activeUrl
+      targetCode = activeTenant
+    }
+
+    if (targetUrl) {
+      if (prevTenantCode && prevTenantCode.toUpperCase() !== targetCode.toUpperCase()) {
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
+        localStorage.removeItem('resources')
+        localStorage.removeItem('appConfig')
+        localStorage.removeItem('appOptions')
+      }
+
+      activeUrl = targetUrl
+      activeTenant = targetCode
+
+      localStorage.setItem('aql_tenant_url', activeUrl)
+      localStorage.setItem('aql_tenant_code', activeTenant)
+
+      let aqlTenants = null
+      const rawTenants = localStorage.getItem('aql_tenants')
+      if (rawTenants) {
+        try {
+          const parsed = JSON.parse(rawTenants)
+          if (Array.isArray(parsed)) aqlTenants = parsed
+        } catch (_) {}
+      }
+
+      if (!aqlTenants) {
+        aqlTenants = []
+        if (prevTenantCode) {
+          aqlTenants.push({
+            code: prevTenantCode,
+            name: prevTenantCode
+          })
+        }
+      }
+
+      const exists = aqlTenants.some(
+        t => (t.code || '').trim().toUpperCase() === targetCode.toUpperCase()
+      )
+
+      if (!exists) {
+        aqlTenants.push({
+          code: targetCode,
+          name: targetName
+        })
+      } else {
+        const item = aqlTenants.find(
+          t => (t.code || '').trim().toUpperCase() === targetCode.toUpperCase()
+        )
+        if (item && targetName && item.name === item.code && targetName !== item.code) {
+          item.name = targetName
+        }
+      }
+
+      localStorage.setItem('aql_tenants', JSON.stringify(aqlTenants))
+    }
+
+    window.history.replaceState({}, document.title, window.location.pathname)
+  } else if (activeTenant && !localStorage.getItem('aql_tenants')) {
+    localStorage.setItem('aql_tenants', JSON.stringify([{
+      code: activeTenant,
+      name: activeTenant
+    }]))
   }
 
-  // 2. Set the API client's base URL (fallback to build-time env URL if nothing is cached)
   const finalBaseUrl = activeUrl || (import.meta.env.VITE_GAS_URL || '').trim()
 
   if (finalBaseUrl) {

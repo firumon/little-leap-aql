@@ -27,12 +27,62 @@
           no-caps unelevated :loading="loading" />
       </div>
 
-      <div class="text-center">
-        <q-btn flat dense no-caps class="login-link" size="sm" label="Forgot password?" />
-      </div>
-
       <div class="login-version text-center">v{{ version }}</div>
     </q-form>
+
+    <div v-if="hasMultipleTenants" class="absolute-bottom full-width text-center q-mb-lg">
+      <q-btn flat dense no-caps class="login-link text-caption" size="sm" icon="swap_horiz" label="Change Tenant"
+        @click="showTenantDialog = true" />
+    </div>
+
+    <q-dialog v-model="showTenantDialog">
+      <q-card class="tenant-dialog-card q-pa-sm" dark>
+        <q-card-section class="row items-center justify-between q-pb-none">
+          <div class="text-subtitle1 text-weight-bold">Select Tenant</div>
+          <q-btn icon="close" flat round dense v-close-popup size="sm" />
+        </q-card-section>
+
+        <q-card-section class="q-pt-sm">
+          <q-list separator class="tenant-list">
+            <q-item
+              v-for="(tenant, idx) in tenantList"
+              :key="tenant.code"
+              clickable
+              v-ripple
+              class="tenant-item q-my-xs"
+              :class="{ 'tenant-item-active': isCurrentTenant(tenant.code) }"
+              @click="shiftTenant(tenant)"
+            >
+              <q-item-section avatar>
+                <q-icon
+                  :name="isCurrentTenant(tenant.code) ? 'check_circle' : 'domain'"
+                  :color="isCurrentTenant(tenant.code) ? 'secondary' : 'grey-5'"
+                />
+              </q-item-section>
+
+              <q-item-section>
+                <q-item-label class="text-weight-medium text-white">{{ tenant.name || tenant.code }}</q-item-label>
+                <q-item-label caption class="text-grey-5">{{ tenant.code }}</q-item-label>
+              </q-item-section>
+
+              <q-item-section side>
+                <q-btn
+                  flat
+                  round
+                  dense
+                  icon="close"
+                  size="sm"
+                  color="grey-5"
+                  @click.stop="removeTenant(idx)"
+                >
+                  <q-tooltip>Remove tenant</q-tooltip>
+                </q-btn>
+              </q-item-section>
+            </q-item>
+          </q-list>
+        </q-card-section>
+      </q-card>
+    </q-dialog>
   </div>
 </template>
 
@@ -41,7 +91,17 @@ import { ref } from 'vue'
 import { useLoginPage } from 'src/composables/layout/useLoginPage'
 import pkg from '../../../package.json'
 
-const { loginForm, loading, handleLogin } = useLoginPage()
+const {
+  loginForm,
+  loading,
+  handleLogin,
+  tenantList,
+  hasMultipleTenants,
+  showTenantDialog,
+  isCurrentTenant,
+  shiftTenant,
+  removeTenant
+} = useLoginPage()
 const version = pkg.version
 const showPassword = ref(false)
 </script>
@@ -80,6 +140,33 @@ const showPassword = ref(false)
 .login-version {
   font-size: 0.7rem;
   color: rgba(255, 255, 255, 0.28);
+}
+
+.tenant-dialog-card {
+  width: 100%;
+  max-width: 380px;
+  background: #0f2b4a;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 12px;
+}
+
+.tenant-list {
+  background: transparent;
+}
+
+.tenant-item {
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  transition: background 0.2s;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.08);
+  }
+}
+
+.tenant-item-active {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba($secondary, 0.4);
 }
 
 @keyframes fadeIn {

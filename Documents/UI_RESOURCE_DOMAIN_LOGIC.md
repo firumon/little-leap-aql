@@ -296,6 +296,20 @@ export function editablePreset (items) {
 
 ---
 
+---
+
+## 6. Single Domain Source of Truth Policy (STRICT)
+
+- **Every resource domain (`src/_resource/{Scope}/{Resource}/`) MUST have exactly ONE calculation path for each domain concept.**
+- **Never create a second function for a new task or workflow**: When a new task requires building a node, calculating progress, or formatting rows, you MUST route through the existing row/node builder (`<resource>ItemRow`, `<resource>Node`, `derive<Resource>Progress`).
+- **If a new task has slightly different inputs or flags**, generalize and extend the existing builder with options — DO NOT write a parallel function (`build<Task>Nodes`, `custom<Task>Fields`) that duplicates the domain arithmetic or stamps.
+- **Rule of One**:
+  - Exactly ONE function that calculates item-level progress and stamps (`<resource>ItemRow`).
+  - Exactly ONE function that calculates parent-level progress and stamps (`derive<Resource>Progress` / `<resource>Node`).
+  - All workflows (standalone create, wizard submission, chained create) MUST call that ONE engine.
+
+---
+
 ## Maintenance Rule
 
 > [!IMPORTANT]

@@ -116,3 +116,26 @@ Two rules govern every gap on a page. Both are page-level tokens, never per-comp
 | Content inside `<AqlContentWrapper>` | **The wrapper** — the content adds none |
 
 **Invisible containers never pad.** A wrapper carrying no border, no background and no card surface is not a visual boundary, so padding on it is indistinguishable from padding on its child — and doubles it. If a transparent `div`, a section root or a `q-card-section` holds children that already pad themselves, the outer layer applies none.
+
+---
+
+## 8. CODE COMMENTS POLICY (STRICT)
+
+Write code that explains itself. Do not narrate it.
+
+* **Default: no comment.** No JSDoc blocks, no file-header docblocks, no section banners, no restating what the next line does.
+* A comment is allowed only when the code cannot carry the information — a non-obvious constraint, a workaround, or a decision a reader would otherwise undo.
+* When one is truly warranted: **1 line, 2 at the very most.** Never a paragraph, never a rationale essay.
+* Prefer a clearer name, a smaller function, or a well-named constant over any comment.
+* This applies to every language in the repo — `.vue`, `.js`, `.gs` alike.
+* Write the few comments you keep in very simple, easy English. Short sentence. Small words.
+* **Clean up as you go.** Whenever you edit a file, delete the long comments and docblocks you find in it. Keep nothing unless it is genuinely load-bearing, and then strip it to 1 line (2 at the very most). Stay inside the file you were already editing.
+
+### 8.1 One Exception: Data Files (DJS) and Dashboard Items (DBI)
+Every file under `FRONTENT/src/_resource/*/*/Data/` (a DJS) and `FRONTENT/src/_resource/*/*/Dashboard/` (a DBI) must start with a JSDoc block.
+There is no registry and no index that says what these files are for, so the file is the only place that can say it. These blocks are required. Never delete one. Never shorten one to fit the "keep comments rare" rule — that rule does not apply here.
+Write them for a person, not for a machine.
+* **For a DJS**: what topic it prepares, which sheets and columns it reads, every key it exposes (one line each), and what each control changes.
+* **For a DBI**: what the tile is for, what question it answers on the dashboard, which DJS values it uses, and which controls it shows.
+A file named with a leading `_` is a helper and needs no block.
+

@@ -9,9 +9,29 @@ This is the canonical catalogue of every reusable helper, utility, and core comp
 - Each section below names a file and lists its exported functions with a one-line purpose, purity note, and **When to reuse / When to extend** guidance.
 - **Purity**: a "pure" function returns the same output for the same input and has no side effects. Prefer pure functions for new logic.
 - **Extend, don't duplicate**: if your new capability is a sibling of an existing function, add it to the same file. Do not open a new file unless the capability genuinely belongs to a new domain.
-- **Mandatory Exhaustion Quote**: when you do create or extend a helper, cite your search findings in your output exactly as `AGENTS.md` requires.
-- **Ask BEFORE you create, not after.** The exhaustion quote is a *request for permission*, not a note in a completion summary. Post it and wait for the user's yes before the file or the exported function exists. The file list you cite must be files you actually opened — citing an unread file is a false audit.
-- **Core files are read-only without explicit user approval.** `src/composables/core/`, `src/composables/resources/`, `src/utils/`, `src/stores/`, `src/services/`, `src/router/` and the shared component bases under `src/components/{abstract,app,sections,contents,actions,shared,_dashboard_widgets}/` are NOT the place to park a capability one module happened to need. Put it in that module's own tier — Layer 3 `_ui/` for presentation, Layer 2 `src/_resource/` for domain logic. An "additive" core change is still permanent surface area for every other module. Full rule: `AGENTS.md` → **Reuse First & Anti-Duplication Policy (STRICT)**.
+- **Concrete Homes**:
+  - String / object transforms → `FRONTENT/src/utils/appHelpers.js`
+  - Date / time ops → `FRONTENT/src/utils/dateHelpers.js`
+  - Colors / visual → `FRONTENT/src/utils/colorHelpers.js`
+  - Sorting / tokens → `FRONTENT/src/utils/sortHelpers.js`, `FRONTENT/src/utils/tokenEvaluator.js`
+  - Workflow / audit stamps → `FRONTENT/src/utils/workflowStamp.js`
+  - Sheet-row shaping / resource schema / permission checks → `FRONTENT/src/composables/resources/useResourceConfig.js`
+
+- **Layer 1 / core files are READ-ONLY unless the user explicitly asks.** A core file is anything outside a resource's own tier that many modules already depend on: `src/composables/core/`, `src/composables/resources/`, `src/utils/`, `src/stores/`, `src/services/`, `src/router/`, and the shared component bases under `src/components/{abstract,app,sections,contents,actions,shared,_dashboard_widgets}/`.
+  - Never add a function, a parameter, a return key, or a "small additive helper" to one of these because a single module needed it. Additive is not harmless: it is how one module's minute need becomes permanent surface area every other module has to read past.
+  - A need discovered while building a module belongs in **that module's own tier** — Layer 3 `_ui/` for presentation, Layer 2 `src/_resource/` for domain logic. That is what the three layers are for.
+  - If the capability genuinely belongs in core (three or more unrelated modules would each re-implement it), STOP. Report it, show the audit below, and wait for the user to say yes. Proceed only after explicit approval, and quote the approval in your output.
+  - This applies to a one-line change as much as a rewrite.
+
+- **Ask BEFORE creating any new file or function — never after.** Creation is not a step you report in a summary; it is a step you request. Before writing a new file, or adding a new exported function to an existing one, post an audit report to the user and wait:
+  > *"I need `<function/file>` because `<specific reason>`. I searched `Documents/SHARED_UTILITIES_INDEX.md` and read `<explicit file list>`, and found nothing that accomplishes this. I propose adding it at `<path>` because `<rationale>`. May I create it?"*
+  - The `<explicit file list>` must be files you **actually opened** in this session. Naming a file you did not read is a false audit and is worse than no audit at all.
+  - The search is not optional and it is not a formality — it is the whole reason the report exists. Read this document and the source files it points at.
+  - This covers Layer 1, Layer 2 and Layer 3 alike. A new `_ui/` widget file is cheap and usually approved; a new core helper usually is not. Ask for both.
+  - Extending an existing file with a new export counts as creation. Editing the body of an existing function does not.
+
+- **Mandatory Exhaustion Quote**: When an agent DOES create or extend a helper function or file, it MUST explicitly cite in its output:
+  > *"Checked existing utilities in [list of files / SHARED_UTILITIES_INDEX.md] and confirmed no existing helper accomplishes <function/feature>. Adding/extending <function_name> in <file_path> because <specific rationale>."*
 
 ---
 

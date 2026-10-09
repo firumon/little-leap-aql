@@ -20,7 +20,7 @@
  * `useResourceConfig` Core Composable. No store, no service, nothing under `_ui/`.
  */
 
-import { daysFromToday } from 'src/utils/dateHelpers'
+import { daysFromToday, toDateOnly, parseAnyDate } from 'src/utils/dateHelpers'
 import { sortByDate } from 'src/utils/sortHelpers'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { defaultVisitFrequencyDays, visitFrequencyFor } from 'src/_resource/Operation/OutletVisits/composables/useVisitCadence'
@@ -61,12 +61,7 @@ export const IN_FLIGHT_STATES = WORKFLOW_STATES.filter((state) => !TERMINAL_STAT
 // (UI_MODULE_DEVELOPER_GUIDE.md §4.5).
 
 export const PROGRESS_META = {
-  // "Invoice Generation Pending", NOT "Pending Invoice" — the two read as opposites to a
-  // user. An invoice that is pending is one already raised and waiting to be PAID, which is
-  // this app's `PENDING_PAYMENT` further down the chain. This state is the step before any
-  // invoice exists: the consumption is counted, billable, and waiting for someone to
-  // generate the bill. The old wording named the wrong half of the workflow.
-  [PENDING_INVOICE_GENERATION]: { label: 'Invoice Generation Pending', color: 'warning', icon: 'receipt_long' },
+  [PENDING_INVOICE_GENERATION]: { label: 'New Consumption', color: 'warning', icon: 'receipt_long' },
   [INVOICE_GENERATED]: { label: 'Invoiced', color: 'positive', icon: 'task_alt' },
   [CANCELLED]: { label: 'Cancelled', color: 'negative', icon: 'block' }
 }
@@ -186,7 +181,8 @@ export function isActiveRow (row) {
 }
 
 export function isCancelled (row) {
-  return progressOf(row) === CANCELLED
+  const entry = asRow(row)
+  return progressOf(entry) === CANCELLED || text(entry.Status).toUpperCase() === CANCELLED
 }
 
 /** Whether a consumption has come to rest. */
@@ -402,17 +398,85 @@ export function stampOf (row, prefix) {
   }
 }
 
-/**
- * When the consumption last moved — the timestamp of the stamp its CURRENT state writes.
- *
- * Falls back to the audit `Date`, then `CreatedAt`, so a row whose stamp column was never
- * written still ages rather than reading as brand new. The same reader is used for the
- * sort and for the displayed age, so a list can never claim an order it does not have
- * (UI_MODULE_DEVELOPER_GUIDE.md §7.2).
- */
+const todayISO = () => new Date().toISOString().slice(0, 10)
+
 export function settledAt (row) {
   const stamp = stampOf(row, PROGRESS_STAMP_PREFIX[progressOf(row)])
   return stamp.at || text(asRow(row).Date) || asRow(row).CreatedAt || ''
+}
+
+export function consumptionRecentTime (row) {
+  const entry = asRow(row)
+  const raw = isCancelled(entry)
+    ? (entry.UpdatedAt || entry.ProgressCancelledAt || entry.CreatedAt || entry.Date)
+    : (entry.CreatedAt || entry.Date || entry.UpdatedAt)
+  return raw != null && raw !== '' ? raw : ''
+}
+
+export const recentConsumptionAt = consumptionRecentTime
+
+export function consumptionRecentDate (row) {
+  return toDateOnly(consumptionRecentTime(row))
+}
+
+export function consumptionRecentAge (row) {
+  const time = consumptionRecentTime(row)
+  if (!time) return null
+  const days = daysSince(time)
+  return Number.isFinite(days) ? days : null
+}
+
+const timeMs = (row) => parseAnyDate(consumptionRecentTime(row))?.getTime() || 0
+
+export function recentConsumptionsList (rows = []) {
+  return (Array.isArray(rows) ? rows : [])
+    .filter(isActiveRow)
+    .slice()
+    .sort((a, b) => {
+      const diff = timeMs(b) - timeMs(a)
+      if (diff !== 0) return diff
+      return text(asRow(b).Code).localeCompare(text(asRow(a).Code))
+    })
+}
+
+export function recentConsumptionForOutlet (outletCode, rowsSource) {
+  const code = text(outletCode)
+  if (!code) return { date: '', lastAt: '', days: null, row: null, count: 0 }
+
+  let rows = []
+  if (rowsSource instanceof Map) {
+    rows = rowsSource.get(code) || []
+  } else if (Array.isArray(rowsSource)) {
+    rows = rowsSource.filter((r) => !r.OutletCode || text(r.OutletCode) === code)
+  }
+
+  const activeRows = rows.filter(isActiveRow)
+  if (!activeRows.length) return { date: '', lastAt: '', days: null, row: null, count: 0 }
+
+  let latestRow = null
+  let latestMs = -Infinity
+  let latestDate = ''
+  const today = todayISO()
+
+  for (const row of activeRows) {
+    const ms = timeMs(row)
+    const time = consumptionRecentTime(row)
+    const date = toDateOnly(time)
+    if (date && date <= today && (!latestDate || date > latestDate || (date === latestDate && ms > latestMs))) {
+      latestDate = date
+      latestMs = ms
+      latestRow = row
+    }
+  }
+
+  const days = latestDate ? daysSince(consumptionRecentTime(latestRow) || latestDate) : null
+  return {
+    date: latestDate,
+    lastAt: latestDate,
+    days: Number.isFinite(days) ? days : null,
+    row: latestRow,
+    count: activeRows.length
+  }
 }
 
 /** Whole days elapsed since a timestamp. Today is 0, yesterday is 1. */
@@ -550,6 +614,12 @@ export function useConsumptionProgress () {
     isOwnedBy,
     stampOf,
     settledAt,
+    recentConsumptionAt,
+    consumptionRecentTime,
+    consumptionRecentDate,
+    consumptionRecentAge,
+    recentConsumptionsList,
+    recentConsumptionForOutlet,
     daysSince,
     workflowStamps,
     defaultVisitFrequencyDays,

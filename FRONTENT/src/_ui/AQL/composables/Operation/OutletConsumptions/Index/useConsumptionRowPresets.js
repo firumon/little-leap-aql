@@ -3,6 +3,9 @@ import {
   progressLabel,
   progressColor,
   settledAt,
+  consumptionRecentTime,
+  consumptionRecentAge,
+  recentConsumptionsList,
   daysSince,
   isActiveRow,
   isCancelled
@@ -15,7 +18,7 @@ const asRow = (value) => (value && typeof value === 'object' ? value : {})
 
 function outletLabel (row) {
   const entry = asRow(row)
-  return text(entry.$outlet?.Name) || text(entry.OutletCode) || 'Unknown outlet'
+  return text(entry.OutletName) || text(entry.$outlet?.Name) || text(entry.OutletCode) || 'Unknown outlet'
 }
 
 function formatDate (value) {
@@ -34,8 +37,24 @@ function elapsedLabel (row) {
   return `${days} days ago`
 }
 
+function recentElapsedLabel (row) {
+  const days = consumptionRecentAge(row)
+  if (days === null || !Number.isFinite(days)) return ''
+  if (days <= 0) return 'Today'
+  if (days === 1) return 'Yesterday'
+  return `${days} days ago`
+}
+
+function recentChipColor (row) {
+  if (isCancelled(row)) return 'negative'
+  const days = consumptionRecentAge(row)
+  if (days == null || days <= 1) return 'positive'
+  if (days <= 7) return 'info'
+  if (days <= 30) return 'warning'
+  return 'grey-7'
+}
+
 function newestFirst (rows = []) {
-  // `slice()` first: `items` is the store's own array and sorting in place would mutate it.
   return (Array.isArray(rows) ? rows : []).slice().sort((a, b) => {
     const left = text(settledAt(a))
     const right = text(settledAt(b))
@@ -43,7 +62,6 @@ function newestFirst (rows = []) {
   })
 }
 
-// Null slots must stay explicit. If a key is missing, `useListStrategy` adds its own guess.
 function baseRow (rows) {
   return {
     items: rows,
@@ -59,12 +77,18 @@ function baseRow (rows) {
 }
 
 export function recentPreset (rows = []) {
-  const live = (Array.isArray(rows) ? rows : []).filter(isActiveRow).filter((row) => !isCancelled(row))
-  const sorted = newestFirst(live).slice(0, 50)
+  const sorted = recentConsumptionsList(rows).slice(0, 50)
   return {
     ...baseRow(sorted),
-    caption: (row) => [formatDate(asRow(row).Date), elapsedLabel(row)].filter(Boolean).join(' · '),
-    metaLayout: ['chip']
+    layout: ['caption', 'label', 'caption'],
+    content: [
+      (row) => formatDate(asRow(row).Date),
+      (row) => outletLabel(row),
+      (row) => progressLabel(progressOf(row))
+    ],
+    metaLayout: ['chip'],
+    chip: (row) => formatRelativeAge(consumptionRecentTime(row)),
+    chipColor: (row) => recentChipColor(row)
   }
 }
 
@@ -135,7 +159,7 @@ export function cancelledPreset (rows = []) {
   }
 }
 
-export { outletLabel, formatDate, elapsedLabel }
+export { outletLabel, formatDate, elapsedLabel, recentElapsedLabel }
 
 export function useConsumptionRowPresets () {
   return {
@@ -146,6 +170,7 @@ export function useConsumptionRowPresets () {
     outletLabel,
     formatDate,
     elapsedLabel,
+    recentElapsedLabel,
     formatRelativeAge
   }
 }

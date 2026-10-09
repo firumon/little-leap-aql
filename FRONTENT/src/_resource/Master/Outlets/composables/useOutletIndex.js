@@ -42,7 +42,10 @@ import {
   PENDING_APPROVAL as RESTOCK_PENDING_APPROVAL,
   AWAITING_DELIVERY as RESTOCK_AWAITING_DELIVERY
 } from 'src/_resource/Operation/OutletRestocks/composables/useRestockProgress'
-import { PENDING_INVOICE_GENERATION } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionProgress'
+import {
+  PENDING_INVOICE_GENERATION,
+  recentConsumptionForOutlet
+} from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionProgress'
 import { PLANNED as VISIT_PLANNED, COMPLETED as VISIT_COMPLETED } from 'src/_resource/Operation/OutletVisits/composables/useVisitProgress'
 
 const text = (value) => (value == null ? '' : String(value).trim())
@@ -181,6 +184,12 @@ const build = (recordSource) => {
       let lastActivityAt = ''
 
       for (const stream of ACTIVITY_STREAMS) {
+        if (stream.key === 'consumption') {
+          const res = recentConsumptionForOutlet(code, maps.consumption)
+          streams.consumption = { count: res.count, lastAt: res.lastAt }
+          if (res.lastAt && res.lastAt > lastActivityAt) lastActivityAt = res.lastAt
+          continue
+        }
         const streamRows = (maps[stream.key]?.get(code) || []).filter((row) => {
           const progress = upper(row.Progress)
           if (progress === 'CANCELLED' || progress === 'REJECTED') return false

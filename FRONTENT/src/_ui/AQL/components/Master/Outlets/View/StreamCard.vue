@@ -60,41 +60,6 @@
 </template>
 
 <script setup>
-/**
- * Outlets › View › StreamCard — resource-private sub-component (§2.3).
- *
- * The ONE card shell every stream breakdown on this page is built from: visits, restocks,
- * returns, invoices, payments and current stock. Each of those is a titled card holding a
- * list, differing only in the rows it holds and the words on its empty state — so they share
- * one component and a caller supplies the difference as a prop bag.
- *
- * Not a placeholder: no page names it in `sections:`, and it is imported by relative path.
- * Its name is deliberately not one any contract would list, so the resolver can never pick
- * it up by accident.
- *
- * It performs NO arithmetic and holds no state. Every figure arrives already computed on
- * `items` (or rendered into the `footer` slot by the caller), which is what guarantees the
- * number a card prints is the number the page's one composable derived (§3.5).
- *
- * ── TWO KINDS OF SPACING, TWO CHANNELS ──
- * The `q-px-{padding}` on the root is the page's HORIZONTAL INSET, arriving as a declared
- * prop from the section that mounts this card. It has to arrive as a prop: `Page.vue` also
- * puts the same token on the placeholder as a class, but `inheritAttrs: false` (§12.1,
- * mandatory on the leaf the resolver mounts) drops `$attrs` and the class with it — so the
- * declared `padding` prop is the only channel that survives (§7.5, §10.2).
- *
- * The `q-pa-md` on the card is INTERNAL spacing: breathing room between the shell and its
- * own contents. That is the card's own composition, not the page's rhythm, and routing it
- * through the page's tokens would couple one to the other. Vertical spacing BETWEEN cards
- * remains the page body's gutter and appears nowhere in this file.
- *
- * ── STRICT VIEW CONTRACT ──
- * There is no action slot and no button anywhere in this card, by design. An outlet's View
- * page reports; the four operational entry points live in the FAB cluster, where the Action
- * subsystem owns their permission gating. The `footer` slot is for SUMMARY figures only.
- *
- * No `<style>` block (CORE_ARCHITECTURE_RULES §7).
- */
 import { computed } from 'vue'
 import AppList from 'components/app/AppList.vue'
 import SectionDividerLabel from 'components/shared/SectionDividerLabel.vue'
@@ -103,20 +68,11 @@ import { useOutletViewContext } from 'src/_ui/AQL/composables/Master/Outlets/Vie
 defineOptions({ name: 'OutletsViewStreamCard', inheritAttrs: false })
 
 const props = defineProps({
-  // Heading above the card. Resolved by the caller, never a closure at this depth.
   title: { type: String, required: true },
-  // Already-filtered, already-sorted rows from the page composable.
   items: { type: Array, default: () => [] },
-  // The `AppList` prop bag — label/caption/chip resolvers for this stream's row shape.
   list: { type: Object, default: () => ({}) },
-  // How many rows before the tail is summarized in one line. A HISTORY card is a summary of
-  // a relationship, not its ledger; the owning resource's own page holds the full record.
-  // A card showing a POSITION rather than a history passes `Number.POSITIVE_INFINITY` — a
-  // truncated position is simply a wrong number.
-  limit: { type: Number, default: 8 },
-  // Bold line on the empty state.
+  limit: { type: Number, default: 5 },
   emptyTitle: { type: String, default: 'Nothing recorded' },
-  // The required caption saying whether that emptiness is normal.
   emptyText: { type: String, default: '' },
   emptyIcon: { type: String, default: 'inbox' }
 })

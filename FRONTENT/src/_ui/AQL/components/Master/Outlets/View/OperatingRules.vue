@@ -38,25 +38,6 @@
 </template>
 
 <script setup>
-/**
- * Outlets › View › OperatingRules — Section (tier CP: resource + page).
- *
- * The `OutletOperatingRules` row joined onto this outlet — the stock ceiling, the visit
- * cadence, the invoice terms, the credit line and the price list every consumption is billed
- * against. A 1:1 relation, so it reads as a second detail card rather than as a list.
- *
- * ── EVERY ROW IS SHOWN, EVEN AT ITS DEFAULT ──
- * This card breaks the identity card's drop-blanks rule deliberately, and the banner above is
- * why: these five figures are the outlet's commercial terms, and "the visit cadence is 14
- * days because nobody set one" is a fact somebody needs, not an empty row. What the card must
- * never do is show a default silently as though it had been chosen.
- *
- * The values are read from the enriched outlet — `useOutletResource` already joined the rules
- * row and resolved the effective price list, including the tenant-wide fallback — so this
- * card never re-derives which price list applies (§4).
- *
- * No `<style>` block (CORE_ARCHITECTURE_RULES §7).
- */
 import { computed } from 'vue'
 import SectionDividerLabel from 'components/shared/SectionDividerLabel.vue'
 import { useOutletViewContext } from 'src/_ui/AQL/composables/Master/Outlets/View/useOutletViewContext'

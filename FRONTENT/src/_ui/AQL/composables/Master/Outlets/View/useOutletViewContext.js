@@ -15,6 +15,7 @@ import {
 } from 'src/_resource/Master/Outlets/composables/useOutletActivity'
 import * as VisitProgress from 'src/_resource/Operation/OutletVisits/composables/useVisitProgress'
 import * as RestockProgress from 'src/_resource/Operation/OutletRestocks/composables/useRestockProgress'
+import * as ConsumptionProgress from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionProgress'
 import * as InvoiceWorkflow from 'src/_resource/Operation/OutletConsumptionInvoices/composables/useInvoiceWorkflow'
 import * as PaymentProgress from 'src/_resource/Operation/OutletPayments/composables/useOutletPaymentProgress'
 import {
@@ -137,14 +138,15 @@ export function useOutletViewContext () {
   const parentOutletName = computed(() =>
     parentOutlet.value?.Name || parentOutlet.value?.name || parentCode.value)
 
-  // ── The five streams, sliced to this outlet ─────────────────────────────────
+  const isNotCancelled = (row) =>
+    upper(row?.Progress) !== 'CANCELLED' && upper(row?.Status) !== 'CANCELLED'
 
   const visits = computed(() => index.visitsFor(outletCode.value))
-  const restocks = computed(() => index.restocksFor(outletCode.value))
-  const returns = computed(() => index.returnsFor(outletCode.value))
-  const consumptions = computed(() => index.consumptionsFor(outletCode.value))
-  const invoices = computed(() => index.invoicesFor(outletCode.value))
-  const payments = computed(() => index.paymentsFor(outletCode.value))
+  const restocks = computed(() => index.restocksFor(outletCode.value).filter(isNotCancelled))
+  const returns = computed(() => index.returnsFor(outletCode.value).filter(isNotCancelled))
+  const consumptions = computed(() => index.consumptionsFor(outletCode.value).filter(isNotCancelled))
+  const invoices = computed(() => index.invoicesFor(outletCode.value).filter(isNotCancelled))
+  const payments = computed(() => index.paymentsFor(outletCode.value).filter(isNotCancelled))
   const stock = computed(() => index.stockFor(outletCode.value))
 
   // ── Invoice balances ────────────────────────────────────────────────────────
@@ -271,6 +273,14 @@ export function useOutletViewContext () {
         label: RestockProgress.progressLabel(state),
         color: RestockProgress.progressColor(state),
         icon: RestockProgress.progressIcon(state)
+      }
+    },
+    consumptionMeta: (row) => {
+      const state = ConsumptionProgress.progressOf(row)
+      return {
+        label: ConsumptionProgress.progressLabel(state),
+        color: ConsumptionProgress.progressColor(state),
+        icon: ConsumptionProgress.progressIcon(state)
       }
     },
     paymentMeta: (row) => PaymentProgress.progressMetaOf(row),

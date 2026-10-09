@@ -60,11 +60,11 @@ export function operatingRuleDefaults () {
   const { defaultValues } = useResourceConfig(RESOURCE_NAME)
   const configured = asRow(defaultValues?.value ?? defaultValues)
   return {
-    visitFrequencyDays: positive(configured.VisitFrequencyDays),
-    invoiceDueDays: positive(configured.InvoiceDueDays),
-    creditLimit: num(configured.CreditLimit),
-    maxStockValueLimit: num(configured.MaxStockValueLimit),
-    priceListCode: text(configured.PriceListCode),
+    visitFrequencyDays: positive(configured.VisitFrequencyDays ?? configured.visitFrequencyDays),
+    invoiceDueDays: positive(configured.InvoiceDueDays ?? configured.invoiceDueDays),
+    creditLimit: num(configured.CreditLimit ?? configured.creditLimit),
+    maxStockValueLimit: num(configured.MaxStockValueLimit ?? configured.maxStockValueLimit),
+    priceListCode: text(configured.PriceListCode ?? configured.priceListCode),
     _raw: configured
   }
 }
@@ -116,11 +116,11 @@ export function enrichOperatingRule (rule, defaults = null) {
     ruleCode: text(row.Code),
     outletCode: text(row.OutletCode),
 
-    visitFrequencyDays: positive(row.VisitFrequencyDays) || base.visitFrequencyDays,
-    invoiceDueDays: positive(row.InvoiceDueDays) || base.invoiceDueDays,
-    creditLimit: num(row.CreditLimit) || base.creditLimit,
-    maxStockValueLimit: num(row.MaxStockValueLimit) || base.maxStockValueLimit,
-    priceListCode: text(row.PriceListCode) || base.priceListCode,
+    visitFrequencyDays: positive(row.VisitFrequencyDays ?? row.visitFrequencyDays) || base.visitFrequencyDays,
+    invoiceDueDays: positive(row.InvoiceDueDays ?? row.invoiceDueDays) || base.invoiceDueDays,
+    creditLimit: num(row.CreditLimit ?? row.creditLimit) || base.creditLimit,
+    maxStockValueLimit: num(row.MaxStockValueLimit ?? row.maxStockValueLimit) || base.maxStockValueLimit,
+    priceListCode: text(row.PriceListCode ?? row.priceListCode) || base.priceListCode,
 
     ruleStatus: text(row.Status) || 'Active',
     hasRules: has,

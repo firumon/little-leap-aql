@@ -192,6 +192,12 @@ const build = (recordSource) => {
         if (last && last > lastActivityAt) lastActivityAt = last
       }
 
+      const latestStreams = lastActivityAt
+        ? ACTIVITY_STREAMS.filter((stream) => streams[stream.key]?.lastAt === lastActivityAt)
+        : []
+      const lastActivityStream = latestStreams.map((stream) => stream.key).join(', ')
+      const lastActivityStreamLabel = latestStreams.map((stream) => stream.label).join(', ')
+
       const summary = {
         outlet,
         code,
@@ -203,20 +209,9 @@ const build = (recordSource) => {
         streams,
         lastActivityAt,
         lastActivityDays: ageInDays(lastActivityAt),
+        lastActivityStream,
+        lastActivityStreamLabel,
 
-        /**
-         * The row's keyword haystack, built ONCE here rather than per keystroke.
-         *
-         * Every list view on the Index page filters summaries, not raw records, so the
-         * framework's own `filteredRecords` search never reaches them. Rebuilding a search
-         * string for 139 outlets on every character typed is the linear scan this module
-         * exists to avoid; built here it is recomputed only when the outlet data itself
-         * changes, and a keystroke costs one `includes` per row.
-         *
-         * It covers exactly the fields a reader can SEE on a row plus the identifiers they
-         * are likely to paste — searching a column nobody is shown returns matches that
-         * look like bugs.
-         */
         search: [
           code,
           outlet.name,

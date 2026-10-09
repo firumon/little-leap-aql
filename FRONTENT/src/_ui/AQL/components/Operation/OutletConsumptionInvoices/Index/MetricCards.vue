@@ -6,7 +6,17 @@
     :class="[`q-mb-${gutter}`, `aql-metrics--gutter-${gutter}`]"
   >
     <SectionDividerLabel :label="group.title" />
-    <MetricCardsWidget :items="group.items" />
+    <div
+      v-if="group.rows"
+      :class="[`q-gutter-y-${gutter}`, `aql-metrics--gutter-${gutter}`]"
+    >
+      <MetricCardsWidget
+        v-for="(rowItems, rIdx) in group.rows"
+        :key="rIdx"
+        :items="rowItems"
+      />
+    </div>
+    <MetricCardsWidget v-else :items="group.items" />
   </div>
 </template>
 
@@ -55,18 +65,27 @@ const visibleGroups = computed(() => {
     },
     {
       title: 'Amount',
-      show: open.overdueAmount > 0 || today.total > 0,
-      items: [
-        {
-          label: 'Overdue',
-          number: _C(open.overdueAmount, true),
-          color: open.overdueAmount > 0 ? 'negative' : 'grey-6'
-        },
-        {
-          label: 'Today Collected',
-          number: _C(today.total, true),
-          color: today.total > 0 ? 'positive' : 'grey-6'
-        }
+      show: open.amount > 0 || open.overdueAmount > 0 || today.total > 0,
+      rows: [
+        [
+          {
+            label: 'Receivable',
+            number: _C(open.amount, true),
+            color: open.amount > 0 ? 'info' : 'grey-6'
+          },
+          {
+            label: 'Overdue',
+            number: _C(open.overdueAmount, true),
+            color: open.overdueAmount > 0 ? 'negative' : 'grey-6'
+          }
+        ],
+        [
+          {
+            label: 'Today Collected',
+            number: _C(today.total, true),
+            color: 'positive'
+          }
+        ]
       ]
     },
     {

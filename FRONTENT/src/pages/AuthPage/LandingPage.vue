@@ -1,26 +1,29 @@
 <template>
   <div class="landing-page flex-grow-1 flex flex-center">
-    <div class="text-center full-width">
+    <div class="full-width">
       <div v-show="!showInstructions">
         <p class="text-body1 text-grey-8 q-mb-xl">
-          Welcome to the next generation of distribution management. 
+          Welcome to the next generation of distribution management.
           To access the platform, please install the application on your device.
         </p>
 
-        <q-btn
-          unelevated
-          rounded
-          color="secondary"
-          text-color="primary"
-          size="lg"
-          @click="handleInstall"
-          class="q-px-xl q-py-sm"
-          label="Install App"
-          icon-right="get_app"
-        />
+        <div class="full-width text-center">
+          <q-btn
+            unelevated
+            rounded
+            color="secondary"
+            text-color="primary"
+            size="lg"
+            @click="handleInstall"
+            class="q-px-xl q-py-sm"
+            label="Install App"
+            icon-right="get_app"
+          />
 
-        <div class="q-mt-md">
-          <q-btn flat color="secondary" @click="showInstructions = true" label="How to install manually?" />
+          <div class="q-mt-md">
+            <q-btn flat color="secondary" @click="showInstructions = true" label="How to install manually?" />
+          </div>
+
         </div>
       </div>
 
@@ -42,11 +45,13 @@
             </q-item-section>
           </q-item>
         </q-list>
-        
+
         <div class="text-center q-mt-lg">
           <q-btn flat color="grey-7" @click="showInstructions = false" label="Back" />
         </div>
       </div>
+
+      <div class="landing-version text-center q-mt-lg">v{{ version }}</div>
     </div>
   </div>
 </template>
@@ -55,13 +60,15 @@
 import { ref } from 'vue'
 import { useQuasar } from 'quasar'
 import { presentInstallPrompt } from 'src/utils/pwa-utils'
+import pkg from '../../../package.json'
 
 const $q = useQuasar()
 const showInstructions = ref(false)
+const version = pkg.version
 
 async function handleInstall() {
   const outcome = await presentInstallPrompt()
-  
+
   if (outcome === 'accepted') {
     $q.notify({
       type: 'positive',
@@ -109,5 +116,10 @@ async function handleInstall() {
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+
+.landing-version {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.28);
 }
 </style>

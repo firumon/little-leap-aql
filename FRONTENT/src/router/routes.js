@@ -1,5 +1,3 @@
-import { isStandalone } from 'src/utils/pwa-utils'
-
 const routes = [
   {
     path: '/',
@@ -8,14 +6,8 @@ const routes = [
       {
         path: '',
         name: 'home',
-        beforeEnter: (to, from) => {
-          const isDev = import.meta.env.DEV || (typeof process !== 'undefined' && process.env?.DEV)
-          const isProdNonStandalone = !isDev && !isStandalone()
-          if (isProdNonStandalone) {
-            return { name: 'landing' }
-          }
-
-          const isAuthenticated = !!localStorage.getItem('token')
+        beforeEnter: () => {
+          const isAuthenticated = Boolean(localStorage.getItem('token'))
           return { name: isAuthenticated ? 'dashboard' : 'login' }
         }
       },

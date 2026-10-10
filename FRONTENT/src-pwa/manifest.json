@@ -2,6 +2,10 @@
   "name": "AQL",
   "short_name": "AQL",
   "description": "Premium AQL Management System",
+  "display_override": [
+    "standalone",
+    "window-controls-overlay"
+  ],
   "display": "standalone",
   "start_url": "/",
   "orientation": "portrait",

@@ -1,13 +1,14 @@
-/**
- * Detects if the app is running in standalone mode (installed as PWA)
- * @returns {boolean}
- */
 export function isStandalone() {
-    return (
-        window.matchMedia('(display-mode: standalone)').matches ||
-        window.navigator.standalone ||
-        document.referrer.includes('android-app://')
-    );
+  if (typeof window === 'undefined') return false
+
+  return Boolean(
+    window.matchMedia?.('(display-mode: standalone)')?.matches ||
+    window.matchMedia?.('(display-mode: minimal-ui)')?.matches ||
+    window.matchMedia?.('(display-mode: fullscreen)')?.matches ||
+    window.matchMedia?.('(display-mode: window-controls-overlay)')?.matches ||
+    window.navigator?.standalone === true ||
+    (typeof document !== 'undefined' && document.referrer?.includes('android-app://'))
+  )
 }
 
 /**

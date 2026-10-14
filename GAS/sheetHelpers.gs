@@ -511,14 +511,8 @@ function getAppConfigValue(key) {
   return map[(key || '').toString().toLowerCase()] || '';
 }
 
-/**
- * Returns the list of valid scopes from App.Config "Scopes" key.
- * Falls back to a default set if not configured.
- */
 function getConfiguredScopes() {
-  var raw = getAppConfigValue('Scopes');
-  if (!raw) return ['master', 'operation', 'accounts', 'report', 'view'];
-  return raw.toString().split(',').map(function(s) { return s.trim().toLowerCase(); }).filter(Boolean);
+  return ['master', 'operation', 'accounts', 'report', 'view'];
 }
 
 /**

@@ -1,4 +1,4 @@
-﻿# Resource Registry Architecture
+# Resource Registry Architecture
 
 ## Purpose
 This document explains how `APP.Resources` and related config determine runtime routing and metadata behavior.
@@ -9,8 +9,6 @@ This document explains how `APP.Resources` and related config determine runtime 
 - Scope-level config can provide default file resolution when a resource-level `FileID` is blank.
 
 ## Scope Model
-Scopes are defined in `App.Config` under the key `Scopes` as a CSV string. Default scopes if not configured: `master,operation,accounts,report,view`.
-
 Canonical scopes include:
 - `master`: Static reference data with auto-generated codes.
 - `operation`: Transactional records with year-scoped auto-generated codes.

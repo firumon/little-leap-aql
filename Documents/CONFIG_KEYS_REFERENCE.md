@@ -103,14 +103,7 @@ AQL splits large data domains across multiple Google Drive spreadsheets to preve
 
 ---
 
-### 3.3 Scope & System Operation Keys
-
-#### `Scopes`
-- **What it is**: Comma-separated list of recognized resource scopes.
-- **Purpose**: Validates resource definitions in `APP.Resources` and controls file resolution.
-- **Allowed Values**: Comma-separated scope names in lowercase. Example: `"master,operation,accounts,report,view"`.
-- **Default**: `"master,operation,accounts,report,view"` ([sheetHelpers.gs#L520](file:///f:/LITTLE%20LEAP/AQL/GAS/sheetHelpers.gs#L520)).
-- **Used by**: `getConfiguredScopes()` ([sheetHelpers.gs#L518](file:///f:/LITTLE%20LEAP/AQL/GAS/sheetHelpers.gs#L518)).
+### 3.3 System & Business Settings
 
 #### `Currency`
 - **What it is**: Default base currency code for the tenant.
@@ -186,7 +179,6 @@ AQL splits large data domains across multiple Google Drive spreadsheets to preve
 | `AccountsFileID` | Google Drive File ID | File ID | Spreadsheet ID for Accounts data |
 | `ReportFileID` | Google Drive File ID | File ID | Spreadsheet ID for Report data |
 | `ViewsFileID` | Google Drive File ID | File ID | Spreadsheet ID for Views data |
-| `Scopes` | `"master,operation,accounts,report,view"` | System | List of recognized data scopes |
 | `Currency` | `"AED"` | Finance | Default base currency code |
 | `PriceListLookup`| `"INLINE"` | Pricing | Price list mode (`"INLINE"` or `"ITEMS"`) |
 | `File` | `{"provider":"php",...}` | Storage | Cloud storage provider and API keys |

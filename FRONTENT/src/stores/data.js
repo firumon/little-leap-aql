@@ -20,6 +20,7 @@ export const useDataStore = defineStore('data', () => {
     initResource: state.initResource,
     setRows: state.setRows,
     replaceRows: state.replaceRows,
+    removeRows: state.removeRows,
     getRows: projections.getRows,
     getRowCount: state.getRowCount,
     hasRows: state.hasRows,

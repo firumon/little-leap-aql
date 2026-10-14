@@ -320,7 +320,7 @@ async function executeGasApiCall(action, payload = {}, options = {}) {
 const inFlightRequests = new Map()
 
 // Skip 'get' because each resource fetches different data; any future action with per-call payloads also belongs here.
-const SKIP_IN_FLIGHT_ACTIONS = new Set(['get'])
+const SKIP_IN_FLIGHT_ACTIONS = new Set(['get', 'archive'])
 
 export function executeGasApi(action, payload = {}, options = {}) {
   if (SKIP_IN_FLIGHT_ACTIONS.has(action)) {

@@ -307,7 +307,7 @@ function normalizeActionData(action, requestResource, requestPayload, rawResult)
 
   extractResourcePayloads(resources, requestResource, rawResult, requestPayload);
 
-  var topLevelResultKeys = ['token', 'user', 'resources', 'appConfig', 'avatarUrl', 'name', 'email'];
+  var topLevelResultKeys = ['token', 'user', 'resources', 'appConfig', 'avatarUrl', 'name', 'email', 'archived'];
   topLevelResultKeys.forEach(function (key) {
     if (rawResult && rawResult[key] !== undefined) {
       result[key] = rawResult[key];
@@ -556,6 +556,10 @@ function dispatchProtectedAction(action, auth, data) {
     // Polling action for resource updates
     case 'poll':
       return handlePollAction(auth, data);
+
+    // Archive action
+    case 'archive':
+      return handleArchive(auth, data);
 
     // Report scope
     case 'generateReport':

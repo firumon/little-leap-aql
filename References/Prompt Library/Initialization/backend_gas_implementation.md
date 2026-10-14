@@ -23,6 +23,7 @@ AQL's backend is a Google Apps Script (GAS) project that provides a generic, met
   - [procurement.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/procurement.gs) — procurement workflow linking
   - [outletMovements.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/outletMovements.gs) — outlet stock balance updates
 * **Sheet Utilities**: [sheetHelpers.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/sheetHelpers.gs) — low-level spreadsheet read/write helpers
+* **Archive Engine**: [archiveEngine.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/archiveEngine.gs) — handles periodic spreadsheet archive creation, parent/child row migration, and bottom-up row deletion
 
 ---
 

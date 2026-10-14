@@ -2448,7 +2448,7 @@ function syncAppResourcesFromCode(silent) {
     const protectedColumns = [
         'FileID', 'CodePrefix', 'CodeSequenceLength', 'LastDataUpdatedAt',
         'AccessPolicy', 'AccessRegionSource', 'Menu', 'Reports', 'ListViews', 'CustomUIName',
-        'Settings', 'Dashboard', 'Options'
+        'Settings', 'Dashboard', 'Options', 'Archive'
     ];
     initAppResourcesCodeConfig();
     if (!silent) resetLogSheet_();

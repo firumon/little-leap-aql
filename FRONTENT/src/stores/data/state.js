@@ -60,6 +60,22 @@ export function createState() {
     _bump(resourceName)
   }
 
+  function removeRows(resourceName, codes) {
+    if (!resourceName || !Array.isArray(codes) || !codes.length) return
+    ensureResourceState(resourceName)
+    const map = rows[resourceName]
+    let removed = false
+    for (const code of codes) {
+      if (code == null) continue
+      if (map.delete(code) || map.delete(String(code))) {
+        removed = true
+      }
+    }
+    if (removed) {
+      _bump(resourceName)
+    }
+  }
+
   function getRowCount(resourceName) {
     if (!resourceName) return 0
     ensureResourceState(resourceName)
@@ -84,6 +100,7 @@ export function createState() {
     initResource,
     setRows,
     replaceRows,
+    removeRows,
     getRowCount,
     hasRows
   }

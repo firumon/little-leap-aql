@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { useAuthStore } from './auth'
 import { useResourceStatusStore } from './resourceStatus'
 import { useResourceIoStore } from './resourceIo'
+import { useArchiveStore } from './archive'
 import {
   executeGasApi,
   registerApiRequestListener,
@@ -226,7 +227,12 @@ export const usePollingStore = defineStore('polling', () => {
     }
 
     requestCountInTier.value++
-    if (requestCountInTier.value < tierConfig.maxRequests) return
+    if (requestCountInTier.value < tierConfig.maxRequests) {
+      if (currentTier.value === POLLING_CONFIG.length - 1 && requestCountInTier.value % 5 === 0) {
+        useArchiveStore().runArchiveCheck()
+      }
+      return
+    }
 
     if (currentTier.value >= POLLING_CONFIG.length - 1) {
       // Idle floor: stay here indefinitely.
@@ -237,6 +243,7 @@ export const usePollingStore = defineStore('polling', () => {
     requestCountInTier.value = 0
     applyTier(currentTier.value + 1)
     logger.debug(`Polling escalated to tier ${currentTier.value} (${currentInterval.value}s)`)
+    useArchiveStore().runArchiveCheck()
   }
 
   async function runPoll() {

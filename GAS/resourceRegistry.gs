@@ -234,7 +234,8 @@ function getResourceConfigMap() {
       listViews: listViewsMeta.views,
       listViewsMode: listViewsMeta.mode,
       relations: parseRelationsCell(readOptionalCell(row, registry.idx.Relations, '')),
-      accessRegionSource: parseJsonCell(readOptionalCell(row, registry.idx.AccessRegionSource, ''), null)
+      accessRegionSource: parseJsonCell(readOptionalCell(row, registry.idx.AccessRegionSource, ''), null),
+      archive: parseJsonCell(readOptionalCell(row, registry.idx.Archive, '{}'), {})
     };
   }
 
@@ -1224,11 +1225,13 @@ function buildAuthorizedResourceEntry(resourceName, options) {
       listViews: Array.isArray(config.listViews) ? config.listViews : [],
       listViewsMode: (config.listViewsMode || 'auto').toString(),
       dashboard: Array.isArray(config.dashboard) ? config.dashboard : [],
-      options: (config.options && typeof config.options === 'object' && !Array.isArray(config.options)) ? config.options : {}
+      options: (config.options && typeof config.options === 'object' && !Array.isArray(config.options)) ? config.options : {},
+      archive: (config.archive && typeof config.archive === 'object' && !Array.isArray(config.archive)) ? config.archive : {}
     };
     entry.additionalActions = Array.isArray(config.additionalActions) ? config.additionalActions : [];
     entry.reports = Array.isArray(config.reports) ? config.reports : [];
     entry.settings = Array.isArray(config.settings) ? config.settings : [];
+    entry.archive = (config.archive && typeof config.archive === 'object' && !Array.isArray(config.archive)) ? config.archive : {};
   }
 
   return entry;

@@ -19,7 +19,7 @@ This document is the canonical meaning reference for `APP.Resources` columns.
 - access and actions
   - `AccessPolicy`, `AccessRegionSource`, `OwnerUserField`, `AdditionalActions`
 - UI/runtime metadata
-  - `Menu`, `UIFields`, `IncludeInAuthorizationPayload`, `Functional`, `PreAction`, `PostAction`, `Reports`, `ListViews`, `CustomUIName`, `Settings`, `Dashboard`, `Options`
+  - `Menu`, `UIFields`, `IncludeInAuthorizationPayload`, `Functional`, `PreAction`, `PostAction`, `Reports`, `ListViews`, `CustomUIName`, `Settings`, `Dashboard`, `Options`, `Archive`
 - cross-resource linking
   - `ParentResource`, `Relations`
 
@@ -300,6 +300,15 @@ The `Options` column in `APP.Resources` is the single source for all option list
 }
 ```
 
+## Archive Column Schema & Usage
+The `Archive` column in `APP.Resources` holds the archive policy JSON for this resource.
+
+* **Purpose**: Defines automated archival rules, archive spreadsheet file patterns, batch limits, and conditions for moving historical rows to Google Drive archive spreadsheets.
+* **Format**: A JSON object with `{ frequency, filename?, limit?, condition }`.
+* **Fallback**: An empty object `{}` or blank cell means "archiving disabled".
+* **Exposed on Metadata**: Populated on each resource entry under `entry.archive` and `entry.ui.archive` (defaulting to `{}`).
+* **Canonical Specification**: [FEATURE_ARCHIVE_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/FEATURE_ARCHIVE_SYSTEM.md).
+
 ## Audit Columns & Revision Lifecycle
 Every audited sheet across `master`, `operation`, and `accounts` scopes includes 5 standard audit columns at the trailing end:
 `CreatedAt`, `UpdatedAt`, `Revision`, `CreatedBy`, `UpdatedBy`.
@@ -318,8 +327,8 @@ Every audited sheet across `master`, `operation`, and `accounts` scopes includes
 ## Sync Protection Rule
 When `syncAppResourcesFromCode` executes, it protects designated metadata columns in `APP.Resources` from being overwritten by code defaults if the sheet cell already contains data.
 
-* **Protected Columns (13 total)**:
-  `FileID`, `CodePrefix`, `CodeSequenceLength`, `LastDataUpdatedAt`, `AccessPolicy`, `AccessRegionSource`, `Menu`, `Reports`, `ListViews`, `CustomUIName`, `Settings`, `Dashboard`, `Options`.
+* **Protected Columns (14 total)**:
+  `FileID`, `CodePrefix`, `CodeSequenceLength`, `LastDataUpdatedAt`, `AccessPolicy`, `AccessRegionSource`, `Menu`, `Reports`, `ListViews`, `CustomUIName`, `Settings`, `Dashboard`, `Options`, `Archive`.
 * **Protection Logic**:
   - If a column is in the protected list and the cell in Google Sheets is not blank (note: `0` and `false` are considered valid data and are protected), `syncAppResourcesFromCode` preserves the sheet value and skips overwriting.
   - If the sheet cell is empty or blank, or if the column is not in the protected list, code-level config is written to the sheet.

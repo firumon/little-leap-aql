@@ -231,6 +231,11 @@ Use when customizing tax columns, calculating wholesale values, or modifying com
 - Read:
   - `Documents/FEATURE_TAX_SYSTEM.md`
 
+### Resource Archive System
+Use when inspecting, designing, modifying, or debugging the resource archive system, archive policies in `APP.Resources.Archive`, idle polling archive triggers, backend GAS archive copying and deletion, or IndexedDB/Pinia eviction.
+- Read:
+  - `Documents/FEATURE_ARCHIVE_SYSTEM.md`
+
 ### Multi-Tenant System & Onboarding
 Use when working with tenant routing, Master Apps Script configurations, select tenant forms, or generating a new client/tenant instance.
 - Read:

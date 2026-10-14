@@ -287,6 +287,21 @@ export async function deleteResourceRowByCode(resource, code) {
   return db.delete('resource-records', `${resource}::${normalizeKeyValue(code)}`)
 }
 
+export async function deleteResourceRowsByCodes(resource, codes) {
+  if (!resource || !Array.isArray(codes) || !codes.length) return 0
+  const db = await ensureDB()
+  const tx = db.transaction('resource-records', 'readwrite')
+  const pending = []
+  for (const code of codes) {
+    const key = normalizeKeyValue(code)
+    if (!key) continue
+    pending.push(tx.store.delete(`${resource}::${key}`))
+  }
+  await Promise.all(pending)
+  await tx.done
+  return pending.length
+}
+
 export async function saveFunctionalDraft(key, data) {
   if (!key) return null
   const db = await ensureDB()

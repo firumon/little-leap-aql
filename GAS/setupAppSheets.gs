@@ -57,7 +57,8 @@ function setupAppSheets() {
         'ListViews',
         'Options',
         'CustomUIName',
-        'Relations'
+        'Relations',
+        'Archive'
       ],
       autoIdFormula: null,
       columnWidths: {
@@ -91,7 +92,8 @@ function setupAppSheets() {
         ListViews: 320,
         Options: 320,
         CustomUIName: 160,
-        Relations: 320
+        Relations: 320,
+        Archive: 320
       }
     },
     {

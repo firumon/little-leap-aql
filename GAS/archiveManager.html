@@ -26,28 +26,28 @@
     }
     input, select, textarea {
       width: 100%;
-      padding: 9px 12px;
+      padding: 8px 10px;
       border: 1px solid #cbd5e1;
-      border-radius: 8px;
+      border-radius: 6px;
       font-size: 13px;
       font-family: inherit;
       background: #fff;
       color: #0f172a;
       transition: all 0.2s ease;
-      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.04);
     }
     input:focus, select:focus, textarea:focus {
       outline: none;
       border-color: #000077;
-      box-shadow: 0 0 0 3px rgba(0, 0, 119, 0.15);
+      box-shadow: 0 0 0 3px rgba(0, 0, 119, 0.12);
     }
     .btn {
-      padding: 9px 16px;
+      padding: 8px 14px;
       border: 0;
-      border-radius: 8px;
+      border-radius: 6px;
       font-weight: 600;
       cursor: pointer;
-      font-size: 13px;
+      font-size: 12px;
       transition: all 0.2s;
       display: inline-flex;
       align-items: center;
@@ -57,28 +57,27 @@
     .btn:hover { transform: translateY(-1px); }
     .btn:active { transform: translateY(0); }
     .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
-    .btn-primary { background: #000077; color: #fff; box-shadow: 0 4px 6px -1px rgba(0, 0, 119, 0.2); }
+    .btn-primary { background: #000077; color: #fff; box-shadow: 0 3px 6px -1px rgba(0, 0, 119, 0.25); }
     .btn-primary:hover { background: #000055; }
     .btn-secondary { background: #fff; color: #475569; border: 1px solid #cbd5e1; }
     .btn-secondary:hover { background: #f8fafc; }
     .btn-danger { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
     .btn-danger:hover { background: #fecaca; }
-    .btn-sm { padding: 5px 10px; font-size: 11px; border-radius: 6px; }
+    .btn-sm { padding: 5px 10px; font-size: 11px; border-radius: 5px; }
     .card {
       background: #fff;
-      border-radius: 10px;
-      padding: 16px;
-      margin-bottom: 14px;
-      border: 1px solid #cbd5e1;
-      box-shadow: 0 1px 3px 0 rgba(0,0,0,0.05);
-    }
-    .flex { display: flex; gap: 10px; align-items: center; }
-    .flex-between { display: flex; justify-content: space-between; align-items: center; }
-    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
-    .msg {
-      padding: 10px 14px;
       border-radius: 8px;
+      padding: 14px;
+      margin-bottom: 12px;
+      border: 1px solid #cbd5e1;
+      box-shadow: 0 1px 3px 0 rgba(0,0,0,0.04);
+    }
+    .flex { display: flex; gap: 8px; align-items: center; }
+    .flex-between { display: flex; justify-content: space-between; align-items: center; }
+    .grid-3 { display: grid; grid-template-columns: 140px 140px 1fr; gap: 12px; }
+    .msg {
+      padding: 10px 12px;
+      border-radius: 6px;
       font-size: 12px;
       margin-bottom: 12px;
       display: none;
@@ -88,589 +87,749 @@
     .er { background: #fef2f2; color: #991b1b; border: 1px solid #fca5a5; }
     .status-badge {
       display: inline-block;
-      padding: 4px 10px;
-      border-radius: 20px;
+      padding: 3px 8px;
+      border-radius: 12px;
       font-size: 11px;
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.05em;
+      letter-spacing: 0.04em;
     }
     .badge-active { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
     .badge-disabled { background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; }
     .nav-tabs {
       display: flex;
       gap: 6px;
+      border-bottom: 1px solid #cbd5e1;
       margin-bottom: 14px;
-      border-bottom: 2px solid #cbd5e1;
-      padding-bottom: 4px;
     }
     .tab-btn {
-      padding: 6px 14px;
-      border: none;
+      padding: 8px 16px;
+      border: 0;
       background: none;
       font-weight: 600;
       font-size: 13px;
       color: #64748b;
       cursor: pointer;
-      border-radius: 6px;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
     }
     .tab-btn.active {
-      background: #000077;
-      color: #fff;
-    }
-    .token-chip {
-      display: inline-block;
-      padding: 2px 7px;
-      background: #f1f5f9;
       color: #000077;
+      border-bottom-color: #000077;
+    }
+    .condition-card {
+      background: #fff;
       border: 1px solid #cbd5e1;
-      border-radius: 4px;
-      font-size: 11px;
-      font-family: monospace;
-      cursor: pointer;
-      margin-right: 4px;
-      margin-top: 4px;
+      border-radius: 6px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      box-shadow: 0 1px 2px 0 rgba(0,0,0,0.02);
     }
-    .token-chip:hover {
-      background: #e2e8f0;
-      border-color: #94a3b8;
-    }
-    .condition-box {
-      background: #f8fafc;
-      border: 1px solid #cbd5e1;
-      border-left: 4px solid #F58841;
-      border-radius: 8px;
-      padding: 12px;
-      margin-bottom: 10px;
-    }
-    .condition-row {
-      display: grid;
-      grid-template-columns: 140px 1fr 140px 1.5fr 36px;
+    .cond-line-1 {
+      display: flex;
       gap: 8px;
-      align-items: end;
+      align-items: center;
+      margin-bottom: 8px;
+      padding-bottom: 8px;
+      border-bottom: 1px dashed #e2e8f0;
     }
-    .relation-box {
-      background: #fff;
-      border: 1px dashed #94a3b8;
-      border-radius: 6px;
-      padding: 10px;
-      margin-top: 8px;
+    .cond-line-2 {
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
     }
-    .logic-toggle {
-      padding: 4px 10px;
-      border: 1px solid #cbd5e1;
-      border-radius: 6px;
-      background: #fff;
+    .rel-tag {
+      font-size: 11px;
+      font-weight: 700;
+      color: #475569;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .rel-arrow {
+      color: #94a3b8;
       font-weight: 700;
       font-size: 12px;
-      cursor: pointer;
-      color: #000077;
     }
-    .hidden { display: none !important; }
+    .cond-line-1 select, .cond-line-2 select {
+      font-size: 12px;
+      padding: 7px 8px;
+    }
+    .group-box {
+      border: 2px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 14px;
+      margin: 10px 0;
+      background: #f8fafc;
+    }
+    .group-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .logic-toggle {
+      padding: 5px 12px;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      background: #fff;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 11px;
+      transition: all 0.2s;
+    }
+    .logic-toggle.active {
+      background: #000077;
+      color: #fff;
+      border-color: #000077;
+    }
     .loader {
       text-align: center;
-      padding: 40px;
+      padding: 30px;
       color: #64748b;
       font-size: 14px;
       font-weight: 500;
+    }
+    .hidden { display: none !important; }
+    .token-select {
+      background: #f8fafc;
+      font-size: 11px;
+      color: #475569;
     }
   </style>
 </head>
 <body>
 
-  <div id="loader" class="loader">
-    Loading resource archive policies...
-  </div>
+  <div id="loader" class="loader">Loading Archive Manager...</div>
 
-  <div id="app" class="hidden">
+  <div id="mainContainer" class="hidden">
     <div id="msgBox" class="msg"></div>
 
-    <div class="card flex-between" style="border-left: 4px solid #000077;">
+    <div class="card flex-between">
       <div style="flex: 1; max-width: 420px;">
         <label for="resourceSelect">Select Resource</label>
-        <select id="resourceSelect" onchange="onResourceChange()"></select>
+        <select id="resourceSelect" onchange="onResourceChange(this.value)">
+          <option value="">-- Choose Resource --</option>
+        </select>
       </div>
       <div>
-        <label>Current Status</label>
-        <span id="statusBadge" class="status-badge badge-disabled">Disabled</span>
+        <span id="policyStatusBadge" class="status-badge badge-disabled">No Policy</span>
       </div>
     </div>
 
-    <div class="nav-tabs">
-      <button class="tab-btn active" id="tabVisual" onclick="switchTab('visual')">Visual Editor</button>
-      <button class="tab-btn" id="tabRaw" onclick="switchTab('raw')">Raw JSON</button>
-    </div>
-
-    <div id="panelVisual">
-      <div class="card">
-        <h3 style="margin-bottom: 12px; font-size: 14px;">1. Archive Settings</h3>
-        <div class="grid-3">
-          <div>
-            <label for="archiveFrequency">Frequency</label>
-            <select id="archiveFrequency">
-              <option value="MONTHLY">MONTHLY (Every Month)</option>
-              <option value="BIMONTHLY">BIMONTHLY (Every 2 Months)</option>
-              <option value="QUARTERLY">QUARTERLY (Every 3 Months)</option>
-              <option value="SEMIANNUAL">SEMIANNUAL (Every 6 Months)</option>
-              <option value="ANNUAL">ANNUAL (Every Year)</option>
-            </select>
-          </div>
-          <div>
-            <label for="archiveFilename">File Name Pattern</label>
-            <input type="text" id="archiveFilename" placeholder="ARCHIVE_{{YEAR}}_{{FREQ}}" value="ARCHIVE_{{YEAR}}_{{FREQ}}">
-          </div>
-          <div>
-            <label for="archiveLimit">Batch Limit</label>
-            <input type="number" id="archiveLimit" placeholder="30" value="30" min="1" max="500">
-          </div>
-        </div>
+    <div id="editorArea" class="hidden">
+      <div class="nav-tabs">
+        <button type="button" class="tab-btn active" id="tabBtn_visual" onclick="switchTab('visual')">Visual Builder</button>
+        <button type="button" class="tab-btn" id="tabBtn_raw" onclick="switchTab('raw')">Raw JSON Editor</button>
       </div>
 
-      <div class="card">
-        <div class="flex-between" style="margin-bottom: 12px;">
-          <div>
-            <h3 style="font-size: 14px;">2. Archive Rules & Conditions</h3>
-            <span style="font-size: 11px; color: #64748b;">Records matching these rules will be moved to the archive spreadsheet.</span>
-          </div>
-          <div class="flex">
-            <span style="font-size: 11px; font-weight: 600; color: #475569;">MATCH LOGIC:</span>
-            <button type="button" class="logic-toggle" id="groupLogicBtn" onclick="toggleGroupLogic()">AND</button>
+      <div id="tabVisual">
+        <div class="card">
+          <h3 style="font-size: 13px; margin-bottom: 10px;">1. General Archive Settings</h3>
+          <div class="grid-3">
+            <div>
+              <label for="archiveFreq">Files Per Year</label>
+              <select id="archiveFreq">
+                <option value="1">Once in an Year</option>
+                <option value="2">2 - On each 6 months</option>
+                <option value="3">3 - On each 4 months</option>
+                <option value="4">4 - On each 3 months</option>
+                <option value="6">6 - On each 2 months</option>
+                <option value="12">12 - Every month</option>
+              </select>
+            </div>
+            <div>
+              <label for="archiveLimit">Batch Limit</label>
+              <input type="number" id="archiveLimit" min="1" max="500" value="30">
+            </div>
+            <div>
+              <label for="archiveFilename">Custom File Name (Optional)</label>
+              <input type="text" id="archiveFilename" placeholder="e.g. Products, Invoices (Leave empty to use source file name)">
+            </div>
           </div>
         </div>
 
-        <div id="conditionsList"></div>
-
-        <div class="flex" style="margin-top: 12px;">
-          <button type="button" class="btn btn-secondary btn-sm" onclick="addConditionRow()">+ Add Column Rule</button>
-          <button type="button" class="btn btn-secondary btn-sm" onclick="addRelationRow()">+ Add Relation Rule</button>
+        <div class="card">
+          <h3 style="font-size: 13px; margin-bottom: 10px;">2. Archive Conditions</h3>
+          <p style="font-size: 12px; color: #64748b; margin-bottom: 12px;">
+            Match records using own columns or relations up to 3 levels deep. Combine conditions with AND / OR groups.
+          </p>
+          <div id="filterRoot"></div>
         </div>
       </div>
-    </div>
 
-    <div id="panelRaw" class="hidden">
-      <div class="card">
-        <label for="rawJsonText">Archive Policy JSON</label>
-        <textarea id="rawJsonText" rows="18" style="font-family: monospace; font-size: 12px;"></textarea>
+      <div id="tabRaw" class="hidden">
+        <div class="card">
+          <label for="rawJson">Archive Policy JSON</label>
+          <textarea id="rawJson" rows="16" style="font-family: monospace; font-size: 12px;"></textarea>
+        </div>
       </div>
-    </div>
 
-    <div class="flex-between" style="margin-top: 16px;">
-      <div class="flex">
-        <button type="button" class="btn btn-primary" onclick="savePolicy()">Save Archive Policy</button>
-        <button type="button" class="btn btn-danger btn-sm" onclick="clearPolicy()">Clear / Disable Policy</button>
+      <div class="flex-between" style="margin-top: 14px;">
+        <button type="button" class="btn btn-danger" onclick="clearPolicy()" id="btnClear">Clear Policy</button>
+        <button type="button" class="btn btn-primary" onclick="savePolicy()" id="btnSave">Save Archive Policy</button>
       </div>
-      <button type="button" class="btn btn-secondary" onclick="google.script.host.close()">Close</button>
     </div>
   </div>
 
   <script>
-    let appData = { resources: [] };
-    let currentResource = null;
-    let currentLogic = 'AND';
-    let conditionRows = [];
+    var ALL_RESOURCES = [];
+    var RESOURCES_MAP = {};
+    var CURRENT_RESOURCE = null;
+
+    var OPERATORS = [
+      { code: 'eq', label: 'Equals (=)' },
+      { code: 'neq', label: 'Not Equals (!=)' },
+      { code: 'gt', label: 'Greater Than (>)' },
+      { code: 'gte', label: 'Greater Or Equal (>=)' },
+      { code: 'lt', label: 'Less Than (<)' },
+      { code: 'lte', label: 'Less Or Equal (<=)' },
+      { code: 'contains', label: 'Contains' },
+      { code: 'empty', label: 'Is Empty' },
+      { code: 'notEmpty', label: 'Is Not Empty' },
+      { code: 'in', label: 'In (Comma list)' },
+      { code: 'not_in', label: 'Not In (Comma list)' }
+    ];
+
+    var TOKENS = [
+      { code: '$now', label: 'Now (timestamp)', group: 'Date & Time' },
+      { code: '$dateTime', label: 'Now (YYYY-MM-DD HH:mm:ss)', group: 'Date & Time' },
+      { code: '$date', label: 'Date (YYYY-MM-DD)', group: 'Date & Time', param: '0' },
+      { code: '$day', label: 'Day of year (1-366)', group: 'Date & Time' },
+      { code: '$month', label: 'Month (01-12)', group: 'Date & Time', param: '0' },
+      { code: '$year', label: 'Current year (YYYY)', group: 'Date & Time' },
+      { code: '$week', label: 'Current ISO week (1-53)', group: 'Date & Time' },
+      { code: '$startOfDay', label: 'Start of day (timestamp)', group: 'Date & Time', param: '0' },
+      { code: '$endOfDay', label: 'End of day (timestamp)', group: 'Date & Time', param: '0' },
+      { code: '$startOfMonth', label: 'Start of month (timestamp)', group: 'Date & Time', param: '0' },
+      { code: '$endOfMonth', label: 'End of month (timestamp)', group: 'Date & Time', param: '0' },
+      { code: '$daysAgo', label: 'N days ago', group: 'Relative Days', param: '90' },
+      { code: '$daysIn', label: 'In N days', group: 'Relative Days', param: '30' },
+      { code: '$hoursAgo', label: 'N hours ago', group: 'Relative Hours', param: '24' },
+      { code: '$hoursIn', label: 'In N hours', group: 'Relative Hours', param: '24' },
+      { code: '$userCode', label: 'My user code', group: 'Current User' },
+      { code: '$userEmail', label: 'My email', group: 'Current User' },
+      { code: '$userName', label: 'My name', group: 'Current User' },
+      { code: '$userDesignation', label: 'My designation', group: 'Current User' },
+      { code: '$userRole', label: 'My primary role', group: 'Current User' },
+      { code: '$userRoles', label: 'My roles (list)', group: 'Current User' },
+      { code: '$userRegion', label: 'My region code', group: 'Current User' },
+      { code: '$userRegions', label: 'My accessible regions (list)', group: 'Current User' }
+    ];
 
     window.onload = function() {
       google.script.run
         .withSuccessHandler(initData)
-        .withFailureHandler(showError)
+        .withFailureHandler(function(err) {
+          document.getElementById('loader').textContent = 'Error loading data: ' + err.message;
+        })
         .app_getArchiveManagerData();
     };
 
-    function initData(data) {
-      appData = data || { resources: [] };
-      document.getElementById('loader').classList.add('hidden');
-      document.getElementById('app').classList.remove('hidden');
-
-      const select = document.getElementById('resourceSelect');
-      select.innerHTML = '';
-      appData.resources.forEach(res => {
-        const opt = document.createElement('option');
-        opt.value = res.name;
-        opt.textContent = `${res.name} (${res.scope})`;
-        select.appendChild(opt);
-      });
-
-      if (appData.resources.length > 0) {
-        select.value = appData.resources[0].name;
-        loadResource(appData.resources[0].name);
-      }
-    }
-
-    function onResourceChange() {
-      const select = document.getElementById('resourceSelect');
-      loadResource(select.value);
-    }
-
-    function loadResource(name) {
-      currentResource = appData.resources.find(r => r.name === name);
-      if (!currentResource) return;
-
-      const policy = currentResource.archive || {};
-      const hasPolicy = policy && policy.condition && Object.keys(policy.condition).length > 0;
-
-      const badge = document.getElementById('statusBadge');
-      if (hasPolicy) {
-        badge.textContent = 'Active';
-        badge.className = 'status-badge badge-active';
-      } else {
-        badge.textContent = 'Disabled';
-        badge.className = 'status-badge badge-disabled';
-      }
-
-      document.getElementById('archiveFrequency').value = policy.frequency || 'MONTHLY';
-      document.getElementById('archiveFilename').value = policy.filename || 'ARCHIVE_{{YEAR}}_{{FREQ}}';
-      document.getElementById('archiveLimit').value = policy.limit || 30;
-
-      const cond = policy.condition || {};
-      currentLogic = (cond.logic || 'AND').toUpperCase();
-      document.getElementById('groupLogicBtn').textContent = currentLogic;
-
-      conditionRows = [];
-      if (Array.isArray(cond.items) && cond.items.length > 0) {
-        cond.items.forEach(item => conditionRows.push(item));
-      } else if (cond.column || cond.relation) {
-        conditionRows.push(cond);
-      }
-
-      renderConditions();
-      updateRawJson();
-    }
-
-    function toggleGroupLogic() {
-      currentLogic = currentLogic === 'AND' ? 'OR' : 'AND';
-      document.getElementById('groupLogicBtn').textContent = currentLogic;
-      updateRawJson();
-    }
-
-    function renderConditions() {
-      const list = document.getElementById('conditionsList');
-      list.innerHTML = '';
-
-      if (conditionRows.length === 0) {
-        list.innerHTML = '<div style="color: #94a3b8; font-style: italic; padding: 12px 0;">No archive conditions set. Click "+ Add Column Rule" to create one.</div>';
-        return;
-      }
-
-      const headers = currentResource.headers || [];
-      const relations = currentResource.relations || [];
-
-      conditionRows.forEach((row, idx) => {
-        const box = document.createElement('div');
-        box.className = 'condition-box';
-
-        if (row.relation) {
-          // Relation Rule
-          const subCond = row.condition || {};
-          box.innerHTML = `
-            <div class="flex-between" style="margin-bottom: 8px;">
-              <span style="font-weight: 700; color: #000077; font-size: 12px;">🔗 Relation Rule</span>
-              <button type="button" class="btn btn-danger btn-sm" onclick="removeCondition(${idx})">✕</button>
-            </div>
-            <div class="grid-2" style="margin-bottom: 8px;">
-              <div>
-                <label>Related Resource</label>
-                <select onchange="updateRelationName(${idx}, this.value)">
-                  ${renderRelationOptions(row.relation, relations)}
-                </select>
-              </div>
-            </div>
-            <div class="relation-box">
-              <label style="color: #000077;">Must Match Child / Parent Condition</label>
-              <div style="display: grid; grid-template-columns: 1fr 140px 1.5fr; gap: 8px;">
-                <div>
-                  <input type="text" placeholder="Column Name (e.g. Status)" value="${escapeHtml(subCond.column || '')}" oninput="updateRelationSubCol(${idx}, this.value)">
-                </div>
-                <div>
-                  <select onchange="updateRelationSubOp(${idx}, this.value)">
-                    ${renderOperatorOptions(subCond.operator || 'eq')}
-                  </select>
-                </div>
-                <div>
-                  <input type="text" placeholder="Value or Token" value="${escapeHtml(subCond.value ?? '')}" oninput="updateRelationSubVal(${idx}, this.value)">
-                  <div style="margin-top: 4px;">
-                    <span class="token-chip" onclick="insertSubToken(${idx}, '$daysAgo:90')">$daysAgo:90</span>
-                    <span class="token-chip" onclick="insertSubToken(${idx}, '$today')">$today</span>
-                    <span class="token-chip" onclick="insertSubToken(${idx}, '$now')">$now</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          `;
-        } else {
-          // Column Rule
-          box.innerHTML = `
-            <div class="condition-row">
-              <div>
-                <label>Target Column</label>
-                <select onchange="updateConditionCol(${idx}, this.value)">
-                  ${renderHeaderOptions(row.column, headers)}
-                </select>
-              </div>
-              <div>
-                <label>Operator</label>
-                <select onchange="updateConditionOp(${idx}, this.value)">
-                  ${renderOperatorOptions(row.operator || 'eq')}
-                </select>
-              </div>
-              <div style="grid-column: span 2;">
-                <label>Value / Token</label>
-                <input type="text" placeholder="Value or Token (e.g. Completed, $daysAgo:90)" value="${escapeHtml(row.value ?? '')}" oninput="updateConditionVal(${idx}, this.value)">
-                <div style="margin-top: 4px;">
-                  <span class="token-chip" onclick="insertToken(${idx}, '$daysAgo:30')">$daysAgo:30</span>
-                  <span class="token-chip" onclick="insertToken(${idx}, '$daysAgo:90')">$daysAgo:90</span>
-                  <span class="token-chip" onclick="insertToken(${idx}, '$daysAgo:180')">$daysAgo:180</span>
-                  <span class="token-chip" onclick="insertToken(${idx}, '$today')">$today</span>
-                  <span class="token-chip" onclick="insertToken(${idx}, '$now')">$now</span>
-                </div>
-              </div>
-              <div>
-                <button type="button" class="btn btn-danger btn-sm" onclick="removeCondition(${idx})">✕</button>
-              </div>
-            </div>
-          `;
-        }
-
-        list.appendChild(box);
-      });
-    }
-
-    function renderHeaderOptions(selected, headers) {
-      let html = '<option value="">-- Choose Column --</option>';
-      headers.forEach(h => {
-        html += `<option value="${h}" ${h === selected ? 'selected' : ''}>${h}</option>`;
-      });
-      if (selected && !headers.includes(selected)) {
-        html += `<option value="${selected}" selected>${selected}</option>`;
-      }
-      return html;
-    }
-
-    function renderRelationOptions(selected, relations) {
-      let html = '<option value="">-- Choose Relation --</option>';
-      relations.forEach(r => {
-        html += `<option value="${r}" ${r === selected ? 'selected' : ''}>${r}</option>`;
-      });
-      if (selected && !relations.includes(selected)) {
-        html += `<option value="${selected}" selected>${selected}</option>`;
-      }
-      return html;
-    }
-
-    function renderOperatorOptions(selected) {
-      const ops = [
-        { v: 'eq', l: 'Equals (=)' },
-        { v: 'neq', l: 'Not Equals (!=)' },
-        { v: 'gt', l: 'Greater Than (>)' },
-        { v: 'gte', l: 'Greater Or Equal (>=)' },
-        { v: 'lt', l: 'Less Than (<)' },
-        { v: 'lte', l: 'Less Or Equal (<=)' },
-        { v: 'contains', l: 'Contains' },
-        { v: 'empty', l: 'Is Empty' },
-        { v: 'notEmpty', l: 'Is Not Empty' },
-        { v: 'in', l: 'In (Comma list)' },
-        { v: 'not_in', l: 'Not In (Comma list)' }
-      ];
-      return ops.map(o => `<option value="${o.v}" ${o.v === selected ? 'selected' : ''}>${o.l}</option>`).join('');
-    }
-
-    function addConditionRow() {
-      const firstHeader = (currentResource.headers && currentResource.headers[0]) || 'Status';
-      conditionRows.push({ column: firstHeader, operator: 'eq', value: '' });
-      renderConditions();
-      updateRawJson();
-    }
-
-    function addRelationRow() {
-      const firstRel = (currentResource.relations && currentResource.relations[0]) || '';
-      conditionRows.push({
-        relation: firstRel,
-        condition: { column: 'Status', operator: 'eq', value: '' }
-      });
-      renderConditions();
-      updateRawJson();
-    }
-
-    function removeCondition(idx) {
-      conditionRows.splice(idx, 1);
-      renderConditions();
-      updateRawJson();
-    }
-
-    function updateConditionCol(idx, val) {
-      conditionRows[idx].column = val;
-      updateRawJson();
-    }
-
-    function updateConditionOp(idx, val) {
-      conditionRows[idx].operator = val;
-      updateRawJson();
-    }
-
-    function updateConditionVal(idx, val) {
-      conditionRows[idx].value = val;
-      updateRawJson();
-    }
-
-    function insertToken(idx, token) {
-      conditionRows[idx].value = token;
-      renderConditions();
-      updateRawJson();
-    }
-
-    function updateRelationName(idx, val) {
-      conditionRows[idx].relation = val;
-      updateRawJson();
-    }
-
-    function updateRelationSubCol(idx, val) {
-      if (!conditionRows[idx].condition) conditionRows[idx].condition = {};
-      conditionRows[idx].condition.column = val;
-      updateRawJson();
-    }
-
-    function updateRelationSubOp(idx, val) {
-      if (!conditionRows[idx].condition) conditionRows[idx].condition = {};
-      conditionRows[idx].condition.operator = val;
-      updateRawJson();
-    }
-
-    function updateRelationSubVal(idx, val) {
-      if (!conditionRows[idx].condition) conditionRows[idx].condition = {};
-      conditionRows[idx].condition.value = val;
-      updateRawJson();
-    }
-
-    function insertSubToken(idx, token) {
-      if (!conditionRows[idx].condition) conditionRows[idx].condition = {};
-      conditionRows[idx].condition.value = token;
-      renderConditions();
-      updateRawJson();
-    }
-
-    function buildCurrentPolicyObject() {
-      const freq = document.getElementById('archiveFrequency').value || 'MONTHLY';
-      const filename = document.getElementById('archiveFilename').value || 'ARCHIVE_{{YEAR}}_{{FREQ}}';
-      const limit = Number(document.getElementById('archiveLimit').value) || 30;
-
-      if (conditionRows.length === 0) {
-        return {};
-      }
-
-      return {
-        frequency: freq,
-        filename: filename,
-        limit: limit,
-        condition: {
-          logic: currentLogic,
-          items: conditionRows
-        }
-      };
-    }
-
-    function updateRawJson() {
-      const obj = buildCurrentPolicyObject();
-      document.getElementById('rawJsonText').value = Object.keys(obj).length > 0 ? JSON.stringify(obj, null, 2) : '';
-    }
-
-    function switchTab(tab) {
-      document.getElementById('tabVisual').className = 'tab-btn' + (tab === 'visual' ? ' active' : '');
-      document.getElementById('tabRaw').className = 'tab-btn' + (tab === 'raw' ? ' active' : '');
-
-      if (tab === 'visual') {
-        const rawText = document.getElementById('rawJsonText').value.trim();
-        if (rawText) {
-          try {
-            const parsed = JSON.parse(rawText);
-            document.getElementById('archiveFrequency').value = parsed.frequency || 'MONTHLY';
-            document.getElementById('archiveFilename').value = parsed.filename || 'ARCHIVE_{{YEAR}}_{{FREQ}}';
-            document.getElementById('archiveLimit').value = parsed.limit || 30;
-            const cond = parsed.condition || {};
-            currentLogic = (cond.logic || 'AND').toUpperCase();
-            document.getElementById('groupLogicBtn').textContent = currentLogic;
-            conditionRows = Array.isArray(cond.items) ? cond.items : (cond.column || cond.relation ? [cond] : []);
-            renderConditions();
-          } catch (e) {
-            showError('Invalid JSON in editor: ' + e.message);
-            return;
-          }
-        } else {
-          conditionRows = [];
-          renderConditions();
-        }
-        document.getElementById('panelVisual').classList.remove('hidden');
-        document.getElementById('panelRaw').classList.add('hidden');
-      } else {
-        updateRawJson();
-        document.getElementById('panelVisual').classList.add('hidden');
-        document.getElementById('panelRaw').classList.remove('hidden');
-      }
-    }
-
-    function savePolicy() {
-      let policyObj;
-      const isRawTab = document.getElementById('tabRaw').classList.contains('active');
-
-      if (isRawTab) {
-        const text = document.getElementById('rawJsonText').value.trim();
-        if (!text) {
-          policyObj = {};
-        } else {
-          try {
-            policyObj = JSON.parse(text);
-          } catch (e) {
-            showError('Invalid JSON: ' + e.message);
-            return;
-          }
-        }
-      } else {
-        policyObj = buildCurrentPolicyObject();
-      }
-
-      showMsg('Saving archive policy...', false);
-      google.script.run
-        .withSuccessHandler(function() {
-          showMsg('Archive policy saved successfully!', true);
-          currentResource.archive = policyObj;
-          loadResource(currentResource.name);
-        })
-        .withFailureHandler(showError)
-        .app_saveResourceArchivePolicy(currentResource.name, policyObj);
-    }
-
-    function clearPolicy() {
-      if (!confirm(`Are you sure you want to disable and clear the archive policy for ${currentResource.name}?`)) return;
-
-      showMsg('Clearing archive policy...', false);
-      google.script.run
-        .withSuccessHandler(function() {
-          showMsg('Archive policy cleared and disabled!', true);
-          currentResource.archive = {};
-          loadResource(currentResource.name);
-        })
-        .withFailureHandler(showError)
-        .app_saveResourceArchivePolicy(currentResource.name, {});
-    }
-
-    function showMsg(text, isOk) {
-      const box = document.getElementById('msgBox');
-      box.textContent = text;
-      box.className = 'msg ' + (isOk ? 'ok' : 'er');
-      box.style.display = 'block';
-      if (isOk) {
-        setTimeout(() => { box.style.display = 'none'; }, 4000);
-      }
-    }
-
-    function showError(err) {
-      showMsg(err?.message || String(err), false);
-    }
-
-    function escapeHtml(str) {
-      return String(str ?? '')
+    function esc(str) {
+      if (str === null || str === undefined) return '';
+      return String(str)
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;');
+    }
+
+    function initData(data) {
+      document.getElementById('loader').classList.add('hidden');
+      document.getElementById('mainContainer').classList.remove('hidden');
+
+      ALL_RESOURCES = (data && data.resources) || [];
+      ALL_RESOURCES.sort(function(a, b) { return a.name.localeCompare(b.name); });
+      RESOURCES_MAP = {};
+      ALL_RESOURCES.forEach(function(r) { RESOURCES_MAP[r.name] = r; });
+
+      var sel = document.getElementById('resourceSelect');
+      sel.innerHTML = '<option value="">-- Choose Resource --</option>';
+      ALL_RESOURCES.forEach(function(r) {
+        var opt = document.createElement('option');
+        opt.value = r.name;
+        opt.textContent = r.name + ' (' + r.scope + ')';
+        sel.appendChild(opt);
+      });
+    }
+
+    function onResourceChange(resName) {
+      CURRENT_RESOURCE = RESOURCES_MAP[resName] || null;
+      var editorArea = document.getElementById('editorArea');
+      var badge = document.getElementById('policyStatusBadge');
+
+      if (!CURRENT_RESOURCE) {
+        editorArea.classList.add('hidden');
+        badge.textContent = 'No Policy';
+        badge.className = 'status-badge badge-disabled';
+        return;
+      }
+
+      editorArea.classList.remove('hidden');
+      loadResourcePolicy(CURRENT_RESOURCE);
+    }
+
+    function normalizeFrequency(freq) {
+      if (typeof freq === 'string') {
+        var u = freq.toUpperCase().trim();
+        if (u === 'MONTHLY') return 12;
+        if (u === 'QUARTERLY') return 4;
+        if (u === 'HALF_YEARLY' || u === 'BIANNUAL') return 2;
+        if (u === 'ANNUAL' || u === 'YEARLY') return 1;
+      }
+      var n = Number(freq) || 1;
+      return [1, 2, 3, 4, 6, 12].indexOf(n) !== -1 ? n : 1;
+    }
+
+    function loadResourcePolicy(res) {
+      var policy = res.archive || {};
+      var hasPolicy = policy && policy.condition && (Object.keys(policy.condition).length > 0);
+
+      var badge = document.getElementById('policyStatusBadge');
+      if (hasPolicy) {
+        badge.textContent = 'Active Policy';
+        badge.className = 'status-badge badge-active';
+      } else {
+        badge.textContent = 'No Policy';
+        badge.className = 'status-badge badge-disabled';
+      }
+
+      document.getElementById('archiveFreq').value = normalizeFrequency(policy.frequency);
+      document.getElementById('archiveLimit').value = policy.limit || 30;
+      document.getElementById('archiveFilename').value = policy.filename || '';
+
+      var rootCond = policy.condition || { type: 'group', logic: 'AND', items: [] };
+      renderFilterGroup(document.getElementById('filterRoot'), rootCond, true);
+
+      document.getElementById('rawJson').value = hasPolicy ? JSON.stringify(policy, null, 2) : '';
+    }
+
+    function getHeadersForResource(resName) {
+      var r = RESOURCES_MAP[resName];
+      return (r && Array.isArray(r.headers)) ? r.headers : [];
+    }
+
+    function buildResourceOptions(selectedVal) {
+      var html = '<option value="">-- None --</option>';
+      ALL_RESOURCES.forEach(function(r) {
+        html += '<option value="' + esc(r.name) + '"' + (selectedVal === r.name ? ' selected' : '') + '>' + esc(r.name) + '</option>';
+      });
+      if (selectedVal && !RESOURCES_MAP[selectedVal]) {
+        html += '<option value="' + esc(selectedVal) + '" selected>' + esc(selectedVal) + '</option>';
+      }
+      return html;
+    }
+
+    function buildTokenOptions() {
+      var groups = {};
+      TOKENS.forEach(function(t) {
+        if (!groups[t.group]) groups[t.group] = [];
+        groups[t.group].push(t);
+      });
+
+      var html = '<option value="">Tokens...</option>';
+      for (var grp in groups) {
+        html += '<optgroup label="' + esc(grp) + '">';
+        groups[grp].forEach(function(t) {
+          html += '<option value="' + esc(t.code) + '">' + esc(t.label) + '</option>';
+        });
+        html += '</optgroup>';
+      }
+      return html;
+    }
+
+    function renderFilterGroup(container, group, isRoot) {
+      container.innerHTML = '';
+      var box = document.createElement('div');
+      box.className = 'group-box';
+
+      var logic = (group && group.logic ? group.logic : 'AND').toUpperCase();
+      var removeBtn = !isRoot ? '<button type="button" class="btn btn-danger btn-sm" onclick="removeItem(this)">Remove Group</button>' : '';
+
+      var header = document.createElement('div');
+      header.className = 'group-header';
+      header.innerHTML =
+        '<div class="flex">' +
+          '<span style="font-size:11px; font-weight:700; color:#475569; text-transform:uppercase;">Match</span>' +
+          '<button type="button" class="logic-toggle ' + (logic === 'AND' ? 'active' : '') + '" data-logic="AND" onclick="toggleLogic(this, \'AND\')">ALL (AND)</button>' +
+          '<button type="button" class="logic-toggle ' + (logic === 'OR' ? 'active' : '') + '" data-logic="OR" onclick="toggleLogic(this, \'OR\')">ANY (OR)</button>' +
+        '</div>' +
+        '<div class="flex">' +
+          '<button type="button" class="btn btn-secondary btn-sm" onclick="addCondition(this)">+ Condition</button>' +
+          '<button type="button" class="btn btn-secondary btn-sm" onclick="addNestedGroup(this)">+ Group</button>' +
+          removeBtn +
+        '</div>';
+      box.appendChild(header);
+
+      var itemsContainer = document.createElement('div');
+      itemsContainer.className = 'group-items';
+      box.appendChild(itemsContainer);
+      container.appendChild(box);
+
+      var rawItems = (group && Array.isArray(group.items)) ? group.items : [];
+      if (!Array.isArray(group.items) && (group.column || group.relation)) {
+        rawItems = [group];
+      }
+
+      if (rawItems.length === 0) {
+        appendConditionRow(itemsContainer, { column: '', operator: 'eq', value: '' });
+      } else {
+        rawItems.forEach(function(item) {
+          if (item.type === 'group' || (Array.isArray(item.items) && item.logic)) {
+            var nestedDiv = document.createElement('div');
+            itemsContainer.appendChild(nestedDiv);
+            renderFilterGroup(nestedDiv, item, false);
+          } else {
+            appendConditionRow(itemsContainer, item);
+          }
+        });
+      }
+    }
+
+    function appendConditionRow(container, condition) {
+      var card = document.createElement('div');
+      card.className = 'condition-card';
+
+      var relStr = '';
+      var sub = condition || {};
+
+      if (condition.type === 'relation' || (condition.relation && condition.condition)) {
+        var chain = [];
+        var curr = condition;
+        while (curr && curr.relation) {
+          chain.push(curr.relation);
+          curr = curr.condition;
+        }
+        relStr = chain.join('.');
+        sub = curr || {};
+      } else if (condition.relation) {
+        relStr = condition.relation;
+      }
+
+      var parts = relStr ? relStr.split('.') : [];
+      var r1 = parts[0] || '';
+      var r2 = parts[1] || '';
+      var r3 = parts[2] || '';
+
+      var selCol = sub.column || '';
+      var selOp = sub.operator || 'eq';
+      var valStr = sub.value !== undefined && sub.value !== null ? String(sub.value) : '';
+
+      var r1Opts = buildResourceOptions(r1);
+      var r2Disabled = !r1;
+      var r2Opts = buildResourceOptions(r2);
+      var r3Disabled = !r2;
+      var r3Opts = buildResourceOptions(r3);
+
+      // Determine active target resource for columns
+      var targetRes = r3 || r2 || r1 || (CURRENT_RESOURCE ? CURRENT_RESOURCE.name : '');
+      var headers = getHeadersForResource(targetRes);
+      var colOpts = '<option value="">-- Select Column --</option>';
+      headers.forEach(function(h) {
+        colOpts += '<option value="' + esc(h) + '"' + (selCol === h ? ' selected' : '') + '>' + esc(h) + '</option>';
+      });
+      if (selCol && headers.indexOf(selCol) === -1) {
+        colOpts += '<option value="' + esc(selCol) + '" selected>' + esc(selCol) + '</option>';
+      }
+
+      var opOpts = OPERATORS.map(function(op) {
+        return '<option value="' + op.code + '"' + (selOp === op.code ? ' selected' : '') + '>' + op.label + '</option>';
+      }).join('');
+
+      card.innerHTML =
+        '<div class="cond-line-1">' +
+          '<span class="rel-tag">RELATION:</span>' +
+          '<select class="c-rel-1" onchange="onRelChange(this, 1)" style="flex:1;">' + r1Opts + '</select>' +
+          '<span class="rel-arrow">&gt;</span>' +
+          '<select class="c-rel-2" onchange="onRelChange(this, 2)" style="flex:1;"' + (r2Disabled ? ' disabled' : '') + '>' + r2Opts + '</select>' +
+          '<span class="rel-arrow">&gt;</span>' +
+          '<select class="c-rel-3" onchange="onRelChange(this, 3)" style="flex:1;"' + (r3Disabled ? ' disabled' : '') + '>' + r3Opts + '</select>' +
+          '<button type="button" class="btn btn-danger btn-sm" onclick="removeItem(this)">✕</button>' +
+        '</div>' +
+        '<div class="cond-line-2">' +
+          '<div style="width:220px;">' +
+            '<label>Column</label>' +
+            '<select class="c-col">' + colOpts + '</select>' +
+          '</div>' +
+          '<div style="width:140px;">' +
+            '<label>Operator</label>' +
+            '<select class="c-op">' + opOpts + '</select>' +
+          '</div>' +
+          '<div style="flex:1;">' +
+            '<label>Value / Token</label>' +
+            '<div class="flex">' +
+              '<input type="text" class="c-val" placeholder="Value or token" value="' + esc(valStr) + '" style="flex:1;">' +
+              '<select class="c-token token-select" style="width:85px;" onchange="onTokenSelect(this)">' +
+                buildTokenOptions() +
+              '</select>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+
+      container.appendChild(card);
+    }
+
+    function onRelChange(el, slotIndex) {
+      var card = el.closest('.condition-card');
+      var sel1 = card.querySelector('.c-rel-1');
+      var sel2 = card.querySelector('.c-rel-2');
+      var sel3 = card.querySelector('.c-rel-3');
+      var colSel = card.querySelector('.c-col');
+
+      if (slotIndex === 1) {
+        var r1 = sel1.value;
+        if (!r1) {
+          sel2.innerHTML = '<option value="">-- None --</option>';
+          sel2.value = '';
+          sel2.disabled = true;
+          sel3.innerHTML = '<option value="">-- None --</option>';
+          sel3.value = '';
+          sel3.disabled = true;
+        } else {
+          sel2.disabled = false;
+          var cur2 = sel2.value;
+          sel2.innerHTML = buildResourceOptions(cur2);
+          if (!sel2.value) {
+            sel3.innerHTML = '<option value="">-- None --</option>';
+            sel3.value = '';
+            sel3.disabled = true;
+          }
+        }
+      } else if (slotIndex === 2) {
+        var r2 = sel2.value;
+        if (!r2) {
+          sel3.innerHTML = '<option value="">-- None --</option>';
+          sel3.value = '';
+          sel3.disabled = true;
+        } else {
+          sel3.disabled = false;
+          var cur3 = sel3.value;
+          sel3.innerHTML = buildResourceOptions(cur3);
+        }
+      }
+
+      var targetRes = sel3.value || sel2.value || sel1.value || (CURRENT_RESOURCE ? CURRENT_RESOURCE.name : '');
+      var headers = getHeadersForResource(targetRes);
+      var currentVal = colSel.value;
+      var colOpts = '<option value="">-- Select Column --</option>';
+      headers.forEach(function(h) {
+        colOpts += '<option value="' + esc(h) + '"' + (h === currentVal ? ' selected' : '') + '>' + esc(h) + '</option>';
+      });
+      colSel.innerHTML = colOpts;
+    }
+
+    function toggleLogic(btn, logic) {
+      var parent = btn.parentElement;
+      parent.querySelectorAll('.logic-toggle').forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+    }
+
+    function addCondition(btn) {
+      var groupBox = btn.closest('.group-box');
+      var itemsContainer = groupBox.querySelector('.group-items');
+      appendConditionRow(itemsContainer, { column: '', operator: 'eq', value: '' });
+    }
+
+    function addNestedGroup(btn) {
+      var groupBox = btn.closest('.group-box');
+      var itemsContainer = groupBox.querySelector('.group-items');
+      var div = document.createElement('div');
+      itemsContainer.appendChild(div);
+      renderFilterGroup(div, { type: 'group', logic: 'AND', items: [] }, false);
+    }
+
+    function removeItem(btn) {
+      var el = btn.closest('.condition-card') || btn.closest('.group-box').parentElement;
+      el.remove();
+    }
+
+    function onTokenSelect(sel) {
+      var card = sel.closest('.condition-card');
+      var valInput = card.querySelector('.c-val');
+      if (!sel.value) return;
+
+      var token = null;
+      TOKENS.forEach(function(t) { if (t.code === sel.value) token = t; });
+
+      if (token && token.param !== undefined) {
+        var p = prompt('Offset value for ' + token.code + ':N (e.g. days or hours):', token.param);
+        if (p !== null) {
+          valInput.value = token.code + ':' + p.trim();
+        }
+      } else if (token) {
+        valInput.value = token.code;
+      }
+      sel.value = '';
+    }
+
+    function compileGroup(groupBox) {
+      var logicBtn = groupBox.querySelector('.group-header .logic-toggle.active');
+      var logic = logicBtn ? logicBtn.getAttribute('data-logic') : 'AND';
+      var itemsContainer = groupBox.querySelector('.group-items');
+      var items = [];
+
+      for (var i = 0; i < itemsContainer.children.length; i++) {
+        var child = itemsContainer.children[i];
+        if (child.classList.contains('condition-card')) {
+          var r1 = child.querySelector('.c-rel-1').value || '';
+          var r2 = child.querySelector('.c-rel-2').value || '';
+          var r3 = child.querySelector('.c-rel-3').value || '';
+
+          var relParts = [];
+          if (r1) relParts.push(r1);
+          if (r1 && r2) relParts.push(r2);
+          if (r1 && r2 && r3) relParts.push(r3);
+          var relStr = relParts.join('.');
+
+          var col = (child.querySelector('.c-col').value || '').trim();
+          var op = (child.querySelector('.c-op').value || '').trim();
+          var val = (child.querySelector('.c-val').value || '').trim();
+
+          if (!col) continue;
+
+          items.push({
+            type: 'condition',
+            relation: relStr,
+            column: col,
+            operator: op || 'eq',
+            value: val
+          });
+        } else if (child.querySelector && child.querySelector('.group-box')) {
+          var nested = compileGroup(child.querySelector('.group-box'));
+          if (nested && nested.items && nested.items.length > 0) {
+            items.push(nested);
+          }
+        }
+      }
+
+      return {
+        type: 'group',
+        logic: logic,
+        items: items
+      };
+    }
+
+    function buildPolicyFromVisual() {
+      var freq = Number(document.getElementById('archiveFreq').value) || 1;
+      var limit = Number(document.getElementById('archiveLimit').value) || 30;
+      var customFilename = (document.getElementById('archiveFilename').value || '').trim();
+
+      var rootBox = document.getElementById('filterRoot').querySelector('.group-box');
+      var condTree = rootBox ? compileGroup(rootBox) : null;
+
+      var policyObj = {
+        frequency: freq,
+        limit: limit,
+        condition: condTree
+      };
+
+      if (customFilename) {
+        policyObj.filename = customFilename;
+      }
+
+      return policyObj;
+    }
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+      document.getElementById('tabBtn_' + tabId).classList.add('active');
+
+      if (tabId === 'visual') {
+        var raw = document.getElementById('rawJson').value.trim();
+        if (raw) {
+          try {
+            var parsed = JSON.parse(raw);
+            document.getElementById('archiveFreq').value = normalizeFrequency(parsed.frequency);
+            document.getElementById('archiveLimit').value = parsed.limit || 30;
+            document.getElementById('archiveFilename').value = parsed.filename || '';
+            var cond = parsed.condition || { type: 'group', logic: 'AND', items: [] };
+            renderFilterGroup(document.getElementById('filterRoot'), cond, true);
+          } catch (e) {
+            showMsg('Invalid JSON in raw editor: ' + e.message, 'er');
+            return;
+          }
+        }
+        document.getElementById('tabVisual').classList.remove('hidden');
+        document.getElementById('tabRaw').classList.add('hidden');
+      } else {
+        var policyObj = buildPolicyFromVisual();
+        document.getElementById('rawJson').value = JSON.stringify(policyObj, null, 2);
+        document.getElementById('tabVisual').classList.add('hidden');
+        document.getElementById('tabRaw').classList.remove('hidden');
+      }
+    }
+
+    function showMsg(txt, type) {
+      var b = document.getElementById('msgBox');
+      b.textContent = txt;
+      b.className = 'msg ' + type;
+      b.style.display = 'block';
+      setTimeout(function() { b.style.display = 'none'; }, 5000);
+    }
+
+    function setButtonsDisabled(state) {
+      document.getElementById('btnSave').disabled = state;
+      document.getElementById('btnClear').disabled = state;
+    }
+
+    function savePolicy() {
+      if (!CURRENT_RESOURCE) return;
+
+      var policyObj = null;
+      var isRawActive = document.getElementById('tabBtn_raw').classList.contains('active');
+
+      if (isRawActive) {
+        var raw = document.getElementById('rawJson').value.trim();
+        if (!raw) {
+          showMsg('Please provide policy JSON or switch to Visual Builder', 'er');
+          return;
+        }
+        try {
+          policyObj = JSON.parse(raw);
+        } catch (e) {
+          showMsg('Invalid JSON: ' + e.message, 'er');
+          return;
+        }
+      } else {
+        policyObj = buildPolicyFromVisual();
+      }
+
+      setButtonsDisabled(true);
+
+      // Single-line stringified JSON passed to server
+      google.script.run
+        .withSuccessHandler(function() {
+          setButtonsDisabled(false);
+          CURRENT_RESOURCE.archive = policyObj;
+          document.getElementById('policyStatusBadge').textContent = 'Active Policy';
+          document.getElementById('policyStatusBadge').className = 'status-badge badge-active';
+          showMsg('Archive policy saved successfully!', 'ok');
+        })
+        .withFailureHandler(function(err) {
+          setButtonsDisabled(false);
+          showMsg('Error saving policy: ' + err.message, 'er');
+        })
+        .app_saveResourceArchivePolicy(CURRENT_RESOURCE.name, policyObj);
+    }
+
+    function clearPolicy() {
+      if (!CURRENT_RESOURCE) return;
+      if (!confirm('Are you sure you want to clear the archive policy for ' + CURRENT_RESOURCE.name + '?')) return;
+
+      setButtonsDisabled(true);
+
+      google.script.run
+        .withSuccessHandler(function() {
+          setButtonsDisabled(false);
+          CURRENT_RESOURCE.archive = {};
+          loadResourcePolicy(CURRENT_RESOURCE);
+          showMsg('Archive policy cleared.', 'ok');
+        })
+        .withFailureHandler(function(err) {
+          setButtonsDisabled(false);
+          showMsg('Error clearing policy: ' + err.message, 'er');
+        })
+        .app_saveResourceArchivePolicy(CURRENT_RESOURCE.name, {});
     }
   </script>
 </body>

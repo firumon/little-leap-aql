@@ -32,8 +32,25 @@ function archive_getPeriodFolderName(frequency) {
   var now = new Date();
   var year = now.getFullYear();
   var m = now.getMonth() + 1;
-  var f = Math.max(1, Math.min(12, Number(frequency) || 1));
-  var periodLength = Math.max(1, Math.floor(12 / f));
+  var f = frequency;
+  var periodLength = 12;
+
+  if (typeof f === 'string') {
+    var upper = f.toUpperCase().trim();
+    if (upper === 'MONTHLY') f = 12;
+    else if (upper === 'QUARTERLY') f = 4;
+    else if (upper === 'HALF_YEARLY' || upper === 'BIANNUAL') f = 2;
+    else if (upper === 'ANNUAL' || upper === 'YEARLY') f = 1;
+    else f = Number(f) || 1;
+  } else {
+    f = Number(f) || 1;
+  }
+
+  var validFreqs = [1, 2, 3, 4, 6, 12];
+  if (validFreqs.indexOf(f) === -1) f = 1;
+
+  var periodLength = Math.floor(12 / f);
+
   var periodIndex = Math.floor((m - 1) / periodLength);
   var startMonth = periodIndex * periodLength + 1;
   var endMonth = Math.min(12, startMonth + periodLength - 1);

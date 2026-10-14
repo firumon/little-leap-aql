@@ -53,7 +53,12 @@ export const useArchiveStore = defineStore('archive', () => {
       for (const rec of records) {
         if (!rec || !rec.Code) continue
         const enriched = recordApi.enrich(resourceName, rec.Code)
-        if (evaluatePreparedArchiveCondition(prepared, enriched)) {
+        const isMatch = await evaluatePreparedArchiveCondition(prepared, enriched || rec, {
+          dataStore,
+          recordApi,
+          resourceName
+        })
+        if (isMatch) {
           matchingCodes.push(rec.Code)
           if (matchingCodes.length >= limit) break
         }

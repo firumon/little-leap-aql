@@ -4,7 +4,7 @@ import { useAuthStore } from 'src/stores/auth'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { useRecord } from 'src/composables/resources/useRecord'
 import { normalizeFieldType } from 'src/_fields/useFieldResolver'
-import { appOptionGroupFor, resolveDynamicFieldOptions } from './dynamicFieldOptions'
+import { resourceOptionGroupFor, resolveDynamicFieldOptions } from './dynamicFieldOptions'
 import AqlFileUpload from 'components/shared/AqlFileUpload.vue'
 import AppDate from 'components/app/Date.vue'
 import AqlStatusToggle from 'components/abstract/StatusToggle.vue'
@@ -59,9 +59,10 @@ export function isToggleField(field) {
   return false
 }
 
-export { appOptionGroupFor, resolveDynamicFieldOptions } from './dynamicFieldOptions'
+export { resourceOptionGroupFor, resolveDynamicFieldOptions } from './dynamicFieldOptions'
 
-export function mapField(field, { resourceName, linkRefs = {}, crossRefOptions = {}, appOptions = {}, dynamicOptions = {} } = {}) {
+export function mapField(field, { resourceName, linkRefs = {}, crossRefOptions = {}, resourceOptions = {}, dynamicOptions = {} } = {}) {
+  const resOpts = resourceOptions || {}
   const baseProps = {
     label: field.label || field.header,
     hint: field.hint || undefined,
@@ -166,7 +167,7 @@ export function mapField(field, { resourceName, linkRefs = {}, crossRefOptions =
       fieldType: 'openselect',
       componentName: 'q-select',
       ...baseProps,
-      options: dynamicOptions[field.header] || field.options || appOptions[field.header] || [],
+      options: dynamicOptions[field.header] || field.options || resOpts[field.header] || [],
       emitValue: true,
       mapOptions: true,
       clearable: !field.required
@@ -179,19 +180,19 @@ export function mapField(field, { resourceName, linkRefs = {}, crossRefOptions =
       fieldType: 'select',
       componentName: 'q-select',
       ...baseProps,
-      options: dynamicOptions[field.header] || field.options || appOptions[field.header] || crossRefOptions[field.header] || [],
+      options: dynamicOptions[field.header] || field.options || resOpts[field.header] || crossRefOptions[field.header] || [],
       emitValue: true,
       mapOptions: true
     }
   }
 
-  if (Array.isArray(appOptions[field.header]) && appOptions[field.header].length) {
+  if (Array.isArray(resOpts[field.header]) && resOpts[field.header].length) {
     return {
       header: field.header,
       fieldType: 'select',
       componentName: 'q-select',
       ...baseProps,
-      options: appOptions[field.header],
+      options: resOpts[field.header],
       emitValue: true,
       mapOptions: true,
       clearable: !field.required
@@ -219,7 +220,7 @@ export function mapField(field, { resourceName, linkRefs = {}, crossRefOptions =
       fieldType: 'multiselect',
       componentName: 'q-select',
       ...baseProps,
-      options: dynamicOptions[field.header] || field.options || appOptions[field.header] || crossRefOptions[field.header] || [],
+      options: dynamicOptions[field.header] || field.options || resOpts[field.header] || crossRefOptions[field.header] || [],
       emitValue: true,
       mapOptions: true,
       multiple: true,
@@ -305,7 +306,7 @@ export function useFormFields(resourceName) {
     return map
   })
 
-  const appOptionsMap = computed(() => {
+  const resourceOptionsMap = computed(() => {
     const map = {}
     const cfg = config.value
     if (!cfg) return map
@@ -329,7 +330,7 @@ export function useFormFields(resourceName) {
 
     const uiFields = Array.isArray(cfg.ui?.fields) ? cfg.ui.fields : []
     const resName = resolvedName.value
-    const appOpts = appOptionsMap.value
+    const resOpts = resourceOptionsMap.value
 
     for (const field of uiFields) {
       if (!field?.header || !field?.source) continue
@@ -337,7 +338,7 @@ export function useFormFields(resourceName) {
         resourceName: resName,
         dataStore,
         authStore,
-        appOptions: appOpts
+        resourceOptions: resOpts
       })
       if (options && options.length) {
         map[field.header] = options
@@ -368,7 +369,7 @@ export function useFormFields(resourceName) {
         resourceName: resolvedName.value,
         linkRefs: linkRefs.value,
         crossRefOptions: crossRefOptionsMap.value,
-        appOptions: appOptionsMap.value,
+        resourceOptions: resourceOptionsMap.value,
         dynamicOptions: dynamicOptionsMap.value
       }))
   })

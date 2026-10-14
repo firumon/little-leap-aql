@@ -139,7 +139,7 @@ export function normalizeListViewsMode(mode) {
  * @param {import('vue').Ref<Array>} options.configuredListViews - from config.ui.listViews
  * @param {import('vue').Ref<String>} [options.configuredListViewsMode] - from config.ui.listViewsMode
  * @param {import('vue').Ref<String>} [options.scope] - resource scope ('master' | 'operation' | 'accounts')
- * @param {import('vue').Ref<String>} [options.resourceName] - resource name, used for AppOptions lookups
+ * @param {import('vue').Ref<String>} [options.resourceName] - resource name, used for resource options lookups
  * @param {Boolean} [options.enableUrlSync=false] - optional URL sync mode
  * @param {import('vue-router').RouteLocationNormalized} [options.route]
  * @param {import('vue-router').Router} [options.router]

@@ -1,7 +1,7 @@
 import { prepareFilter, evaluatePreparedFilter } from 'src/utils/tokenEvaluator'
 import { useResourceConfig } from './useResourceConfig'
 
-export function appOptionGroupFor (_optionsMap = {}, resourceName = '', header = '') {
+export function resourceOptionGroupFor (_optionsMap = {}, resourceName = '', header = '') {
   const name = String(resourceName || '').trim()
   const column = String(header || '').trim()
   if (!name || !column) return []
@@ -14,7 +14,7 @@ export function appOptionGroupFor (_optionsMap = {}, resourceName = '', header =
   return []
 }
 
-function getAppOptions (field, resourceName) {
+function getResourceOptions (field, resourceName) {
   const targetResource = field?.targetResource || field?.resource || resourceName
   const targetColumn = field?.targetHeader || field?.header || ''
   if (!targetResource || !targetColumn) return []
@@ -50,11 +50,24 @@ export function resolveDynamicFieldOptions (field, { resourceName, dataStore, au
     return getExistingOptions(field, resourceName, dataStore)
   }
 
-  if (lower === 'appoption' || lower === 'appoptions') {
-    return getAppOptions(field, resourceName, authStore)
+  if (
+    lower === 'option' ||
+    lower === 'options' ||
+    lower === 'resourceoption' ||
+    lower === 'resourceoptions' ||
+    lower === 'appoption' ||
+    lower === 'appoptions'
+  ) {
+    return getResourceOptions(field, resourceName, authStore)
   }
 
   if (
+    lower === 'option & existing' ||
+    lower === 'existing & option' ||
+    lower === 'options & existing' ||
+    lower === 'existing & options' ||
+    lower === 'resourceoption & existing' ||
+    lower === 'existing & resourceoption' ||
     lower === 'appoption & existing' ||
     lower === 'existing & appoption' ||
     lower === 'appoption + existing' ||
@@ -64,7 +77,7 @@ export function resolveDynamicFieldOptions (field, { resourceName, dataStore, au
     lower === 'appoptions+own' ||
     lower === 'own+appoptions'
   ) {
-    const base = getAppOptions(field, resourceName, authStore)
+    const base = getResourceOptions(field, resourceName, authStore)
     const seen = new Set(base.map((o) => String(o.value ?? '').trim().toLowerCase()).filter(Boolean))
     const merged = [...base]
 

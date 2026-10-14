@@ -47,7 +47,6 @@ export default boot(async ({ app }) => {
         localStorage.removeItem('user')
         localStorage.removeItem('resources')
         localStorage.removeItem('appConfig')
-        localStorage.removeItem('appOptions')
       }
 
       activeUrl = targetUrl

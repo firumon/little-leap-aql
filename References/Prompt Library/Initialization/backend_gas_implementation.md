@@ -24,6 +24,7 @@ AQL's backend is a Google Apps Script (GAS) project that provides a generic, met
   - [outletMovements.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/outletMovements.gs) — outlet stock balance updates
 * **Sheet Utilities**: [sheetHelpers.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/sheetHelpers.gs) — low-level spreadsheet read/write helpers
 * **Archive Engine**: [archiveEngine.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/archiveEngine.gs) — handles periodic spreadsheet archive creation, parent/child row migration, and bottom-up row deletion
+* **Multi-Tenant Wrapper**: [tenant.gs](file:///f:/LITTLE%20LEAP/AQL/TENANTS/tenant.gs) — forwards spreadsheet menu actions, sheet triggers, and HTML dialog callbacks for each tenant sheet
 
 ---
 
@@ -79,6 +80,7 @@ Rules:
 2. **Follow hook naming conventions**: `handleResourceName` for base hooks, `handleResourceName_afterCreate` for action-specific hooks.
 3. **Update resource config**: If adding a PostAction, set it in `initAppResourcesCodeConfig()` within [syncAppResources.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/syncAppResources.gs).
 4. **Use sheet helpers**: Use `updateResourceRecordFieldsByCode()`, `getSheetDataAsObjects()` from [sheetHelpers.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/sheetHelpers.gs) rather than raw SpreadsheetApp calls.
+5. **Sync Tenant Wrapper**: If you add or modify sheet menus, spreadsheet triggers, or HTML dialog callbacks (`google.script.run`), you must add or update forwarding functions in [tenant.gs](file:///f:/LITTLE%20LEAP/AQL/TENANTS/tenant.gs).
 
 ### Step 3: Documentation
 1. Update [GAS_PATTERNS.md](file:///f:/LITTLE%20LEAP/AQL/Documents/GAS_PATTERNS.md) if a new pattern was introduced.
@@ -96,6 +98,7 @@ Rules:
 - **DO** use the generic resource API for all CRUD operations.
 - **DO** keep hook functions in domain-specific files (e.g., `stockMovements.gs`, `procurement.gs`).
 - **DO** verify that `payload.record` / `payload.data` nesting is correct — top-level write fields are rejected.
+- **DO** update [tenant.gs](file:///f:/LITTLE%20LEAP/AQL/TENANTS/tenant.gs) whenever adding or modifying sheet menu items, sheet triggers, or HTML dialog callbacks (`google.script.run`).
 
 ---
 

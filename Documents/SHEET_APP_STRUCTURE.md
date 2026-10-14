@@ -46,14 +46,16 @@ This document describes the APP spreadsheet as the control plane for authenticat
 
 ### Config
 - deployment-specific settings such as file IDs and sync-related values
+- canonical specification and key catalogue: [CONFIG_KEYS_REFERENCE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/CONFIG_KEYS_REFERENCE.md)
 
 ## Setup
 APP structure is created/refreshed through setup/refactor scripts and related menu actions.
 
 ## Canonical Detail Owners
-- Resource column semantics: [SCHEMA_RESOURCE_COLUMNS.md](F:/LITTLE%20LEAP/AQL/Documents/SCHEMA_RESOURCE_COLUMNS.md)
-- Resource/runtime routing: [SCHEMA_RESOURCE_REGISTRY.md](F:/LITTLE%20LEAP/AQL/Documents/SCHEMA_RESOURCE_REGISTRY.md)
-- Setup flow: [TENANT_NEW_CLIENT_SETUP.md](F:/LITTLE%20LEAP/AQL/Documents/TENANT_NEW_CLIENT_SETUP.md)
+- Resource column semantics: [SCHEMA_RESOURCE_COLUMNS.md](file:///f:/LITTLE%20LEAP/AQL/Documents/SCHEMA_RESOURCE_COLUMNS.md)
+- Resource/runtime routing: [SCHEMA_RESOURCE_REGISTRY.md](file:///f:/LITTLE%20LEAP/AQL/Documents/SCHEMA_RESOURCE_REGISTRY.md)
+- Setup flow: [TENANT_NEW_CLIENT_SETUP.md](file:///f:/LITTLE%20LEAP/AQL/Documents/TENANT_NEW_CLIENT_SETUP.md)
+- Config keys catalogue: [CONFIG_KEYS_REFERENCE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/CONFIG_KEYS_REFERENCE.md)
 
 ## Maintenance Rule
 Update this file when:

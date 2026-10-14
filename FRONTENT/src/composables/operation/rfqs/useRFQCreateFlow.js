@@ -1,6 +1,6 @@
-﻿import { computed, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useQuasar } from 'quasar'
-import { useAuthStore } from 'src/stores/auth'
+import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { useResourceIoStore } from 'src/stores/resourceIo'
 import { usePageRecord } from 'src/composables/resources/usePageRecord'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
@@ -23,7 +23,7 @@ function resultCode(entry) {
 
 export function useRFQCreateFlow() {
   const $q = useQuasar()
-  const auth = useAuthStore()
+  const rfqConfig = useResourceConfig('RFQs')
   const resourceIoStore = useResourceIoStore()
   const nav = useResourceNav()
   const procurements = useProcurements()
@@ -64,13 +64,13 @@ export function useRFQCreateFlow() {
   })
 
   const optionSets = computed(() => ({
-    leadTimeTypes: mapRFQOptions(auth.appOptionsMap.RFQLeadTimeType, 'leadTimeTypes'),
-    shippingTermModes: mapRFQOptions(auth.appOptionsMap.RFQShippingTermMode, 'shippingTermModes'),
-    shippingTerms: mapRFQOptions(auth.appOptionsMap.RFQShippingTerm, 'shippingTerms'),
-    paymentTermModes: mapRFQOptions(auth.appOptionsMap.RFQPaymentTermMode, 'paymentTermModes'),
-    paymentTerms: mapRFQOptions(auth.appOptionsMap.RFQPaymentTerm, 'paymentTerms'),
-    quotationValidityModes: mapRFQOptions(auth.appOptionsMap.RFQQuotationValidityMode, 'quotationValidityModes'),
-    deliveryModes: mapRFQOptions(auth.appOptionsMap.RFQDeliveryMode, 'deliveryModes')
+    leadTimeTypes: mapRFQOptions(rfqConfig.options('LeadTimeType'), 'leadTimeTypes'),
+    shippingTermModes: mapRFQOptions(rfqConfig.options('ShippingTermMode'), 'shippingTermModes'),
+    shippingTerms: mapRFQOptions(rfqConfig.options('ShippingTerm'), 'shippingTerms'),
+    paymentTermModes: mapRFQOptions(rfqConfig.options('PaymentTermMode'), 'paymentTermModes'),
+    paymentTerms: mapRFQOptions(rfqConfig.options('PaymentTerm'), 'paymentTerms'),
+    quotationValidityModes: mapRFQOptions(rfqConfig.options('QuotationValidityMode'), 'quotationValidityModes'),
+    deliveryModes: mapRFQOptions(rfqConfig.options('DeliveryMode'), 'deliveryModes')
   }))
 
   const approvedPrs = computed(() => {

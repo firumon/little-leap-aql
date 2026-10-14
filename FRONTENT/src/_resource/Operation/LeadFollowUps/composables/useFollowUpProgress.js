@@ -1,5 +1,4 @@
 // LeadFollowUps workflow vocabulary and state gates. Layer 2, pure functions only.
-// Progress is stored Title Case, matching the LeadFollowUpProgress AppOptions group.
 
 // eslint-disable-next-line no-unused-vars -- read by the permission-gated predicates below
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'

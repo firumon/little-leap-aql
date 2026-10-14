@@ -8,7 +8,6 @@
  */
 
 import { useResourceConfig, findResourceConfig } from 'src/composables/resources/useResourceConfig'
-import { useAuth } from 'src/composables/core/useAuth'
 
 const RESOURCE_NAME = 'OutletPayments'
 const INVOICE_RESOURCE = 'OutletConsumptionInvoices'
@@ -18,8 +17,7 @@ const text = (value) => (value == null ? '' : String(value).trim())
 const asRow = (value) => (value && typeof value === 'object' ? value : {})
 
 export function paymentModes () {
-  const { appOptionsMap } = useAuth()
-  const options = appOptionsMap.value?.OutletPaymentMode
+  const options = useResourceConfig(RESOURCE_NAME).options('PaymentMode')
   const list = (Array.isArray(options) ? options : []).map(text).filter(Boolean)
   return list.length ? list : [...DEFAULT_MODES]
 }

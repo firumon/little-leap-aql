@@ -25,8 +25,7 @@ This document is the authoritative reference for the payload returned by `handle
       "token": "string (uuid)",
       "user": { },
       "resources": [],
-      "appConfig": { },
-      "appOptions": { }
+      "appConfig": { }
     },
     "artifacts": {}
   },
@@ -46,9 +45,8 @@ This document is the authoritative reference for the payload returned by `handle
 | `success` | Computed | `GAS/auth.gs:116` | Login success flag | Not persisted | Per request |
 | `data.result.token` | `APP.Users.ApiKey` | `GAS/auth.gs:111` — `Utilities.getUuid()` | Session identifier written to `Users.ApiKey` | `localStorage.token` + Pinia `authStore.token` | Re-login only |
 | `data.result.user` | `APP.Users` + `APP.Roles` + `APP.Designations` | `GAS/auth.gs:119` → `buildAuthUserPayload()` `GAS/auth.gs:205` | Authenticated user identity, roles, access region | `localStorage.user` + Pinia `authStore.user` | Re-login only |
-| `data.result.resources` | `APP.Resources` + `APP.RolePermissions` | `GAS/auth.gs:120` → `getLoginAuthorizedResources()` `GAS/auth.gs:196` → `safeGetRoleResourceAccess()` `GAS/auth.gs:236` → `buildAuthorizedResourceEntry()` `GAS/resourceRegistry.gs:482` | Menu items, permissions, UI config per resource the user can access | `localStorage.resources` + Pinia `authStore.resources` | Re-login or admin runs **AQL 🚀 > Resources > Clear Resource Config Cache** |
+| `data.result.resources` | `APP.Resources` + `APP.RolePermissions` | `GAS/auth.gs:120` → `getLoginAuthorizedResources()` `GAS/auth.gs:196` → `safeGetRoleResourceAccess()` `GAS/auth.gs:236` → `buildAuthorizedResourceEntry()` `GAS/resourceRegistry.gs:482` | Menu items, permissions, UI config, and options per resource the user can access | `localStorage.resources` + Pinia `authStore.resources` | Re-login or admin runs **AQL 🚀 > Resources > Clear Resource Config Cache** |
 | `data.result.appConfig` | `APP.Config` | `GAS/auth.gs:121` → `getLoginAppConfig()` `GAS/auth.gs:164` | Deployment-scoped settings (sync TTLs, file IDs, branding) | `localStorage.appConfig` + Pinia `authStore.appConfig` | Re-login |
-| `data.result.appOptions` | `APP.AppOptions` | `GAS/auth.gs:122` → `getAppOptions()` `GAS/appOptions.gs:15` | Flat map of option-group → array of selectable values | `localStorage.appOptions` + Pinia `authStore.appOptions` (exposed as `appOptionsMap` computed) | Re-login |
 
 ---
 
@@ -145,6 +143,7 @@ Array of resource entries built by `buildAuthorizedResourceEntry()` at `GAS/reso
 | `defaultValues` | Backend-authored seed values (`APP.Resources.DefaultValues`, JSON), keyed by header; consumed by the frontend via `useResourceConfig(resource).defaultValues` to seed `FormRecord`/`FormChild` drafts |
 | `permissions` | CRUD and custom workflow action flags (e.g. `canApprove`) derived from `APP.RolePermissions` for the user's role(s) |
 | `headers` | Sheet column headers; empty array for functional resources |
+| `ui.options` | Map of `{ [column]: string[] }` parsed from `APP.Resources.Options`. Consumed via `useResourceConfig(resource).options(column)` |
 | `ui.menus` | Sidebar menu configuration array including `menuAccess` rules. See [UI_SIDEBAR_MENU_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_SIDEBAR_MENU_SYSTEM.md) for full schema and evaluation logic. |
 | `ui.fields` | UIFields config for custom form rendering |
 | `ui.customUIName` | Drives per-tenant 3-tier component resolution in frontend |
@@ -173,23 +172,16 @@ Key-value map read from `APP.Config` sheet by `getLoginAppConfig()` at `GAS/auth
 
 ---
 
-## 6. `appOptions` Sub-Reference
+## 6. Resource Options (`ui.options`) Reference
 
-Flat map read from `APP.AppOptions` sheet by `getAppOptions()` at `GAS/appOptions.gs:15`.
-Sheet layout: Column A = option group key; Columns B onwards = selectable values.
-Seed data defined in `GAS/Constants.gs:65` (`APP_OPTIONS_SEED`).
+Options are no longer stored in a standalone `APP.AppOptions` sheet or sent as a top-level `appOptions` key in the login payload.
+Instead, all options belong to their respective resources and are defined in the `APP.Resources.Options` column as JSON strings:
+`{ "Progress": ["Draft", "Approved"], "Type": ["A", "B"] }`.
 
-Supplier Quotation additions:
-- `SupplierQuotationResponseType`: `['QUOTED', 'PARTIAL', 'DECLINED']`
-- `SupplierQuotationProgress`: `['RECEIVED', 'ACCEPTED', 'REJECTED']`
-- `SupplierQuotationExtraChargeType`: `['tax', 'freight', 'commission', 'handling', 'other']`
-- `Currency`: `['AED']`
+These are parsed and exposed under each resource's `ui.options` object in `data.result.resources[]`.
 
-| Option Group | Values | Seeded at | Frontend consumer |
-|---|---|---|---|
-| `StockMovementReferenceType` | `['GRN', 'DirectEntry', 'StockAdjustment']` | `GAS/Constants.gs:66` + `GAS/setupOperationSheets.gs` (validation is no longer applied by setup scripts) | `FRONTENT/src/components/Warehouse/ManageStockContextStep.vue` → type cards |
-
-> Rule: When adding a new option group to `APP_OPTIONS_SEED`, update this table and update any frontend consumers (dropdown/list validation is no longer applied to sheets by setup scripts).
+Frontend consumers access options via:
+`useResourceConfig(resourceName).options(columnName)`
 
 ---
 
@@ -197,6 +189,7 @@ Supplier Quotation additions:
 
 ```js
 import { useAuthStore } from 'src/stores/auth'
+import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 
 const auth = useAuthStore()
 
@@ -205,16 +198,16 @@ auth.token              // session token string
 auth.user               // user payload object
 auth.resources          // full authorized resources array
 auth.appConfig          // raw appConfig map
-auth.appOptions         // raw appOptions map
 
 // Computed getters
 auth.appConfigMap        // same as appConfig (normalized)
-auth.appOptionsMap       // same as appOptions (normalized)
 auth.authorizedResources // same as resources
 auth.scopeSyncConfig     // { masterSyncTTL, accountsSyncTTL, operationsSyncTTL }
 
-// Example: get StockMovement reference types
-const types = auth.appOptionsMap['StockMovementReferenceType'] // ['GRN', 'DirectEntry', ...]
+// Resource options pattern
+const stockMovementConfig = useResourceConfig('StockMovements')
+const referenceTypes = stockMovementConfig.options('ReferenceType') // ['GRN', 'DirectEntry', ...]
+const allOptions = stockMovementConfig.options() // { ReferenceType: [...], ... }
 ```
 
 

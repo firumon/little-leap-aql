@@ -1,29 +1,26 @@
-import { singularize, pluralize } from 'src/utils/appHelpers'
 import { prepareFilter, evaluatePreparedFilter } from 'src/utils/tokenEvaluator'
+import { useResourceConfig } from './useResourceConfig'
 
-export function appOptionGroupFor (optionsMap = {}, resourceName = '', header = '') {
+export function appOptionGroupFor (_optionsMap = {}, resourceName = '', header = '') {
   const name = String(resourceName || '').trim()
   const column = String(header || '').trim()
   if (!name || !column) return []
 
-  const colVariants = new Set([column, singularize(column), pluralize(column)])
-  for (const variant of new Set([name, singularize(name), pluralize(name)])) {
-    for (const col of colVariants) {
-      const group = optionsMap[`${variant}${col}`]
-      if (Array.isArray(group) && group.length) {
-        return group.map((value) => ({ label: String(value), value }))
-      }
-    }
+  const { options } = useResourceConfig(name)
+  const list = options(column)
+  if (Array.isArray(list) && list.length) {
+    return list.map((value) => ({ label: String(value), value }))
   }
   return []
 }
 
-function getAppOptions (field, resourceName, authStore) {
-  const map = authStore?.appOptionsMap || {}
-  if (field.appOptionGroup && Array.isArray(map[field.appOptionGroup])) {
-    return map[field.appOptionGroup].map((v) => ({ label: String(v), value: v }))
-  }
-  return appOptionGroupFor(map, resourceName, field.header)
+function getAppOptions (field, resourceName) {
+  const targetResource = field?.targetResource || field?.resource || resourceName
+  const targetColumn = field?.targetHeader || field?.header || ''
+  if (!targetResource || !targetColumn) return []
+  const { options } = useResourceConfig(targetResource)
+  const list = options(targetColumn)
+  return (Array.isArray(list) ? list : []).map((v) => ({ label: String(v), value: v }))
 }
 
 function getExistingOptions (field, resourceName, dataStore) {

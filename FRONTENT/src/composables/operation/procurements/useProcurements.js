@@ -1,5 +1,6 @@
-﻿import { computed } from 'vue'
+import { computed } from 'vue'
 import { useAuthStore } from 'src/stores/auth'
+import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { todayIsoSlash } from 'src/utils/appHelpers'
 import {
   buildPurchaseRequisitionFormData,
@@ -31,14 +32,16 @@ const FALLBACK_PROCUREMENT_PROGRESS = [
 
 export function useProcurements() {
   const auth = useAuthStore()
+  const prConfig = useResourceConfig('PurchaseRequisitions')
+  const procurementConfig = useResourceConfig('Procurements')
 
   const purchaseRequisitionProgress = computed(() => {
-    const values = auth.appOptionsMap.PurchaseRequisitionProgress
+    const values = prConfig.options('Progress')
     return Array.isArray(values) && values.length ? values : FALLBACK_PR_PROGRESS
   })
 
   const procurementProgress = computed(() => {
-    const values = auth.appOptionsMap.ProcurementProgress
+    const values = procurementConfig.options('Progress')
     return Array.isArray(values) && values.length ? values : FALLBACK_PROCUREMENT_PROGRESS
   })
 

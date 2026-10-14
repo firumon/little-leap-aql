@@ -218,8 +218,17 @@ function getResourceConfigMap() {
         return Array.isArray(v) ? v : [];
       })(),
       options: (function() {
-        var v = parseJsonCell(readOptionalCell(row, registry.idx.Options, '[]'), []);
-        return Array.isArray(v) ? v : [];
+        var v = parseJsonCell(readOptionalCell(row, registry.idx.Options, '{}'), {});
+        if (Array.isArray(v)) {
+          var map = {};
+          for (var i = 0; i < v.length; i++) {
+            if (v[i] && v[i].name && Array.isArray(v[i].values)) {
+              map[v[i].name] = v[i].values;
+            }
+          }
+          return map;
+        }
+        return (v && typeof v === 'object') ? v : {};
       })(),
       customUIName: (readOptionalCell(row, registry.idx.CustomUIName, '') || '').toString().trim(),
       listViews: listViewsMeta.views,
@@ -1215,7 +1224,7 @@ function buildAuthorizedResourceEntry(resourceName, options) {
       listViews: Array.isArray(config.listViews) ? config.listViews : [],
       listViewsMode: (config.listViewsMode || 'auto').toString(),
       dashboard: Array.isArray(config.dashboard) ? config.dashboard : [],
-      options: Array.isArray(config.options) ? config.options : []
+      options: (config.options && typeof config.options === 'object' && !Array.isArray(config.options)) ? config.options : {}
     };
     entry.additionalActions = Array.isArray(config.additionalActions) ? config.additionalActions : [];
     entry.reports = Array.isArray(config.reports) ? config.reports : [];

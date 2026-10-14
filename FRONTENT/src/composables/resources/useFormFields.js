@@ -305,22 +305,19 @@ export function useFormFields(resourceName) {
     return map
   })
 
-  // Per-header AppOptions lookup. For each header, probe appOptionsMap for a
-  // `<ResourceName><Column>` group, trying the resource name as-is, singular,
-  // and plural (e.g. Products/Type → ProductsType, ProductType). First hit wins;
-  // string values become {label,value} pairs for QSelect.
   const appOptionsMap = computed(() => {
     const map = {}
     const cfg = config.value
-    const name = resolvedName.value
-    if (!cfg || !name) return map
+    if (!cfg) return map
 
-    const options = authStore.appOptionsMap || {}
+    const options = cfg.ui?.options || cfg.options || {}
     const headers = Array.isArray(cfg.headers) ? cfg.headers : []
 
     for (const header of headers) {
-      const group = appOptionGroupFor(options, name, header)
-      if (group.length) map[header] = group
+      const list = options[header]
+      if (Array.isArray(list) && list.length) {
+        map[header] = list.map((v) => ({ label: String(v), value: v }))
+      }
     }
     return map
   })

@@ -40,7 +40,6 @@ export const useAuthStore = defineStore('auth', () => {
     set: (val) => { auth.value.resources = val }
   })
   const appConfig = ref(JSON.parse(localStorage.getItem('appConfig')) || {})
-  const appOptions = ref(JSON.parse(localStorage.getItem('appOptions')) || {})
   const loading = ref(false)
   const isGlobalSyncing = ref(false)
 
@@ -70,14 +69,12 @@ export const useAuthStore = defineStore('auth', () => {
   const userDesignationScope = computed(() => user.value?.designationScope || { code: '', parents: [], children: [], designationNames: {}, userDesignationMap: {} })
   const authorizedResources = computed(() => resources.value)
   const appConfigMap = computed(() => appConfig.value || {})
-  const appOptionsMap = computed(() => appOptions.value || {})
 
   function persistSession() {
     localStorage.setItem('token', token.value || '')
     localStorage.setItem('user', JSON.stringify(user.value))
     localStorage.setItem('resources', JSON.stringify(resources.value || []))
     localStorage.setItem('appConfig', JSON.stringify(appConfig.value || {}))
-    localStorage.setItem('appOptions', JSON.stringify(appOptions.value || {}))
   }
 
   function clearPersistedSession() {
@@ -85,7 +82,6 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem('user')
     localStorage.removeItem('resources')
     localStorage.removeItem('appConfig')
-    localStorage.removeItem('appOptions')
     clearSessionGeneration()
   }
 
@@ -95,7 +91,6 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = sessionData?.user || null
     resources.value = Array.isArray(sessionData?.resources) ? sessionData.resources : []
     appConfig.value = sessionData?.appConfig && typeof sessionData.appConfig === 'object' ? sessionData.appConfig : {}
-    appOptions.value = sessionData?.appOptions && typeof sessionData.appOptions === 'object' ? sessionData.appOptions : {}
     persistSession()
     notifyServiceWorker(token.value)
   }
@@ -114,7 +109,6 @@ export const useAuthStore = defineStore('auth', () => {
     token.value = null
     resources.value = []
     appConfig.value = {}
-    appOptions.value = {}
     loading.value = false
     isGlobalSyncing.value = false
     resourceStatus.reset()
@@ -192,7 +186,6 @@ export const useAuthStore = defineStore('auth', () => {
     token,
     resources,
     appConfig,
-    appOptions,
     loading,
     isGlobalSyncing,
 
@@ -208,7 +201,6 @@ export const useAuthStore = defineStore('auth', () => {
     userDesignationScope,
     authorizedResources,
     appConfigMap,
-    appOptionsMap,
 
     // Actions
     applySessionData,

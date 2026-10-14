@@ -4,7 +4,7 @@ import { useQuasar } from 'quasar'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 import { usePageRecord } from 'src/composables/resources/usePageRecord'
 import { useStockMovements } from 'src/composables/operation/stock/useStockMovements'
-import { useAuthStore } from 'src/stores/auth'
+import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { useResourceIoStore } from 'src/stores/resourceIo'
 import { useProcurements } from 'src/composables/operation/procurements/useProcurements'
 import { useCurrency } from 'src/composables/useCurrency'
@@ -29,7 +29,7 @@ export function usePurchaseRequisitionEditableFlow() {
   const $q = useQuasar()
   const nav = useResourceNav()
   const { loadWarehouses } = useStockMovements()
-  const auth = useAuthStore()
+  const prConfig = useResourceConfig('PurchaseRequisitions')
   const resourceIoStore = useResourceIoStore()
   const procurements = useProcurements()
   const { _C } = useCurrency()
@@ -61,8 +61,8 @@ export function usePurchaseRequisitionEditableFlow() {
 
   let pollTimer = null
 
-  const types = computed(() => mapPurchaseRequisitionTypeOptions(auth.appOptionsMap.PurchaseRequisitionType || []))
-  const priorities = computed(() => mapPurchaseRequisitionPriorityOptions(auth.appOptionsMap.PurchaseRequisitionPriority || []))
+  const types = computed(() => mapPurchaseRequisitionTypeOptions(prConfig.options('Type') || []))
+  const priorities = computed(() => mapPurchaseRequisitionPriorityOptions(prConfig.options('Priority') || []))
   const isRevision = computed(() => procurements.isRevisionRequiredProgress(prForm.value.Progress))
   const selectedWarehouse = computed(() => warehouses.value.find((warehouse) => warehouse.Code === prForm.value.WarehouseCode) || null)
   const revisionThread = computed(() => (prForm.value.ProgressRevisionRequiredComment || '').trim())

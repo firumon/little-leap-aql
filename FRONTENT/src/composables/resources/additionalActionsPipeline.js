@@ -4,7 +4,6 @@ import { useDataStore } from 'src/stores/data'
 import { useResourceIoStore } from 'src/stores/resourceIo'
 import { textOrRef } from 'src/utils/appHelpers'
 import { useResourceConfig, findResourceConfig, normalizeAdditionalActions } from './useResourceConfig'
-import { appOptionGroupFor } from './useFormFields'
 import {
   buildFieldOptions,
   buildSourceFieldGroup,
@@ -171,9 +170,6 @@ export function useAdditionalActionsPipeline (resourceName = null) {
     return resource ? (dataStore.headers?.[resource] || []) : []
   }
 
-  // A select with neither literal `options[]` nor a `source` still has a vocabulary:
-  // the column's own AppOptions group, the same one every form field reads. Without
-  // this fallback such a field rendered an empty dropdown.
   function optionsFor (field, resourceName = '') {
     const resource = field?.source?.resource
     const built = buildFieldOptions(
@@ -182,7 +178,9 @@ export function useAdditionalActionsPipeline (resourceName = null) {
       resource ? headersFor(resource) : []
     )
     if (built.length) return built
-    return appOptionGroupFor(auth.appOptionsMap, resourceName, field?.name)
+    const resCfg = useResourceConfig(resourceName)
+    const opts = resCfg.options(field?.name)
+    return (Array.isArray(opts) ? opts : []).map((v) => ({ label: String(v), value: v }))
   }
 
   /**

@@ -44,7 +44,7 @@ This document is the canonical meaning reference for `APP.Resources` columns.
 - `ProcurementProgress` includes `GOODS_RECEIVING` and `GRN_GENERATED` to align PO receiving and GRN lifecycle state.
 - `Outlets` is a master resource for customer/retail locations. `OutletOperatingRules` is master rule data keyed by `OutletCode`.
 - `OutletVisits.Status` uses normal active/inactive record state (`Active`, `Inactive`). `OutletVisits.Progress` uses `PLANNED`, `COMPLETED`, `POSTPONED`, and `CANCELLED`; progress transitions are performed through configured additional actions and stamp `Progress<Progress>At`, `Progress<Progress>By`, and `Progress<Progress>Comment` columns when present. Visit rows do not use sales-user/link fields.
-- `OutletRestocks.Progress` uses `DRAFT`, `PENDING_APPROVAL`, `REVISION_REQUIRED`, `APPROVED`, `PARTIALLY_DELIVERED`, `DELIVERED`, and `REJECTED`; these values must be present in `APP.AppOptions` as `OutletRestockProgress`. AdditionalActions must include Submit, Approve, Reject, and SendBack.
+- `OutletRestocks.Progress` uses `DRAFT`, `PENDING_APPROVAL`, `REVISION_REQUIRED`, `APPROVED`, `PARTIALLY_DELIVERED`, `DELIVERED`, and `REJECTED`; these values are defined in `APP.Resources.Options` for `OutletRestocks`. AdditionalActions must include Submit, Approve, Reject, and SendBack.
 - `OutletRestocks` rows are directly editable only before submission (`DRAFT`) or after send-back (`REVISION_REQUIRED`). Submitted/approved/delivered/rejected states are workflow-locked except configured action or delivery side-effect updates. `RequestedUser` and `ApprovedUser` are readable user-name fields, not user-code lookup fields.
 - `OutletDeliveryProgress` uses `DRAFT`, `IN_TRANSIT`, `COMPLETED`, and `CANCELLED`. `OutletDeliveries` is a multi-outlet delivery header with `Date`, `UserName`, `OutletRestockItemCodes` (CSV of ORI codes), derived `Progress`, progress stamp/comment columns, cancel audit fields, `Status`, and `AccessRegion`. Item details are read from `OutletRestockItems` matched against the CSV.
 - `OutletConsumptions` stores outlet stock-count sessions. `OutletVisitCode` is optional context only. `Progress` uses `PENDING_INVOICE_GENERATION`, `INVOICE_GENERATED`, and `CANCELLED`, with matching `Progress<Status>At/By/Comment` action-stamp columns.
@@ -118,13 +118,12 @@ Supported `source` values:
    - Example: `{ header: 'Province', label: 'Province', type: 'openselect', source: 'Existing' }`
 
 2. **`AppOption`**
-   - Reads choices from app options (`authStore.appOptionsMap`).
-   - Group names follow the rule `<ResourceName><FieldHeader>` (for example, `LeadsType`, `PurchaseRequisitionPriority`).
-   - If the group uses a custom name, specify `appOptionGroup: 'MyCustomGroup'`.
+   - Reads choices from resource options (`useResourceConfig(resource).options(fieldHeader)`).
+   - Resolved directly from the resource's `Options` column mapping.
    - Example: `{ header: 'Type', label: 'Type', type: 'select', source: 'AppOption' }`
 
 3. **`AppOption & Existing`** (or **`Existing & AppOption`**)
-   - Combines choices from both AppOptions and existing rows.
+   - Combines choices from both resource options and existing rows.
    - Removes duplicate choices automatically.
    - Example: `{ header: 'Category', label: 'Category', type: 'openselect', source: 'AppOption & Existing' }`
 
@@ -286,29 +285,20 @@ For the full engine flow (scoring, packing grid, and motion), see [FEATURE_DASHB
 
 
 ## Options Column Schema & Usage
-The `Options` column in `APP.Resources` holds option lists that belong to one resource.
+The `Options` column in `APP.Resources` is the single source for all option lists. The legacy `APP.AppOptions` sheet and top-level login `appOptions` payload have been completely removed.
 
-* **Purpose**: Stores option lists that belong only to this resource.
-* **Global Options**: `APP.AppOptions` is still the home for all global option lists. It is not being retired. This column holds only resource-specific ones.
-* **Format**: A JSON array of option list objects.
-* **Fallback**: An empty array `[]` or blank cell means "no resource-specific option lists". Blank or invalid JSON always falls back to `[]` and never throws.
-* **Exposed on Metadata**: Populated on the resource metadata object under `ui.options` (defaulting to `[]`, always an array).
-* **Option List Shape**:
+* **Purpose**: Stores selectable option lists for columns belonging to this resource.
+* **Format**: A JSON object mapping column name to an array of option strings.
+* **Fallback**: An empty object `{}` or blank cell means "no options defined". Blank or invalid JSON falls back to `{}` and never throws.
+* **Exposed on Metadata**: Populated on each resource object under `entry.ui.options` (defaulting to `{}`).
+* **Frontend Access**: Retrieved using `useResourceConfig(resourceName).options(columnName)` returning `string[]`, or `useResourceConfig(resourceName).options()` returning the full options object.
+* **Option Shape**:
 ```json
-[
-  {
-    "name": "OutletRestockProgress",
-    "detail": "Track progress for outlet restock requests",
-    "values": ["DRAFT", "PENDING_APPROVAL", "APPROVED"]
-  }
-]
+{
+  "Progress": ["Draft", "Approved"],
+  "Type": ["A", "B"]
+}
 ```
-
-| Key | Meaning |
-|---|---|
-| `name` | The list name, e.g. `OutletRestockProgress` |
-| `detail` | Plain description of what the list is for |
-| `values` | Array of strings — the options themselves |
 
 ## Audit Columns & Revision Lifecycle
 Every audited sheet across `master`, `operation`, and `accounts` scopes includes 5 standard audit columns at the trailing end:

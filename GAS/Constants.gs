@@ -26,8 +26,7 @@ const CONFIG = {
     ROLE_PERMISSIONS: 'RolePermissions',
     RESOURCES: 'Resources',
     CONFIG: 'Config',
-    METADATA: 'Metadata',
-    APP_OPTIONS: 'AppOptions'
+    METADATA: 'Metadata'
   },
   MASTER_SHEETS: {
     PRODUCTS: 'Products',
@@ -88,53 +87,4 @@ const CONFIG = {
   VIEW_SHEETS: {
     // Placeholder — view sheets will be added as they are designed
   }
-};
-
-/**
- * Seed data for the AppOptions sheet.
- * Each key maps to an ordered list of selectable option values.
- * Rule: When adding a new option group here, also add a matching
- *       dropdown validation in the relevant setup script.
- */
-const  APP_OPTIONS_SEED = {
-  StockMovementReferenceType: ['GRN', 'DirectEntry', 'StockAdjustment', 'OutletRestock', 'OutletReturn', 'WarehouseTransfer'],
-  WarehouseTransferProgress: ['DRAFT', 'PENDING_APPROVAL', 'APPROVED', 'COMPLETED', 'REJECTED'],
-  WarehouseTransferItemProgress: ['PENDING', 'TRANSFERRED', 'CANCELLED'],
-  PurchaseRequisitionType: ['STOCK', 'PROJECT', 'SALES', 'ASSET'],
-  PurchaseRequisitionPriority: ['Low', 'Medium', 'High', 'Urgent'],
-  PurchaseRequisitionProgress: ['Draft', 'Pending Approval', 'Revision Required', 'Approved', 'Rejected', 'RFQ Processed'],
-  ProcurementProgress: ['INITIATED', 'PR_CREATED', 'PR_APPROVED', 'RFQ_GENERATED','RFQ_SENT_TO_SUPPLIERS','QUOTATIONS_RECEIVED', 'PO_ISSUED', 'GOODS_RECEIVING', 'GRN_GENERATED', 'IN_TRANSIT', 'ARRIVED_AT_PORT', 'COMPLETED', 'CANCELLED'],
-  POReceivingProgress: ['DRAFT', 'CONFIRMED', 'GRN_GENERATED', 'CANCELLED'],
-  OutletVisitProgress: ['PLANNED', 'COMPLETED', 'POSTPONED', 'CANCELLED'],
-  OutletRestockProgress: ['DRAFT', 'PENDING_APPROVAL', 'REVISION_REQUIRED', 'APPROVED', 'PARTIALLY_DELIVERED', 'DELIVERED', 'REJECTED', 'CANCELLED'],
-  OutletRestockItemProgress: ['PENDING', 'ALLOCATED', 'DELIVERED', 'CANCELLED'],
-  OutletDeliveryProgress: ['DRAFT', 'IN_TRANSIT', 'COMPLETED', 'CANCELLED'],
-  OutletReturnReason: ['DAMAGE', 'EXPIRED', 'SLOW_MOVING', 'RECALL', 'OVERSTOCK', 'SPECIFICATION_MISMATCH', 'OTHER'],
-  OutletReturnProgress: ['SUBMITTED', 'AWAITING_INVOICE_ADJUSTMENT', 'AWAITING_WAREHOUSE_RECEIPT', 'COMPLETED', 'CANCELLED'],
-  OutletReturnWarehouseAction: ['Disposed', 'Stocked'],
-  OutletReturnWarehouseActionDisposedReason: ['Damaged Beyond Repair', 'Expired / Spoiled', 'Contaminated', 'Other'],
-  OutletMovementReferenceType: ['RestockDelivery', 'Consumption', 'Adjustment', 'OutletReturn'],
-  OutletConsumptionProgress: ['PENDING_INVOICE_GENERATION', 'INVOICE_GENERATED', 'CANCELLED'],
-  OutletConsumptionInvoiceProgress: ['PENDING_PAYMENT', 'PARTIALLY_PAID', 'PAID', 'CANCELLED'],
-  OutletConsumptionInvoiceSettlementReasons: ['Waived Off', 'RoundOff', 'Bad Debt / Write-Off', 'Underpayment Settled', 'Other'],
-  OutletPaymentProgress: ['SUBMITTED', 'APPROVED', 'CANCELLED'],
-  OutletPaymentMode: ['Cash', 'Cheque', 'Bank Transfer', 'Card', 'Other'],
-  RFQLeadTimeType: ['FLEXIBLE','STRICT','RANGE_10','RANGE_25'],
-  RFQShippingTermMode: ['ANY','FIXED'],
-  RFQShippingTerm: ['EXW','FOB','CIF','DDP'],
-  RFQPaymentTermMode: ['ANY','FIXED'],
-  RFQPaymentTerm: ['ADVANCE','PARTIAL','CAD','LC','CREDIT'],
-  RFQQuotationValidityMode: ['MIN_REQUIRED','MAX_ALLOWED','FLEXIBLE'],
-  RFQDeliveryMode: ['ANY','FIXED'],
-  RFQProgress: ['DRAFT','SENT','CLOSED','CANCELLED'],
-  RFQSupplierProgress: ['ASSIGNED','SENT','RESPONDED','DECLINED','CANCELLED'],
-  SupplierQuotationResponseType: ['QUOTED','PARTIAL','DECLINED'],
-  SupplierQuotationProgress: ['RECEIVED','ACCEPTED','REJECTED'],
-  PurchaseOrderProgress: ['CREATED','SENT','ACKNOWLEDGED','ACCEPTED','CANCELLED','CLOSED'],
-  SupplierQuotationExtraChargeType: ['tax','freight','commission','handling','other'],
-  Currency: ['AED', 'INR', 'USD', 'EUR', 'GBP'],
-  LeadType: ['Outlet', 'Warehouse', 'Supplier', 'Customer', 'Distributor', 'Agent', 'Partner'],
-  LeadProgress: ['Draft', 'Processing', 'Later', 'Rejected', 'Approved'],
-  LeadFollowUpPurpose: ['Initial Contact', 'Follow-up Visit', 'Phone Call', 'Business Discussion', 'Product Demo', 'Price Discussion', 'Agreement Signing', 'Document Collection', 'Decision Making', 'Others'],
-  LeadFollowUpProgress: ['Awaiting', 'Completed', 'Postponed', 'Cancelled'],
 };

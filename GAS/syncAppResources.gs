@@ -155,7 +155,8 @@ function initAppResourcesCodeConfig() {
       PostAction: '',
       Reports: '',
       CustomUIName: '',
-      ListViews: ''
+      ListViews: '',
+      Options: JSON.stringify({ Code: ['AED', 'INR', 'USD', 'EUR', 'GBP'] })
     },
     {
       Name: CONFIG.MASTER_SHEETS.PRICE_LIST,
@@ -574,6 +575,10 @@ function initAppResourcesCodeConfig() {
             { "name": "recentApprovals", "hideOnEmpty": true },
             { "name": "leadsPerDay" }
         ]),
+        Options: JSON.stringify({
+            Type: ['Outlet', 'Warehouse', 'Supplier', 'Customer', 'Distributor', 'Agent', 'Partner'],
+            Progress: ['Draft', 'Processing', 'Later', 'Rejected', 'Approved']
+        })
     },
     {
         Name: CONFIG.OPERATION_SHEETS.PROCUREMENTS,
@@ -610,7 +615,10 @@ function initAppResourcesCodeConfig() {
             { "name": "InFlight", "label": "In Flight", "icon": "sync", "color": "primary", "default": true, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "nin", "value": ["COMPLETED", "CANCELLED"] }] } },
             { "name": "Completed", "label": "Completed", "icon": "task_alt", "color": "positive", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "COMPLETED" }] } },
             { "name": "Cancelled", "label": "Cancelled", "icon": "block", "color": "negative", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "CANCELLED" }] } }
-        ])
+        ]),
+        Options: JSON.stringify({
+            Progress: ['INITIATED', 'PR_CREATED', 'PR_APPROVED', 'RFQ_GENERATED', 'RFQ_SENT_TO_SUPPLIERS', 'QUOTATIONS_RECEIVED', 'PO_ISSUED', 'GOODS_RECEIVING', 'GRN_GENERATED', 'IN_TRANSIT', 'ARRIVED_AT_PORT', 'COMPLETED', 'CANCELLED']
+        })
     },
     {
         Name: CONFIG.OPERATION_SHEETS.PURCHASE_REQUISITIONS,
@@ -675,6 +683,11 @@ function initAppResourcesCodeConfig() {
         ]),
         Relations: JSON.stringify({
             WarehouseCode: CONFIG.MASTER_SHEETS.WAREHOUSES
+        }),
+        Options: JSON.stringify({
+            Type: ['STOCK', 'PROJECT', 'SALES', 'ASSET'],
+            Priority: ['Low', 'Medium', 'High', 'Urgent'],
+            Progress: ['Draft', 'Pending Approval', 'Revision Required', 'Approved', 'Rejected', 'RFQ Processed']
         })
     },
     {
@@ -774,7 +787,17 @@ function initAppResourcesCodeConfig() {
             { "name": "Sent", "label": "Out for Quoting", "icon": "send", "color": "primary", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "SENT" }] } },
             { "name": "Closed", "label": "Closed", "icon": "lock", "color": "positive", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "CLOSED" }] } },
             { "name": "Cancelled", "label": "Cancelled", "icon": "block", "color": "negative", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "CANCELLED" }] } }
-        ])
+        ]),
+        Options: JSON.stringify({
+            Progress: ['DRAFT', 'SENT', 'CLOSED', 'CANCELLED'],
+            LeadTimeType: ['FLEXIBLE', 'STRICT', 'RANGE_10', 'RANGE_25'],
+            ShippingTermMode: ['ANY', 'FIXED'],
+            ShippingTerm: ['EXW', 'FOB', 'CIF', 'DDP'],
+            PaymentTermMode: ['ANY', 'FIXED'],
+            PaymentTerm: ['ADVANCE', 'PARTIAL', 'CAD', 'LC', 'CREDIT'],
+            QuotationValidityMode: ['MIN_REQUIRED', 'MAX_ALLOWED', 'FLEXIBLE'],
+            DeliveryMode: ['ANY', 'FIXED']
+        })
     },
     {
         Name: CONFIG.OPERATION_SHEETS.RFQ_SUPPLIERS,
@@ -812,6 +835,9 @@ function initAppResourcesCodeConfig() {
         ListViews: '',
         Relations: JSON.stringify({
             SupplierCode: CONFIG.MASTER_SHEETS.SUPPLIERS
+        }),
+        Options: JSON.stringify({
+            Progress: ['ASSIGNED', 'SENT', 'RESPONDED', 'DECLINED', 'CANCELLED']
         })
     },
     {
@@ -882,6 +908,16 @@ function initAppResourcesCodeConfig() {
         Relations: JSON.stringify({
             SupplierCode: CONFIG.MASTER_SHEETS.SUPPLIERS,
             Currency: CONFIG.MASTER_SHEETS.CURRENCIES
+        }),
+        Options: JSON.stringify({
+            ResponseType: ['QUOTED', 'PARTIAL', 'DECLINED'],
+            Progress: ['RECEIVED', 'ACCEPTED', 'REJECTED'],
+            ExtraChargeType: ['tax', 'freight', 'commission', 'handling', 'other'],
+            LeadTimeType: ['FLEXIBLE', 'STRICT', 'RANGE_10', 'RANGE_25'],
+            ShippingTerm: ['EXW', 'FOB', 'CIF', 'DDP'],
+            PaymentTerm: ['ADVANCE', 'PARTIAL', 'CAD', 'LC', 'CREDIT'],
+            DeliveryMode: ['ANY', 'FIXED'],
+            Currency: ['AED', 'INR', 'USD', 'EUR', 'GBP']
         })
     },
     {
@@ -994,6 +1030,9 @@ function initAppResourcesCodeConfig() {
             SupplierCode: CONFIG.MASTER_SHEETS.SUPPLIERS,
             ShipToWarehouseCode: CONFIG.MASTER_SHEETS.WAREHOUSES,
             Currency: CONFIG.MASTER_SHEETS.CURRENCIES
+        }),
+        Options: JSON.stringify({
+            Progress: ['CREATED', 'SENT', 'ACKNOWLEDGED', 'ACCEPTED', 'CANCELLED', 'CLOSED']
         })
     },
     {
@@ -1093,7 +1132,10 @@ function initAppResourcesCodeConfig() {
             { "name": "Confirmed", "label": "Awaiting GRN", "icon": "task_alt", "color": "primary", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "CONFIRMED" }] } },
             { "name": "GrnGenerated", "label": "GRN Generated", "icon": "receipt_long", "color": "positive", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "GRN_GENERATED" }] } },
             { "name": "Cancelled", "label": "Cancelled", "icon": "block", "color": "negative", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "CANCELLED" }] } }
-        ])
+        ]),
+        Options: JSON.stringify({
+            Progress: ['DRAFT', 'CONFIRMED', 'GRN_GENERATED', 'CANCELLED']
+        })
     },
     {
         Name: CONFIG.OPERATION_SHEETS.PO_RECEIVING_ITEMS,
@@ -1261,6 +1303,9 @@ function initAppResourcesCodeConfig() {
         Relations: JSON.stringify({
             WarehouseCode: CONFIG.MASTER_SHEETS.WAREHOUSES,
             SKU: { resource: CONFIG.MASTER_SHEETS.SKUS, targetHeader: 'Code', labelHeader: '$product.Name' }
+        }),
+        Options: JSON.stringify({
+            ReferenceType: ['GRN', 'DirectEntry', 'StockAdjustment', 'OutletRestock', 'OutletReturn', 'WarehouseTransfer']
         })
     },
     {
@@ -1358,6 +1403,9 @@ function initAppResourcesCodeConfig() {
         ]),
         Relations: JSON.stringify({
             OutletCode: CONFIG.MASTER_SHEETS.OUTLETS
+        }),
+        Options: JSON.stringify({
+            Progress: ['PLANNED', 'COMPLETED', 'POSTPONED', 'CANCELLED']
         })
     },
     {
@@ -1435,6 +1483,9 @@ function initAppResourcesCodeConfig() {
         ]),
         Relations: JSON.stringify({
             OutletCode: CONFIG.MASTER_SHEETS.OUTLETS
+        }),
+        Options: JSON.stringify({
+            Progress: ['DRAFT', 'PENDING_APPROVAL', 'REVISION_REQUIRED', 'APPROVED', 'PARTIALLY_DELIVERED', 'DELIVERED', 'REJECTED', 'CANCELLED']
         })
     },
     {
@@ -1471,6 +1522,9 @@ function initAppResourcesCodeConfig() {
         Relations: JSON.stringify({
             WarehouseCode: CONFIG.MASTER_SHEETS.WAREHOUSES,
             SKU: { resource: CONFIG.MASTER_SHEETS.SKUS, targetHeader: 'Code', labelHeader: '$product.Name' }
+        }),
+        Options: JSON.stringify({
+            Progress: ['PENDING', 'ALLOCATED', 'DELIVERED', 'CANCELLED']
         })
     },
     {
@@ -1511,7 +1565,10 @@ function initAppResourcesCodeConfig() {
             { "name": "Outlets", "label": "Ready to Load", "icon": "storefront", "color": "warning", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Status", "operator": "eq", "value": "Active" }] } },
             { "name": "Completed", "label": "Completed", "icon": "check_circle", "color": "positive", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Status", "operator": "eq", "value": "Active" }, { "type": "condition", "column": "Progress", "operator": "eq", "value": "COMPLETED" }] } },
             { "name": "Cancelled", "label": "Cancelled", "icon": "block", "color": "negative", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Status", "operator": "eq", "value": "Active" }, { "type": "condition", "column": "Progress", "operator": "eq", "value": "CANCELLED" }] } }
-        ])
+        ]),
+        Options: JSON.stringify({
+            Progress: ['DRAFT', 'IN_TRANSIT', 'COMPLETED', 'CANCELLED']
+        })
     },
     {
         Name: CONFIG.OPERATION_SHEETS.OUTLET_RETURNS,
@@ -1583,6 +1640,12 @@ function initAppResourcesCodeConfig() {
             OutletCode: CONFIG.MASTER_SHEETS.OUTLETS,
             WarehouseCode: CONFIG.MASTER_SHEETS.WAREHOUSES,
             SKU: { resource: CONFIG.MASTER_SHEETS.SKUS, targetHeader: 'Code', labelHeader: '$product.Name' }
+        }),
+        Options: JSON.stringify({
+            Reason: ['DAMAGE', 'EXPIRED', 'SLOW_MOVING', 'RECALL', 'OVERSTOCK', 'SPECIFICATION_MISMATCH', 'OTHER'],
+            Progress: ['SUBMITTED', 'AWAITING_INVOICE_ADJUSTMENT', 'AWAITING_WAREHOUSE_RECEIPT', 'COMPLETED', 'CANCELLED'],
+            WarehouseAction: ['Disposed', 'Stocked'],
+            WarehouseActionDisposedReason: ['Damaged Beyond Repair', 'Expired / Spoiled', 'Contaminated', 'Other']
         })
     },
     {
@@ -1638,6 +1701,9 @@ function initAppResourcesCodeConfig() {
         Relations: JSON.stringify({
             OutletCode: CONFIG.MASTER_SHEETS.OUTLETS,
             OutletVisitCode: CONFIG.OPERATION_SHEETS.OUTLET_VISITS
+        }),
+        Options: JSON.stringify({
+            Progress: ['PENDING_INVOICE_GENERATION', 'INVOICE_GENERATED', 'CANCELLED']
         })
     },
     {
@@ -1730,6 +1796,10 @@ function initAppResourcesCodeConfig() {
         Relations: JSON.stringify({
             OutletCode: CONFIG.MASTER_SHEETS.OUTLETS,
             PriceListCode: CONFIG.MASTER_SHEETS.PRICE_LIST
+        }),
+        Options: JSON.stringify({
+            Progress: ['PENDING_PAYMENT', 'PARTIALLY_PAID', 'PAID', 'CANCELLED'],
+            SettlementReasons: ['Waived Off', 'RoundOff', 'Bad Debt / Write-Off', 'Underpayment Settled', 'Other']
         })
     },
     {
@@ -1885,6 +1955,11 @@ function initAppResourcesCodeConfig() {
         ]),
         Relations: JSON.stringify({
             OutletCode: CONFIG.MASTER_SHEETS.OUTLETS
+        }),
+        Options: JSON.stringify({
+            Progress: ['SUBMITTED', 'APPROVED', 'CANCELLED'],
+            PaymentMode: ['Cash', 'Cheque', 'Bank Transfer', 'Card', 'Other'],
+            Mode: ['Cash', 'Cheque', 'Bank Transfer', 'Card', 'Other']
         })
     },
     {
@@ -1905,6 +1980,9 @@ function initAppResourcesCodeConfig() {
         Relations: JSON.stringify({
             OutletCode: CONFIG.MASTER_SHEETS.OUTLETS,
             SKU: { resource: CONFIG.MASTER_SHEETS.SKUS, targetHeader: 'Code', labelHeader: '$product.Name' }
+        }),
+        Options: JSON.stringify({
+            ReferenceType: ['RestockDelivery', 'Consumption', 'Adjustment', 'OutletReturn']
         })
     },
     {
@@ -1972,6 +2050,9 @@ function initAppResourcesCodeConfig() {
         Relations: JSON.stringify({
             SourceWarehouseCode: CONFIG.MASTER_SHEETS.WAREHOUSES,
             DestinationWarehouseCode: CONFIG.MASTER_SHEETS.WAREHOUSES
+        }),
+        Options: JSON.stringify({
+            Progress: ['DRAFT', 'PENDING_APPROVAL', 'APPROVED', 'COMPLETED', 'REJECTED']
         })
     },
     {
@@ -2016,6 +2097,9 @@ function initAppResourcesCodeConfig() {
         ListViews: '',
         Relations: JSON.stringify({
             SKUCode: { resource: CONFIG.MASTER_SHEETS.SKUS, targetHeader: 'Code', labelHeader: '$product.Name' }
+        }),
+        Options: JSON.stringify({
+            Progress: ['PENDING', 'TRANSFERRED', 'CANCELLED']
         })
     },
     {
@@ -2095,6 +2179,10 @@ function initAppResourcesCodeConfig() {
         ]),
         Relations: JSON.stringify({
             LeadCode: { resource: CONFIG.MASTER_SHEETS.LEADS, targetHeader: 'Code', labelHeader: 'Name' }
+        }),
+        Options: JSON.stringify({
+            Purpose: ['Initial Contact', 'Follow-up Visit', 'Phone Call', 'Business Discussion', 'Product Demo', 'Price Discussion', 'Agreement Signing', 'Document Collection', 'Decision Making', 'Others'],
+            Progress: ['Awaiting', 'Completed', 'Postponed', 'Cancelled']
         })
     },
     {
@@ -2430,7 +2518,7 @@ function syncAppResourcesFromCode(silent) {
             Object.keys(resource).forEach(function (key) {
                 if (idx[key] !== undefined) {
                     const cellVal = existingValues[existingRowIndex][idx[key]];
-                    const isBlank = cellVal === null || cellVal === undefined || (typeof cellVal === 'string' && cellVal.trim() === '');
+                    const isBlank = cellVal === null || cellVal === undefined || (typeof cellVal === 'string' && (cellVal.trim() === '' || cellVal.trim() === '[]' || cellVal.trim() === '{}'));
                     const isProtected = protectedColumns.indexOf(key) !== -1;
                     if (!isProtected || isBlank) {
                         sheet.getRange(rowNum, idx[key] + 1).setValue(resource[key]);

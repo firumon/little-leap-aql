@@ -1,9 +1,9 @@
-﻿import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
 import { format } from 'date-fns'
 import { useStockMovements } from 'src/composables/operation/stock/useStockMovements'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
-import { useAuthStore } from 'src/stores/auth'
+import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { useResourceIoStore } from 'src/stores/resourceIo'
 import { usePageRecord } from 'src/composables/resources/usePageRecord'
 import { formatSkuVariants, todayIsoSlash, todayLongLabel } from 'src/utils/appHelpers'
@@ -21,7 +21,6 @@ import {
 export function usePurchaseRequisitionCreateFlow() {
   const $q = useQuasar()
   const nav = useResourceNav()
-  const auth = useAuthStore()
   const resourceIoStore = useResourceIoStore()
   const { loadWarehouses } = useStockMovements()
   const { skuInfo } = useProductSkuResolver()
@@ -57,9 +56,9 @@ export function usePurchaseRequisitionCreateFlow() {
     TypeReferenceCode: ''
   })
 
-  const types = computed(() => mapPurchaseRequisitionTypeOptions(auth.appOptionsMap.PurchaseRequisitionType || []))
-
-  const priorities = computed(() => mapPurchaseRequisitionPriorityOptions(auth.appOptionsMap.PurchaseRequisitionPriority || []))
+  const prConfig = useResourceConfig('PurchaseRequisitions')
+  const types = computed(() => mapPurchaseRequisitionTypeOptions(prConfig.options('Type') || []))
+  const priorities = computed(() => mapPurchaseRequisitionPriorityOptions(prConfig.options('Priority') || []))
 
   const selectedType = computed(() => types.value.find((type) => type.value === form.value.Type) || types.value[0])
   const needsRefCode = computed(() => purchaseRequisitionNeedsRefCode(form.value.Type))

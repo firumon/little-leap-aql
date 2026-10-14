@@ -1,6 +1,5 @@
 import { computed, ref, watch } from 'vue'
 import { useQuasar } from 'quasar'
-import { useAuthStore } from 'src/stores/auth'
 import { useResourceIoStore } from 'src/stores/resourceIo'
 import { useResourceConfig, isActionVisible } from 'src/composables/resources/useResourceConfig'
 import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
@@ -34,10 +33,9 @@ function firstFailureMessage(response, fallback) {
 
 export function useSupplierQuotationView() {
   const $q = useQuasar()
-  const auth = useAuthStore()
   const resourceIoStore = useResourceIoStore()
   const nav = useResourceNav()
-  const { additionalActions } = useResourceConfig()
+  const { additionalActions, options } = useResourceConfig('SupplierQuotations')
   const { code } = useRouteConfig()
   const quotations = usePageRecord(ref('SupplierQuotations'))
   const quotationItems = usePageRecord(ref('SupplierQuotationItems'))
@@ -73,12 +71,12 @@ export function useSupplierQuotationView() {
   })
 
   const optionSets = computed(() => ({
-    responseTypes: mapOptions(auth.appOptionsMap.SupplierQuotationResponseType, 'responseTypes'),
-    leadTimeTypes: mapOptions(auth.appOptionsMap.RFQLeadTimeType, 'leadTimeTypes'),
-    deliveryModes: mapOptions(auth.appOptionsMap.RFQDeliveryMode, 'deliveryModes'),
-    shippingTerms: mapOptions(auth.appOptionsMap.RFQShippingTerm, 'shippingTerms'),
-    paymentTerms: mapOptions(auth.appOptionsMap.RFQPaymentTerm, 'paymentTerms'),
-    currencies: mapOptions(auth.appOptionsMap.Currency, 'currencies')
+    responseTypes: mapOptions(options('ResponseType'), 'responseTypes'),
+    leadTimeTypes: mapOptions(options('LeadTimeType'), 'leadTimeTypes'),
+    deliveryModes: mapOptions(options('DeliveryMode'), 'deliveryModes'),
+    shippingTerms: mapOptions(options('ShippingTerm'), 'shippingTerms'),
+    paymentTerms: mapOptions(options('PaymentTerm'), 'paymentTerms'),
+    currencies: mapOptions(options('Currency'), 'currencies')
   }))
 
   const rejectAction = computed(() =>

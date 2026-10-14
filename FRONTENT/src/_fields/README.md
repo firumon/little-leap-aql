@@ -213,7 +213,7 @@ Use it where a column has a known vocabulary that users must still be able to ex
 a schema change — e.g. `Leads.Province` seeded from existing rows, or `Leads.Type` seeded from `LeadType`.
 `field.source` configures the options:
 - `'Existing'`: scans existing rows of this table for distinct non-empty values.
-- `'AppOption'`: pulls from `authStore.appOptionsMap` via `<ResourceName><FieldHeader>` (e.g. `LeadsType`).
+- `'AppOption'`: pulls from resource options (`useResourceConfig(resource).options(fieldHeader)`).
 - `'AppOption & Existing'` (or `'Existing & AppOption'`): combines both and deduplicates.
 - `{ resource, value, label, filter }` (or resource name string): pulls from another resource, with optional token-evaluated filters.
 `config.freeTextLabel` renames the prompt row.

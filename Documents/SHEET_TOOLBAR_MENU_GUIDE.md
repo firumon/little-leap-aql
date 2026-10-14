@@ -366,7 +366,7 @@ These groups appear in the **frontend application sidebar**, not in the Google S
 **Reference:**
 - `GAS/stockMovements.gs` — the WarehouseStorages upsert hook
 - `Documents/WORKFLOW_OUTLET_OPERATIONS.md / WORKFLOW_PROCUREMENT.md` — Direct Stock Entry workflow section
-- `Documents/API_LOGIN_RESPONSE.md` — `appOptions.StockMovementReferenceType`
+- `Documents/API_LOGIN_RESPONSE.md` — `StockMovements` options `ReferenceType`
 
 ### 9.5 Warehouse Stock List
 

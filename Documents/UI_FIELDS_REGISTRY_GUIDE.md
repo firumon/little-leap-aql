@@ -97,8 +97,8 @@ Every `Add.vue` / `Edit.vue` / `View.vue` implements exactly this surface, with 
 Dropdown-family controls (`openselect`, `select`, `multiselect`, etc.) can dynamically populate their options via `field.source` in `APP.Resources.UIFields`:
 
 - **`Existing`**: Collects distinct values already saved in this column from current resource rows in the local data store.
-- **`AppOption`**: Fetches option items from `authStore.appOptionsMap` matching `<ResourceName><FieldHeader>` (e.g. `LeadsType`). Or use `field.appOptionGroup` to override the group key.
-- **`AppOption & Existing`** (or **`Existing & AppOption`**): Merges AppOption choices and values from existing rows, deduplicating choices.
+- **`AppOption`**: Fetches option items from `useResourceConfig(resource).options(fieldHeader)` (from `APP.Resources.Options`).
+- **`AppOption & Existing`** (or **`Existing & AppOption`**): Merges resource options and values from existing rows, deduplicating choices.
 - **`Resource` / Object**: Fetches options from a foreign resource (e.g. `"Warehouses"` or `{ resource: "Outlets", value: "Code", label: "Name", filter: { Status: "Active" } }`). Supports dynamic tokens.
 
 

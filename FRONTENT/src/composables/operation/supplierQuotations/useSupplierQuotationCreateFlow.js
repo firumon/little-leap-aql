@@ -1,6 +1,6 @@
 import { computed, ref, watch } from 'vue'
 import { useQuasar } from 'quasar'
-import { useAuthStore } from 'src/stores/auth'
+import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { useResourceIoStore } from 'src/stores/resourceIo'
 import { usePageRecord } from 'src/composables/resources/usePageRecord'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
@@ -37,7 +37,7 @@ function resultCode(entry) {
 
 export function useSupplierQuotationCreateFlow() {
   const $q = useQuasar()
-  const auth = useAuthStore()
+  const sqConfig = useResourceConfig('SupplierQuotations')
   const resourceIoStore = useResourceIoStore()
   const nav = useResourceNav()
 
@@ -67,12 +67,12 @@ export function useSupplierQuotationCreateFlow() {
   const procurementByCode = computed(() => new Map(procurements.items.value.map((row) => [text(row.Code), row])))
 
   const optionSets = computed(() => ({
-    responseTypes: mapOptions(auth.appOptionsMap.SupplierQuotationResponseType, 'responseTypes'),
-    leadTimeTypes: mapOptions(auth.appOptionsMap.RFQLeadTimeType, 'leadTimeTypes'),
-    deliveryModes: mapOptions(auth.appOptionsMap.RFQDeliveryMode, 'deliveryModes'),
-    shippingTerms: mapOptions(auth.appOptionsMap.RFQShippingTerm, 'shippingTerms'),
-    paymentTerms: mapOptions(auth.appOptionsMap.RFQPaymentTerm, 'paymentTerms'),
-    currencies: mapOptions(auth.appOptionsMap.Currency, 'currencies')
+    responseTypes: mapOptions(sqConfig.options('ResponseType'), 'responseTypes'),
+    leadTimeTypes: mapOptions(sqConfig.options('LeadTimeType'), 'leadTimeTypes'),
+    deliveryModes: mapOptions(sqConfig.options('DeliveryMode'), 'deliveryModes'),
+    shippingTerms: mapOptions(sqConfig.options('ShippingTerm'), 'shippingTerms'),
+    paymentTerms: mapOptions(sqConfig.options('PaymentTerm'), 'paymentTerms'),
+    currencies: mapOptions(sqConfig.options('Currency'), 'currencies')
   }))
 
   const sentRfqs = computed(() => {

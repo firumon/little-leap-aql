@@ -304,110 +304,11 @@ function setupAppSheets() {
 
   logToSheet_('Config keys seeded');
 
-  // AppOptions sheet — horizontal layout, no header row, each row = [key, val1, val2, ...]
-  var appOptionsSheet = ss.getSheetByName(CONFIG.SHEETS.APP_OPTIONS);
-  if (!appOptionsSheet) {
-    appOptionsSheet = ss.insertSheet(CONFIG.SHEETS.APP_OPTIONS);
-    results.push('Created sheet: ' + CONFIG.SHEETS.APP_OPTIONS);
-  } else {
-    results.push('Updated sheet: ' + CONFIG.SHEETS.APP_OPTIONS);
+  var oldAppOptionsSheet = ss.getSheetByName('AppOptions');
+  if (oldAppOptionsSheet) {
+    ss.deleteSheet(oldAppOptionsSheet);
+    results.push('Removed obsolete AppOptions sheet');
   }
-
-  // Column widths: key column wider, value columns standard
-  appOptionsSheet.setColumnWidth(1, 250);
-  for (var col = 2; col <= 10; col++) {
-    appOptionsSheet.setColumnWidth(col, 160);
-  }
-
-  // Read all existing option groups and merge seed data
-  var lastRow = appOptionsSheet.getLastRow();
-  var appOptionsData = lastRow > 0
-    ? appOptionsSheet.getRange(1, 1, lastRow, appOptionsSheet.getMaxColumns()).getValues()
-    : [];
-
-  var existingOptionMap = {};
-  for (var r = 0; r < appOptionsData.length; r++) {
-    var rowValues = appOptionsData[r];
-    var key = (rowValues[0] || '').toString().trim();
-    if (key) {
-      var options = [];
-      for (var c = 1; c < rowValues.length; c++) {
-        var val = (rowValues[c] || '').toString().trim();
-        if (val !== '') {
-          options.push(val);
-        }
-      }
-      existingOptionMap[key] = {
-        rowIndex: r + 1,
-        options: options
-      };
-    }
-  }
-
-  var seedKeys = Object.keys(APP_OPTIONS_SEED);
-  for (var s = 0; s < seedKeys.length; s++) {
-    var seedKey = seedKeys[s];
-    var seedOptions = APP_OPTIONS_SEED[seedKey];
-
-    if (!existingOptionMap[seedKey]) {
-      // Key does not exist: append a new row
-      var newRow = [seedKey].concat(seedOptions);
-      var appendRowIdx = appOptionsSheet.getLastRow() + 1;
-      appOptionsSheet.getRange(appendRowIdx, 1, 1, newRow.length).setValues([newRow]);
-      existingOptionMap[seedKey] = {
-        rowIndex: appendRowIdx,
-        options: seedOptions
-      };
-      results.push('Added new option group: ' + seedKey);
-    } else {
-      // Key exists: check if any elements from APP_OPTIONS_SEED are missing in the sheet
-      var existingObj = existingOptionMap[seedKey];
-      var existingOptions = existingObj.options;
-
-      var missingOptions = [];
-      for (var o = 0; o < seedOptions.length; o++) {
-        var opt = seedOptions[o];
-        if (existingOptions.indexOf(opt) === -1) {
-          missingOptions.push(opt);
-        }
-      }
-
-      if (missingOptions.length > 0) {
-        // Append missing options while preserving existing ones (including any extra values)
-        var updatedOptions = existingOptions.concat(missingOptions);
-        var updatedRow = [seedKey].concat(updatedOptions);
-        var requiredCols = updatedRow.length;
-
-        if (requiredCols > appOptionsSheet.getMaxColumns()) {
-          appOptionsSheet.insertColumnsAfter(appOptionsSheet.getMaxColumns(), requiredCols - appOptionsSheet.getMaxColumns());
-        }
-
-        // Write the updated row back to the sheet
-        appOptionsSheet.getRange(existingObj.rowIndex, 1, 1, requiredCols).setValues([updatedRow]);
-        existingObj.options = updatedOptions;
-        results.push('Merged missing options for ' + seedKey + ': ' + JSON.stringify(missingOptions));
-      }
-    }
-  }
-
-  // Delete empty rows beyond the last row with data
-  var finalLastRow = appOptionsSheet.getLastRow();
-  if (finalLastRow < appOptionsSheet.getMaxRows()) {
-    var rowsToDelete = appOptionsSheet.getMaxRows() - finalLastRow;
-    appOptionsSheet.deleteRows(finalLastRow + 1, rowsToDelete);
-  }
-
-  fileSheetIndex++;
-  ss.setActiveSheet(appOptionsSheet);
-  ss.moveActiveSheet(fileSheetIndex);
-
-  var defaultSheet = ss.getSheetByName('Sheet1');
-  if (defaultSheet && defaultSheet.getLastRow() === 0) {
-    ss.deleteSheet(defaultSheet);
-    results.push('Removed empty default Sheet1');
-  }
-
-  logToSheet_('AppOptions seeded');
 
   var summary = 'Setup complete.\n\n' + results.join('\n');
   Logger.log(summary);

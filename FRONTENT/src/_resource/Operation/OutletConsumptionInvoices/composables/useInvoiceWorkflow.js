@@ -28,7 +28,6 @@
  * already knows which resource it is (§3.2).
  */
 
-import { useAuthStore } from 'src/stores/auth'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { balanceDueOf, grandTotalOf } from './useInvoiceCalculation'
 
@@ -78,17 +77,10 @@ export const TERMINAL_STATES = [PAID, CANCELLED]
  */
 export const SETTLEMENT_OTHER = 'Other'
 
-/**
- * The reason list itself, read from the synced `AppOptions` so the dialog, the payment
- * waiver and the sheet's own data validation all offer one list. A second array compiled
- * into a screen writes values the sheet then rejects.
- */
-// Same list as GAS/Constants.gs. Used when the login payload carried no options,
-// so a settlement screen never opens with an empty reason dropdown.
 const SETTLEMENT_REASON_FALLBACK = ['Waived Off', 'RoundOff', 'Bad Debt / Write-Off', 'Underpayment Settled', 'Other']
 
 export function settlementReasons () {
-  const options = useAuthStore().appOptionsMap?.OutletConsumptionInvoiceSettlementReasons
+  const options = useResourceConfig(RESOURCE_NAME).options('SettlementReasons')
   const list = (Array.isArray(options) ? options : []).map(text).filter(Boolean)
   return list.length ? list : [...SETTLEMENT_REASON_FALLBACK]
 }

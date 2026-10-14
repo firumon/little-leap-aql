@@ -1,6 +1,5 @@
 import { computed, ref, watch } from 'vue'
 import { useQuasar } from 'quasar'
-import { useAuthStore } from 'src/stores/auth'
 import { useResourceIoStore } from 'src/stores/resourceIo'
 import { useResourceConfig, isActionVisible } from 'src/composables/resources/useResourceConfig'
 import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
@@ -43,10 +42,9 @@ function editableSnapshot(form) {
 
 export function useRFQEditableFlow() {
   const $q = useQuasar()
-  const auth = useAuthStore()
   const resourceIoStore = useResourceIoStore()
   const nav = useResourceNav()
-  const { resourceName, additionalActions } = useResourceConfig()
+  const { resourceName, additionalActions, options } = useResourceConfig('RFQs')
   const { code } = useRouteConfig()
   const rfqResource = usePageRecord(ref('RFQs'))
 
@@ -97,13 +95,13 @@ export function useRFQEditableFlow() {
   )
 
   const optionSets = computed(() => ({
-    leadTimeTypes: mapRFQOptions(auth.appOptionsMap.RFQLeadTimeType, 'leadTimeTypes'),
-    shippingTermModes: mapRFQOptions(auth.appOptionsMap.RFQShippingTermMode, 'shippingTermModes'),
-    shippingTerms: mapRFQOptions(auth.appOptionsMap.RFQShippingTerm, 'shippingTerms'),
-    paymentTermModes: mapRFQOptions(auth.appOptionsMap.RFQPaymentTermMode, 'paymentTermModes'),
-    paymentTerms: mapRFQOptions(auth.appOptionsMap.RFQPaymentTerm, 'paymentTerms'),
-    quotationValidityModes: mapRFQOptions(auth.appOptionsMap.RFQQuotationValidityMode, 'quotationValidityModes'),
-    deliveryModes: mapRFQOptions(auth.appOptionsMap.RFQDeliveryMode, 'deliveryModes')
+    leadTimeTypes: mapRFQOptions(options('LeadTimeType'), 'leadTimeTypes'),
+    shippingTermModes: mapRFQOptions(options('ShippingTermMode'), 'shippingTermModes'),
+    shippingTerms: mapRFQOptions(options('ShippingTerm'), 'shippingTerms'),
+    paymentTermModes: mapRFQOptions(options('PaymentTermMode'), 'paymentTermModes'),
+    paymentTerms: mapRFQOptions(options('PaymentTerm'), 'paymentTerms'),
+    quotationValidityModes: mapRFQOptions(options('QuotationValidityMode'), 'quotationValidityModes'),
+    deliveryModes: mapRFQOptions(options('DeliveryMode'), 'deliveryModes')
   }))
 
   function hydrateForm(row = {}) {

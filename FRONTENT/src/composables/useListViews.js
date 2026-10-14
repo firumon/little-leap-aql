@@ -1,6 +1,5 @@
 import { ref, computed, watch } from 'vue'
-import { useAuthStore } from 'src/stores/auth'
-import { singularize } from 'src/utils/appHelpers'
+import { useResourceConfig } from './resources/useResourceConfig'
 import { useTokenEvaluator, evaluatePreparedFilter } from 'src/utils/tokenEvaluator'
 
 // Re-exported so existing importers of the filter evaluator keep their import path. The
@@ -76,42 +75,27 @@ function uniqueColumnValues(itemsRef, column) {
   return ordered
 }
 
-/**
- * Looks up an AppOptions group named `<ResourceName><Column>` (or the singularized
- * resource-name variant, since seed data such as `StockMovementReferenceType` uses the
- * singular form) — e.g. `PurchaseOrdersStatus`, `StockMovementReferenceType`.
- */
-function appOptionValuesFor(appOptionsMap, resourceNameVal, column) {
+function appOptionValuesFor(resourceNameVal, column) {
   if (!resourceNameVal || !column) return null
-  const candidates = [`${resourceNameVal}${column}`, `${singularize(resourceNameVal)}${column}`]
-  for (const key of candidates) {
-    const arr = appOptionsMap?.[key]
-    if (Array.isArray(arr) && arr.length) return arr
-  }
-  return null
+  const opts = useResourceConfig(resourceNameVal).options(column)
+  return Array.isArray(opts) && opts.length ? opts : null
 }
 
-/**
- * Values to auto-generate views for `column`: a matching AppOptions group takes
- * priority (it defines the full universe of values, including ones absent from the
- * currently loaded rows), falling back to whatever distinct values are observed live.
- */
-function resolveColumnValues(column, { itemsRef, headers, appOptionsMap, resourceNameVal }) {
+function resolveColumnValues(column, { itemsRef, headers, resourceNameVal }) {
   if (!headers.includes(column)) return []
-  const optionValues = appOptionValuesFor(appOptionsMap, resourceNameVal, column)
+  const optionValues = appOptionValuesFor(resourceNameVal, column)
   return optionValues || uniqueColumnValues(itemsRef, column)
 }
 
-/**
- * Scans remaining headers for an AppOptions group keyed `<ResourceName><Header>`,
- * skipping columns already handled by Status/Progress/Type/audit logic.
- */
-function findAppOptionColumn(headers, appOptionsMap, resourceNameVal) {
+function findAppOptionColumn(headers, resourceNameVal) {
+  if (!resourceNameVal) return null
+  const allOptions = useResourceConfig(resourceNameVal).options()
+  if (!allOptions || typeof allOptions !== 'object') return null
   for (const header of headers) {
     if (AUTO_VIEW_EXCLUDED_HEADERS.has(header)) continue
     if (header.endsWith('Code') && header !== 'Code') continue
-    const values = appOptionValuesFor(appOptionsMap, resourceNameVal, header)
-    if (values) return { column: header, values }
+    const values = allOptions[header]
+    if (Array.isArray(values) && values.length) return { column: header, values }
   }
   return null
 }
@@ -172,23 +156,9 @@ export function useListViews({
   router
 }) {
   const activeViewName = ref('')
-  const authStore = useAuthStore()
 
-  // User-aware tokens ($userCode, $userRoles, ...) read the logged-in user from here.
   const { prepareFilter: prepareViewFilter } = useTokenEvaluator()
 
-  /**
-   * Build effective views:
-   * - If configuredListViews is non-empty array, use it (full override).
-   * - Else if mode is 'off'/'custom', no auto-generation.
-   * - Else auto-generate per scope:
-   *   - master: Status header → Active/Inactive.
-   *   - operation (or any other non-master scope): Progress header → views per Progress
-   *     value; else Type header → views per Type value; else the first remaining header
-   *     with a matching `<ResourceName><Header>` AppOptions group.
-   *   Each of the above prefers a matching AppOptions group (the full universe of values)
-   *   over the distinct values currently loaded in `items`.
-   */
   const effectiveViews = computed(() => {
     const configured = configuredListViews?.value
     const mode = normalizeListViewsMode(configuredListViewsMode?.value)
@@ -204,21 +174,19 @@ export function useListViews({
     const headers = resourceHeaders?.value || []
     const scopeVal = (scope?.value || '').toString().trim().toLowerCase()
     const resourceNameVal = (resourceName?.value || '').toString().trim()
-    const appOptionsMap = authStore.appOptionsMap || {}
 
     if (scopeVal === 'master') {
       if (headers.includes('Status')) return buildStatusViews()
       return []
     }
 
-    // Operation (and any other non-master) scope.
-    const progressValues = resolveColumnValues('Progress', { itemsRef: items, headers, appOptionsMap, resourceNameVal })
+    const progressValues = resolveColumnValues('Progress', { itemsRef: items, headers, resourceNameVal })
     if (progressValues.length) return autoViewsFromValues('Progress', progressValues)
 
-    const typeValues = resolveColumnValues('Type', { itemsRef: items, headers, appOptionsMap, resourceNameVal })
+    const typeValues = resolveColumnValues('Type', { itemsRef: items, headers, resourceNameVal })
     if (typeValues.length) return autoViewsFromValues('Type', typeValues)
 
-    const matched = findAppOptionColumn(headers, appOptionsMap, resourceNameVal)
+    const matched = findAppOptionColumn(headers, resourceNameVal)
     if (matched) return autoViewsFromValues(matched.column, matched.values)
 
     return []

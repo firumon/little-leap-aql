@@ -375,6 +375,16 @@ export function useResourceConfig(resourceNameOverride) {
     return !!activeConfig.value
   }
 
+  const options = (columnName) => {
+    const raw = activeConfig.value?.ui?.options || activeConfig.value?.options || {}
+    if (!columnName) return raw
+    if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+      const list = raw[columnName]
+      return Array.isArray(list) ? list : []
+    }
+    return []
+  }
+
   return {
     config: activeConfig,
     scope,
@@ -387,6 +397,7 @@ export function useResourceConfig(resourceNameOverride) {
     defaultValues,
     additionalActions,
     permissions,
+    options,
     allowed,
     exists,
     missing,

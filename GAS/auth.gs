@@ -245,8 +245,7 @@ function handleLogin(email, password) {
     token,
     user: buildAuthUserPayload(row, roleIds, regions, designationScope),
     resources: authorizedResources,
-    appConfig: getLoginAppConfig(),
-    appOptions: getAppOptions()
+    appConfig: getLoginAppConfig()
   };
 }
 

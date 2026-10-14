@@ -1732,13 +1732,7 @@ function initAppResourcesCodeConfig() {
             {"action":"Cancel","label":"Cancel","icon":"cancel","color":"negative","kind":"navigate","confirm":false,"column":"Progress","columnValue":"CANCELLED","columnValueOptions":[],"fields":[{"name":"Comment","label":"Cancellation Comment","type":"textarea","required":true}],"navigate":{"target":"action","pageSlug":"cancel"},"visibleWhen":{"column":"Progress","op":"nin","value":["PAID","CANCELLED"]}}
         ]),
         Menu: JSON.stringify([{ "group": ["Field Sales"], "order": 7, "label": "Consumption Invoices", "icon": "receipt_long", "route": "/operation/outlet-consumption-invoices", "pageTitle": "Consumption Invoices", "pageDescription": "View outlet consumption invoices", "show": true }]), UIFields: JSON.stringify([
-            // A COMMA-SEPARATED list when several consumptions are bundled onto one
-            // invoice (`OC-000001,OC-000002`), a single code otherwise. Deliberately not
-            // declared in `Relations` and the resource deliberately has no
-            // `ParentResource`: a relation resolves one target code, so declaring one
-            // here would silently fail to resolve every bundled invoice. Consumers match
-            // by membership in the split list, never by equality — see
-            // `src/_resource/Operation/OutletConsumptions/composables/useConsumptionPayload.js`.
+            // Comma-separated list when several consumptions are bundled onto one invoice.
             { header: 'OutletConsumptionCode', label: 'Consumption Code(s)', type: 'text' },
             { header: 'Date', label: 'Date', type: 'date' },
             { header: 'DueDate', label: 'Due Date', type: 'date' },
@@ -1795,6 +1789,8 @@ function initAppResourcesCodeConfig() {
         ]),
         Relations: JSON.stringify({
             OutletCode: CONFIG.MASTER_SHEETS.OUTLETS,
+            OutletConsumptionCode: CONFIG.OPERATION_SHEETS.OUTLET_CONSUMPTIONS,
+            OutletReturnCodes: CONFIG.OPERATION_SHEETS.OUTLET_RETURNS,
             PriceListCode: CONFIG.MASTER_SHEETS.PRICE_LIST
         }),
         Options: JSON.stringify({

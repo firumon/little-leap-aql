@@ -24,6 +24,10 @@ export function useRecord() {
             const key = `$${p.singular.toLowerCase()}`
             parentKeys.push(key)
             byKey.set(key, { kind: 'parent', spec: p })
+            const pluralKey = `$${p.resourceName.toLowerCase()}`
+            if (pluralKey !== key && !byKey.has(pluralKey)) {
+              byKey.set(pluralKey, { kind: 'parent', spec: p })
+            }
           }
 
           for (const c of meta.children || []) {
@@ -42,6 +46,10 @@ export function useRecord() {
             if (parentKeys.includes(key) || childKeys.includes(key)) continue
             linkKeys.push(key)
             byKey.set(key, { kind: 'link', spec: rel })
+            const pluralKey = `$${rel.resource.toLowerCase()}`
+            if (pluralKey !== key && !childKeys.includes(pluralKey) && !byKey.has(pluralKey)) {
+              byKey.set(pluralKey, { kind: 'link', spec: rel })
+            }
           }
 
           const allParentKeys = [...parentKeys, ...linkKeys]
@@ -105,6 +113,15 @@ export function useRecord() {
             const p = entry.spec
             const parentValue = live.value?.[p.codeField]
             if (!parentValue) return null
+            if (typeof parentValue === 'string' && parentValue.includes(',')) {
+              const codes = parentValue.split(',').map((s) => s.trim()).filter(Boolean)
+              return codes
+                .map((val) => {
+                  const parentCode = _resolveTargetCode(dataStore, p.resourceName, p.targetHeader, val)
+                  return parentCode ? enrich(p.resourceName, parentCode) : null
+                })
+                .filter(Boolean)
+            }
             const parentCode = _resolveTargetCode(dataStore, p.resourceName, p.targetHeader, parentValue)
             if (!parentCode) return null
             return enrich(p.resourceName, parentCode)
@@ -114,14 +131,38 @@ export function useRecord() {
             const c = entry.spec
             const selfValue = live.value?.[c.targetHeader || 'Code']
             if (!selfValue) return []
+            if (typeof selfValue === 'string' && selfValue.includes(',')) {
+              const selfCodes = selfValue.split(',').map((s) => s.trim()).filter(Boolean)
+              const seen = new Set()
+              const results = []
+              for (const sc of selfCodes) {
+                const rows = dataStore.getRecordsBy(c.name, c.codeField, sc)
+                for (const row of rows) {
+                  if (!seen.has(row.Code)) {
+                    seen.add(row.Code)
+                    results.push(enrich(c.name, row.Code))
+                  }
+                }
+              }
+              return results
+            }
             return dataStore.getRecordsBy(c.name, c.codeField, selfValue)
-              .map(row => enrich(c.name, row.Code))
+              .map((row) => enrich(c.name, row.Code))
           }
 
           if (entry.kind === 'link') {
             const rel = entry.spec
             const refValue = live.value?.[rel.header]
             if (!refValue) return null
+            if (typeof refValue === 'string' && refValue.includes(',')) {
+              const codes = refValue.split(',').map((s) => s.trim()).filter(Boolean)
+              return codes
+                .map((val) => {
+                  const refCode = _resolveTargetCode(dataStore, rel.resource, rel.targetHeader, val)
+                  return refCode ? enrich(rel.resource, refCode) : null
+                })
+                .filter(Boolean)
+            }
             const refCode = _resolveTargetCode(dataStore, rel.resource, rel.targetHeader, refValue)
             if (!refCode) return null
             return enrich(rel.resource, refCode)

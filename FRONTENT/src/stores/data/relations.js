@@ -34,18 +34,27 @@ export function createRelations(state) {
 
     const parentStr = (resource.parentResource || '').toString().trim()
     if (parentStr && resourceNames.includes(parentStr)) {
-      const expectedHdr = resourceHeaders.find(h => h.endsWith('Code') && h !== 'Code' && pluralize(h.slice(0, -4)) === parentStr)
+      const expectedHdr = resourceHeaders.find(h => (h.endsWith('Code') || h.endsWith('Codes')) && h !== 'Code' && pluralize(h.endsWith('Codes') ? h.slice(0, -5) : h.slice(0, -4)) === parentStr)
         || singularize(parentStr) + 'Code'
       effective[expectedHdr] = { resource: parentStr, targetHeader: DEFAULT_TARGET_HEADER, labelHeader: '' }
     }
 
     for (const header of resourceHeaders) {
-      if (header === 'Code' || !header.endsWith('Code')) continue
-      const plural = pluralize(header.slice(0, -4))
-      if (resourceNames.includes(plural)) {
-        effective[header] = { resource: plural, targetHeader: DEFAULT_TARGET_HEADER, labelHeader: '' }
-      } else if (plural === 'Parents') {
-        effective[header] = { resource: resource.name, targetHeader: DEFAULT_TARGET_HEADER, labelHeader: '' }
+      if (header === 'Code') continue
+      if (header.endsWith('Code')) {
+        const plural = pluralize(header.slice(0, -4))
+        if (resourceNames.includes(plural)) {
+          effective[header] = { resource: plural, targetHeader: DEFAULT_TARGET_HEADER, labelHeader: '' }
+        } else if (plural === 'Parents') {
+          effective[header] = { resource: resource.name, targetHeader: DEFAULT_TARGET_HEADER, labelHeader: '' }
+        }
+      } else if (header.endsWith('Codes')) {
+        const plural = pluralize(header.slice(0, -5))
+        if (resourceNames.includes(plural)) {
+          effective[header] = { resource: plural, targetHeader: DEFAULT_TARGET_HEADER, labelHeader: '' }
+        } else if (plural === 'Parents') {
+          effective[header] = { resource: resource.name, targetHeader: DEFAULT_TARGET_HEADER, labelHeader: '' }
+        }
       }
     }
 

@@ -72,9 +72,26 @@ export function createProjections(state, ensureResource) {
       for (const record of entry.records.value) {
         const value = record[header]
         if (value === undefined || value === null || value === '') continue
-        const bucket = map.get(value)
-        if (bucket) bucket.push(record)
-        else map.set(value, [record])
+        if (typeof value === 'string' && value.includes(',')) {
+          const parts = [...new Set(value.split(',').map((s) => s.trim()).filter(Boolean))]
+          for (const part of parts) {
+            const bucket = map.get(part)
+            if (bucket) bucket.push(record)
+            else map.set(part, [record])
+          }
+          if (!parts.includes(value)) {
+            const bucket = map.get(value)
+            if (bucket) {
+              if (!bucket.includes(record)) bucket.push(record)
+            } else {
+              map.set(value, [record])
+            }
+          }
+        } else {
+          const bucket = map.get(value)
+          if (bucket) bucket.push(record)
+          else map.set(value, [record])
+        }
       }
       return map
     }))

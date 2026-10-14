@@ -67,7 +67,14 @@ The returned object provides:
 - `isLoading(resource)`: A plain `true`/`false` saying whether that resource is fetching right now. Not a ref.
 - `remember(key, build)`: Runs a build function once inside the long-lived store scope and caches the result forever. Use this for shared domain projections and option lists.
 
-### 3.1 Loading on first read
+### 3.1 Comma-Separated (CSV) Relations
+
+When a column holds more than one code separated by commas (such as `OutletConsumptionCode: "OC-0001,OC-0002"` or `OutletReturnCodes: "OR-0001,OR-0002"`), the system handles them automatically:
+- **Forward relations**: Asking for `$parent` or the link property (such as `record.$outletconsumption` or `record.$outletreturns`) returns an array of enriched records (`[ record1, record2, ... ]`) when the field contains commas, or a single enriched record when it has a single code.
+- **Auto-detection**: Headers ending in `Codes` (such as `OutletReturnCodes`) are automatically recognized as relations to the target resource.
+- **Backward indexing**: The data store indexes each code separately. When a parent or child searches with `recordsBy(...)`, it finds the record under every code it contains in `O(1)` time.
+
+### 3.2 Loading on first read
 
 You never have to load a resource before you read it. The data store does it for you.
 

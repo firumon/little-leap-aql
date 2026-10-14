@@ -46,6 +46,7 @@ function app_showAccessRegionSourceManagerDialog() { CORE_LIB.app_showAccessRegi
 function app_showListViewsManagerDialog() { CORE_LIB.app_showListViewsManagerDialog(); }
 function app_showRelationsManagerDialog() { CORE_LIB.app_showRelationsManagerDialog(); }
 function app_showSettingsManagerDialog() { CORE_LIB.app_showSettingsManagerDialog(); }
+function app_showArchiveManagerDialog() { CORE_LIB.app_showArchiveManagerDialog(); }
 function syncAppResourcesFromCode() { CORE_LIB.syncAppResourcesFromCode(); }
 function recalculateAllResourcesLastDataUpdatedAtAndNotify() { CORE_LIB.recalculateAllResourcesLastDataUpdatedAtAndNotify(); }
 function regenerateAppCacheAndNotify() { CORE_LIB.regenerateAppCacheAndNotify(); }
@@ -130,6 +131,12 @@ function app_saveResourceAccessPolicy(resourceName, policyString) {
 function app_getAccessRegionSourceManagerData() { return CORE_LIB.app_getAccessRegionSourceManagerData(); }
 function app_saveResourceAccessRegionSource(resourceName, sourceJson) {
   return CORE_LIB.app_saveResourceAccessRegionSource(resourceName, sourceJson);
+}
+
+// --- Archive Policy Manager Dialog ---
+function app_getArchiveManagerData() { return CORE_LIB.app_getArchiveManagerData(); }
+function app_saveResourceArchivePolicy(resourceName, archivePolicyJson) {
+  return CORE_LIB.app_saveResourceArchivePolicy(resourceName, archivePolicyJson);
 }
 
 // --- Schema Refactor Dialog ---

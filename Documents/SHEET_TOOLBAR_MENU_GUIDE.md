@@ -44,6 +44,7 @@ Use this document when an admin asks:
 | `📚 Resources > Manage Access Region Source` | Configure JSON inheritance rules for region mapping per resource (`AccessRegionSource`). |
 | `📚 Resources > Manage Lists` | Configure list view filters per resource (`ListViews`). |
 | `📚 Resources > Manage Relations` | Configure explicit cross-resource relations per resource (`Relations`). |
+| `📚 Resources > Manage Archive Policy` | Configure automated archive frequencies, file patterns, batch limits, and condition rules (`Archive`). |
 | `📚 Resources > Sync APP.Resources from Code` | Reconcile sheet schema/default rows with `syncAppResources.gs` source config. |
 | `📚 Resources > ⚡ Recalculate LastDataUpdatedAt` | Scans all resources, computes max UpdatedAt from sheet rows, and updates APP.Resources + CacheService in batch. |
 | `📚 Resources > Regenerate App Cache` | Clear and immediately rebuild critical APP runtime caches, including resource config and metadata-backed caches. |
@@ -256,7 +257,29 @@ Behavior:
 Reference:
 - `Documents/SCHEMA_RESOURCE_COLUMNS.md` (`Relations` JSON schema)
 
-### 7.8 Sync APP.Resources from Code
+### 7.8 Manage Archive Policy
+Purpose:
+- Configure automated archive frequencies, file patterns, batch limits, and condition rules (`Archive`).
+
+Inputs:
+- Frequency (`MONTHLY`, `BIMONTHLY`, `QUARTERLY`, `SEMIANNUAL`, `ANNUAL`).
+- File Name Pattern (e.g. `ARCHIVE_{{YEAR}}_{{FREQ}}`).
+- Batch Limit (default `30`).
+- Match Logic (`AND` / `OR`).
+- Condition Rules: Target column, Operator (`eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `contains`, `empty`, `notEmpty`, `in`, `not_in`), Value / Token (`$daysAgo:90`, `$today`, `$now`).
+- Relation Rules: Related resource and child/parent conditions.
+
+Behavior:
+- Dual-mode editor: switch seamlessly between Visual Builder and Raw JSON Editor.
+- Saves valid policy JSON directly to `APP.Resources.Archive` for the selected resource.
+- "Clear / Disable Policy" button empties the cell to turn off archiving for that resource.
+- Save clears the resource config cache.
+
+Reference:
+- `Documents/FEATURE_ARCHIVE_SYSTEM.md`
+- `Documents/SCHEMA_RESOURCE_COLUMNS.md`
+
+### 7.9 Sync APP.Resources from Code
 Purpose:
 - Applies `GAS/syncAppResources.gs` code-level defaults/headers to sheet safely.
 
@@ -264,7 +287,7 @@ When to use:
 - After code changes touching `APP_RESOURCES_CODE_CONFIG`
 - During setup/refactor recovery
 
-### 7.9 ⚡ Recalculate LastDataUpdatedAt
+### 7.10 ⚡ Recalculate LastDataUpdatedAt
 Purpose:
 - Scans all active sheet-backed resources, finds the maximum `UpdatedAt` timestamp across all rows, and updates `APP.Resources.LastDataUpdatedAt` in a single batch write.
 - Also populates `CacheService` keys (`AQL_CURSOR_<SpreadsheetId>_<ResourceName>`) so client polling detects fresh data immediately.
@@ -277,7 +300,7 @@ Result:
 - Logs scan progress to `_LOGS_` sheet.
 - Shows completion alert with count of resources scanned, updated, and skipped.
 
-### 7.10 Regenerate App Cache
+### 7.11 Regenerate App Cache
 Purpose:
 - Clears all APP runtime caches and immediately rebuilds critical cache entries from the current sheets.
 - Includes resource config and metadata-backed APP caches.

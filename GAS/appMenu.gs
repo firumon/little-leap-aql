@@ -24,6 +24,7 @@ function onOpen() {
       .addItem('Manage Settings', 'app_showSettingsManagerDialog')
       .addItem('🔐 Manage Access Policy', 'app_showAccessPolicyManagerDialog')
       .addItem('🗺️ Manage Access Region Source', 'app_showAccessRegionSourceManagerDialog')
+      .addItem('📦 Manage Archive Policy', 'app_showArchiveManagerDialog')
       .addSeparator()
       .addItem('Sync APP.Resources from Code', 'syncAppResourcesFromCode')
       .addItem('⚡ Recalculate LastDataUpdatedAt', 'recalculateAllResourcesLastDataUpdatedAtAndNotify')
@@ -1697,5 +1698,101 @@ function app_runSchemaRefactor(scope, selectedResourceNames, decisions) {
     return { success: true, summary: summary };
   } catch (e) {
     throw new Error('Failed to run schema refactor: ' + e.message);
+  }
+}
+
+function app_showArchiveManagerDialog() {
+  const html = HtmlService.createHtmlOutputFromFile('archiveManager')
+    .setWidth(940)
+    .setHeight(680)
+    .setTitle('Manage Resource Archive Policy');
+  SpreadsheetApp.getUi().showModalDialog(html, 'Manage Resource Archive Policy');
+}
+
+function app_getArchiveManagerData() {
+  try {
+    var resources = getAllResourcesConfigs({ includeInactive: true });
+    
+    var childrenByParent = {};
+    resources.forEach(function(r) {
+      if (r.parentResource) {
+        if (!childrenByParent[r.parentResource]) childrenByParent[r.parentResource] = [];
+        childrenByParent[r.parentResource].push(r.name);
+      }
+    });
+
+    var resourceList = resources.map(function(res) {
+      var headers = [];
+      try {
+        if (!res.functional && res.fileId && res.sheetName) {
+          var ss = openSpreadsheetById(res.fileId);
+          var sheet = ss.getSheetByName(res.sheetName);
+          if (sheet) {
+            headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+          }
+        }
+      } catch (e) { /* skip */ }
+
+      var relNames = [];
+      if (res.parentResource) relNames.push(res.parentResource);
+      if (childrenByParent[res.name]) {
+        relNames = relNames.concat(childrenByParent[res.name]);
+      }
+      if (res.relations && typeof res.relations === 'object') {
+        Object.keys(res.relations).forEach(function(k) {
+          var relObj = res.relations[k];
+          var targetRes = typeof relObj === 'string' ? relObj : (relObj && relObj.resource ? relObj.resource : k);
+          if (relNames.indexOf(targetRes) === -1) relNames.push(targetRes);
+        });
+      }
+
+      return {
+        name: res.name,
+        scope: res.scope || 'master',
+        headers: headers,
+        relations: relNames,
+        archive: res.archive || {}
+      };
+    });
+
+    return { resources: resourceList };
+  } catch (e) {
+    throw new Error('Failed to load archive manager data: ' + e.message);
+  }
+}
+
+function app_saveResourceArchivePolicy(resourceName, archivePolicyJson) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName(CONFIG.SHEETS.RESOURCES);
+    if (!sheet) throw new Error('Sheet ' + CONFIG.SHEETS.RESOURCES + ' not found');
+
+    var data = sheet.getDataRange().getValues();
+    var headers = data[0];
+    var nameIdx = headers.indexOf('Name');
+    var archiveIdx = headers.indexOf('Archive');
+
+    if (nameIdx === -1) throw new Error('Column "Name" not found in ' + CONFIG.SHEETS.RESOURCES);
+    if (archiveIdx === -1) throw new Error('Column "Archive" not found in ' + CONFIG.SHEETS.RESOURCES);
+
+    var valueToSave = '';
+    if (archivePolicyJson && typeof archivePolicyJson === 'object' && Object.keys(archivePolicyJson).length > 0) {
+      valueToSave = JSON.stringify(archivePolicyJson);
+    } else if (typeof archivePolicyJson === 'string' && archivePolicyJson.trim()) {
+      var parsed = JSON.parse(archivePolicyJson);
+      valueToSave = Object.keys(parsed).length > 0 ? JSON.stringify(parsed) : '';
+    }
+
+    for (var r = 1; r < data.length; r++) {
+      if (data[r][nameIdx] === resourceName) {
+        sheet.getRange(r + 1, archiveIdx + 1).setValue(valueToSave);
+        clearResourceConfigCache();
+        return { success: true };
+      }
+    }
+
+    throw new Error('Resource not found: ' + resourceName);
+  } catch (e) {
+    throw new Error('Failed to save archive policy: ' + e.message);
   }
 }

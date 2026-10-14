@@ -221,6 +221,13 @@ Use when changing `handleLogin()` response shape, field sources, or frontend sto
   - [MAP.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/MAP.md)
   - `Documents/API_LOGIN_RESPONSE.md`
 
+### Application Configuration & System Keys
+Use when inspecting, adding, changing, or troubleshooting `APP.Config` settings (branding, Google Drive file IDs, scopes, sync TTLs, currency, file storage, or archive limits).
+- Read:
+  - `Documents/CONFIG_KEYS_REFERENCE.md`
+  - `Documents/SHEET_APP_STRUCTURE.md`
+  - `Documents/API_LOGIN_RESPONSE.md`
+
 ### Dashboard Implementation
 Use when implementing or customizing dashboard data items, descriptor files under `_resource/<Scope>/<Resource>/Data/`, sheet columns, or score calculations.
 - Read:

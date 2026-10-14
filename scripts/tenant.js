@@ -2,17 +2,14 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 
-const registryPath = path.join(__dirname, '../TENANTS/tenant_registry.json');
 const claspPath = path.join(__dirname, '../TENANTS/.clasp.json');
 const manifestPath = path.join(__dirname, '../TENANTS/appsscript.json');
 const envPath = path.join(__dirname, '../FRONTENT/.env');
 
-// CLI arguments: e.g. "node scripts/tenant.js <push|update-libs|deploy> [TENANT_CODE]"
 const args = process.argv.slice(2);
 const command = (args[0] || 'push').toLowerCase();
 const target = args[1] || null;
 
-// 1. Helper to fetch live tenant registry from Master Web App
 async function getTenantMap() {
   let masterUrl = null;
   if (fs.existsSync(envPath)) {
@@ -24,44 +21,49 @@ async function getTenantMap() {
     }
   }
 
-  if (masterUrl) {
-    try {
-      console.log(`Querying live tenants from Master Web App (${masterUrl})...`);
-      const response = await fetch(masterUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify({ action: 'getTenants' })
-      });
-      const data = await response.json();
-      if (data && data.success && Array.isArray(data.tenants) && data.tenants.length > 0) {
-        const liveMap = {};
-        data.tenants.forEach(t => {
-          if (t.code && t.projectId) {
-            liveMap[t.code.toUpperCase()] = t.projectId;
-          }
-        });
-        if (Object.keys(liveMap).length > 0) {
-          console.log(`✅ Loaded ${Object.keys(liveMap).length} live tenant(s) from Master Web App:`, Object.keys(liveMap).join(', '));
-          try {
-            fs.writeFileSync(registryPath, JSON.stringify({ tenants: liveMap }, null, 2) + '\n', 'utf8');
-          } catch (e) {}
-          return liveMap;
-        }
-      }
-    } catch (err) {
-      console.warn('⚠️  Could not reach Master Web App, falling back to local tenant_registry.json:', err.message);
-    }
+  if (!masterUrl) {
+    console.error('❌ Error: VITE_MASTER_GAS_URL is missing in FRONTENT/.env');
+    return {};
   }
 
-  // Fallback to local registry JSON
-  if (fs.existsSync(registryPath)) {
-    try {
-      const reg = JSON.parse(fs.readFileSync(registryPath, 'utf8'));
-      return reg.tenants || {};
-    } catch (e) {
-      console.error('Error parsing local registry JSON:', e.message);
+  try {
+    console.log(`Querying live tenants from Master Web App (${masterUrl})...`);
+    const response = await fetch(masterUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ action: 'getTenants' })
+    });
+    const data = await response.json();
+    if (!data || !data.success) {
+      console.warn('⚠️  Master Web App returned error:', data?.error || 'Unknown error');
+      return {};
     }
+
+    const liveMap = {};
+    if (Array.isArray(data.tenants)) {
+      data.tenants.forEach(t => {
+        if (t.code && t.projectId) {
+          liveMap[t.code.toUpperCase()] = t.projectId;
+        }
+      });
+    } else if (data.tenants && typeof data.tenants === 'object') {
+      Object.entries(data.tenants).forEach(([code, projectId]) => {
+        if (code && projectId) {
+          liveMap[code.toUpperCase()] = projectId;
+        }
+      });
+    }
+
+    if (Object.keys(liveMap).length > 0) {
+      console.log(`✅ Loaded ${Object.keys(liveMap).length} live tenant(s) from Master Web App:`, Object.keys(liveMap).join(', '));
+      return liveMap;
+    }
+
+    console.warn('⚠️  No valid tenants with Project ID found in Master Web App response.');
+  } catch (err) {
+    console.error('❌ Could not reach Master Web App:', err.message);
   }
+
   return {};
 }
 

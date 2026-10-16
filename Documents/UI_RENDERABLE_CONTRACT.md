@@ -10,7 +10,7 @@
 
 ## 1. The Problem It Solves
 
-A `_ui/` tenant customization has two mechanisms (see [UI_CONTENT_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_CONTENT_SYSTEM.md)):
+A `_ui/` tenant customization has two mechanisms (see [UI_CONTENT_SYSTEM.md](file:///f:/AQL/Documents/UI_CONTENT_SYSTEM.md)):
 
 | Mechanism | What it can do | Cost |
 |---|---|---|

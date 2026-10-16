@@ -75,7 +75,7 @@ Quasar's default shadow so the class's own is the only one, `bordered` supplies 
 class refines, `page-card` carries the shared radius token and the entry animation. A second
 UI naming a different class in its own `_config/` is not divergence; it is the mechanism.
 The rationale for each of AQL's values is
-[`_ui/AQL/_config/config.md`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/_ui/AQL/_config/config.md).
+[`_ui/AQL/_config/config.md`](file:///f:/AQL/FRONTENT/src/_ui/AQL/_config/config.md).
 
 | Part | Token | Rule |
 |---|---|---|

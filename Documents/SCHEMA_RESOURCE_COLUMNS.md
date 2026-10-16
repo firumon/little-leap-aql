@@ -89,7 +89,7 @@ This document is the canonical meaning reference for `APP.Resources` columns.
 > metadata is a two-file change, never one. You must also:
 > 1. create `FRONTENT/src/_fields/<type>/` containing `Add.vue`,
 >    `Edit.vue` and `View.vue` (contract in
->    [_fields/README.md](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/_fields/README.md) §2), and
+>    [_fields/README.md](file:///f:/AQL/FRONTENT/src/_fields/README.md) §2), and
 > 2. register it in `FRONTENT/src/_fields/useFieldResolver.js` —
 >    the folder name resolves by itself, so `TYPE_ALIASES` is only for the
 >    schema's alternate spellings of the same intent.
@@ -172,16 +172,16 @@ The `ListViews` column in the `APP.Resources` sheet defines custom data filter v
 * **Purpose**: Configures tab/segment views to filter record datasets on the resource index pages.
 * **Format**: A JSON array of view configuration objects.
 * **Overriding Rule**: If populated with a JSON array (or `[]` to explicitly disable switcher), custom template/modifier overriding for the views switcher is disabled. If blank, overrides are allowed.
-* **Detailed JSON Schema & Operators**: For the complete specification of the filter group/condition JSON objects and supported comparison operators, refer to the canonical [AQL Frontend List Switcher Guide](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_LIST_SWITCHER.md).
-* **Dynamic Tokens**: A condition `value` may be a date/time or current-user token (`$startOfMonth`, `$daysIn:7`, `$userRoles`, ...) instead of a literal, so views such as "Due This Week" or "Assigned To Me" stay correct without per-user sheets. See [Section 5.2 — Dynamic Tokens](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_LIST_SWITCHER.md#52-dynamic-tokens-datetime--current-user).
+* **Detailed JSON Schema & Operators**: For the complete specification of the filter group/condition JSON objects and supported comparison operators, refer to the canonical [AQL Frontend List Switcher Guide](file:///f:/AQL/Documents/UI_LIST_SWITCHER.md).
+* **Dynamic Tokens**: A condition `value` may be a date/time or current-user token (`$startOfMonth`, `$daysIn:7`, `$userRoles`, ...) instead of a literal, so views such as "Due This Week" or "Assigned To Me" stay correct without per-user sheets. See [Section 5.2 — Dynamic Tokens](file:///f:/AQL/Documents/UI_LIST_SWITCHER.md#52-dynamic-tokens-datetime--current-user).
 
 ## Relations Column Schema & Usage
 The `Relations` column declares explicit cross-resource links for a resource, overriding the frontend's name-based heuristics.
 
 * **Purpose**: Tell the frontend which target resource a column points at, which target column holds the referenced value, and which target column supplies the human-readable label.
 * **Format**: A JSON **object** keyed by the *source column header* on this resource. Blank means "heuristics only".
-* **Managed by**: `AQL 🚀 > 📚 Resources > Manage Relations` (see [SHEET_TOOLBAR_MENU_GUIDE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/SHEET_TOOLBAR_MENU_GUIDE.md) §7.5), or directly in code via `APP_RESOURCES_CODE_CONFIG` in `GAS/syncAppResources.gs`.
-* **Exposed to the frontend** as `relations` on each resource entry in the login payload — see [API_LOGIN_RESPONSE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/API_LOGIN_RESPONSE.md).
+* **Managed by**: `AQL 🚀 > 📚 Resources > Manage Relations` (see [SHEET_TOOLBAR_MENU_GUIDE.md](file:///f:/AQL/Documents/SHEET_TOOLBAR_MENU_GUIDE.md) §7.5), or directly in code via `APP_RESOURCES_CODE_CONFIG` in `GAS/syncAppResources.gs`.
+* **Exposed to the frontend** as `relations` on each resource entry in the login payload — see [API_LOGIN_RESPONSE.md](file:///f:/AQL/Documents/API_LOGIN_RESPONSE.md).
 
 ### Entry Shapes
 Two shapes are accepted per entry:
@@ -235,13 +235,13 @@ The picker appends the stored value in parentheses, so `{"SKU": {"resource":"SKU
 The `AccessPolicy` column in `APP.Resources` holds a 5-digit octal string (`ROPDU`), configuring regional and action access rules:
 * **Format**: 5-digit text string (e.g. `'77111'`). Blank inherits scope default (`master`: `77111`, `operation`: `37111`, `accounts`: `37010`, `view`/`report`: `71111`).
 * **Exposed on Metadata**: `accessPolicy` string (or empty string when inheriting).
-* **Canonical Specification**: Full details on octal digit meanings (`ROPDU`), bit weights (`SAME = 1`, `DOWN = 2`, `UP = 4`), and row-level enforcement are in [ACCESS_REGION_AND_POLICY_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ACCESS_REGION_AND_POLICY_SYSTEM.md#3-access-policy-ropdu).
+* **Canonical Specification**: Full details on octal digit meanings (`ROPDU`), bit weights (`SAME = 1`, `DOWN = 2`, `UP = 4`), and row-level enforcement are in [ACCESS_REGION_AND_POLICY_SYSTEM.md](file:///f:/AQL/Documents/ACCESS_REGION_AND_POLICY_SYSTEM.md#3-access-policy-ropdu).
 
 ## AccessRegionSource Column Schema & Usage
 The `AccessRegionSource` column in `APP.Resources` configures how a record's access region is determined:
 * **Format**: JSON object with `self` (record's own region field) and `subject` (fallback lookup walk).
 * **Exposed on Metadata**: `accessRegionSource` (parsed JSON object or `null` if blank).
-* **Canonical Specification**: Full details on the `self` and `subject` JSON grammar, write-time resolution, and place-name resolution are in [ACCESS_REGION_AND_POLICY_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ACCESS_REGION_AND_POLICY_SYSTEM.md#4-accessregionsource).
+* **Canonical Specification**: Full details on the `self` and `subject` JSON grammar, write-time resolution, and place-name resolution are in [ACCESS_REGION_AND_POLICY_SYSTEM.md](file:///f:/AQL/Documents/ACCESS_REGION_AND_POLICY_SYSTEM.md#4-accessregionsource).
 
 
 ## Settings Column Schema & Usage
@@ -279,9 +279,9 @@ dashboard page**. It is not a per-resource dashboard.
 
 #### Tile keys & configuration
 The `Dashboard` cell JSON holds visual configuration, breakpoint sizes, and permissions overrides. For the complete reference of all keys, types, defaults, merge rules, and JSON examples, see:
-[FEATURE_DASHBOARD_ENGINE_CUSTOMIZATION.md](file:///f:/LITTLE%20LEAP/AQL/Documents/FEATURE_DASHBOARD_ENGINE_CUSTOMIZATION.md).
+[FEATURE_DASHBOARD_ENGINE_CUSTOMIZATION.md](file:///f:/AQL/Documents/FEATURE_DASHBOARD_ENGINE_CUSTOMIZATION.md).
 
-For the full engine flow (scoring, packing grid, and motion), see [FEATURE_DASHBOARD_ENGINE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/FEATURE_DASHBOARD_ENGINE.md).
+For the full engine flow (scoring, packing grid, and motion), see [FEATURE_DASHBOARD_ENGINE.md](file:///f:/AQL/Documents/FEATURE_DASHBOARD_ENGINE.md).
 
 
 ## Options Column Schema & Usage
@@ -307,7 +307,7 @@ The `Archive` column in `APP.Resources` holds the archive policy JSON for this r
 * **Format**: A JSON object with `{ frequency, filename?, limit?, condition }`.
 * **Fallback**: An empty object `{}` or blank cell means "archiving disabled".
 * **Exposed on Metadata**: Populated on each resource entry under `entry.archive` and `entry.ui.archive` (defaulting to `{}`).
-* **Canonical Specification**: [FEATURE_ARCHIVE_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/FEATURE_ARCHIVE_SYSTEM.md).
+* **Canonical Specification**: [FEATURE_ARCHIVE_SYSTEM.md](file:///f:/AQL/Documents/FEATURE_ARCHIVE_SYSTEM.md).
 
 ## Audit Columns & Revision Lifecycle
 Every audited sheet across `master`, `operation`, and `accounts` scopes includes 5 standard audit columns at the trailing end:
@@ -341,9 +341,9 @@ When `syncAppResourcesFromCode` executes, it protects designated metadata column
 - `view`: Read-only formula-driven sheets, no CRUD operation, no audit, no code generation, returns all non-empty rows without pagination.
 
 ## Canonical Detail Owners
-- APP control-plane context: [SHEET_APP_STRUCTURE.md](F:/LITTLE%20LEAP/AQL/Documents/SHEET_APP_STRUCTURE.md)
-- Registry/runtime behavior: [SCHEMA_RESOURCE_REGISTRY.md](F:/LITTLE%20LEAP/AQL/Documents/SCHEMA_RESOURCE_REGISTRY.md)
-- Module workflow behavior: [WORKFLOW_OUTLET_OPERATIONS.md / WORKFLOW_PROCUREMENT.md](F:/LITTLE%20LEAP/AQL/Documents/WORKFLOW_OUTLET_OPERATIONS.md / WORKFLOW_PROCUREMENT.md)
+- APP control-plane context: [SHEET_APP_STRUCTURE.md](F:/AQL/Documents/SHEET_APP_STRUCTURE.md)
+- Registry/runtime behavior: [SCHEMA_RESOURCE_REGISTRY.md](F:/AQL/Documents/SCHEMA_RESOURCE_REGISTRY.md)
+- Module workflow behavior: [WORKFLOW_OUTLET_OPERATIONS.md / WORKFLOW_PROCUREMENT.md](F:/AQL/Documents/WORKFLOW_OUTLET_OPERATIONS.md / WORKFLOW_PROCUREMENT.md)
 
 ## Maintenance Rule
 Update this file when:

@@ -8,7 +8,7 @@ This prompt is the one place to start for ANY dashboard item work:
 - change how an item looks for a tenant (`_ui` customization)
 
 It does NOT cover:
-- Building or changing a reusable widget base under `FRONTENT/src/components/widgets/abstract/`. For that, see [CONTRACT.md](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/widgets/CONTRACT.md). Adding a preset is covered here, in step 6.
+- Building or changing a reusable widget base under `FRONTENT/src/components/widgets/abstract/`. For that, see [CONTRACT.md](file:///f:/AQL/FRONTENT/src/components/widgets/CONTRACT.md). Adding a preset is covered here, in step 6.
 - Summary cards on a resource's own Index page. Those belong to the resource UI module system.
 - The engine itself (resolver, packing, motion). If you change the engine, see the Maintenance rule at the end.
 
@@ -64,7 +64,7 @@ You may not write one line of a DJS or a DBI until you understand the business o
 ### 2a. What to read for each resource
 
 1. **Its logic layer**: everything in `FRONTENT/src/_resource/<Scope>/<Resource>/`. That means its `composables/` (progress rules, state names, enrich helpers), `Data/` and `Dashboard/`.
-2. **Its sheet entry in [GAS/syncAppResources.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/syncAppResources.gs)**. Search for the resource's `Name:` block, then read:
+2. **Its sheet entry in [GAS/syncAppResources.gs](file:///f:/AQL/GAS/syncAppResources.gs)**. Search for the resource's `Name:` block, then read:
    - `Scope` and parent/child links (`ParentCode`), which tell you master, operation or accounts
    - `UIFields`: the columns and their types
    - `RequiredHeaders` and `DefaultValues`: what every row always has
@@ -288,7 +288,7 @@ export default (props) => {
 | `users` | Boolean | `false` | +5 to raw score. Use it for items about staff or users. |
 | `multiplier` | Number | `1` | Score knob. It is clamped to 0–2, and 0 turns the tile off. Usually left to the ARD. |
 | `title` / `subtitle` / `caption` | String | none | Fixed card text. If the text changes, put it in `data` instead. |
-| `widgetProps` | Object | `{}` | Look props for the widget: `color`, `variant`, `max`, `target`, `dense`, `signed`, `valueFormat` (a function) and more. The full list for each base is in [WIDGETS.md](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/widgets/WIDGETS.md). |
+| `widgetProps` | Object | `{}` | Look props for the widget: `color`, `variant`, `max`, `target`, `dense`, `signed`, `valueFormat` (a function) and more. The full list for each base is in [WIDGETS.md](file:///f:/AQL/FRONTENT/src/components/widgets/WIDGETS.md). |
 | `controls` | Array | `[]` | Pick the exact control objects from the DJS. Never clone them. |
 | `data` | `computed` | required | The live values. It must hold `loading`, `empty`, and every data key the widget needs. It may also hold `title`, `subtitle`, `caption`. |
 
@@ -333,7 +333,7 @@ Controls are fully working. The DJS owns the ref, and the DBI picks the control 
 
 ## 6. Picking the widget
 
-Read [REGISTRY.md](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/widgets/REGISTRY.md) first. It is short and lists every preset with the data it needs. Then read the base's section in [WIDGETS.md](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/widgets/WIDGETS.md) for its exact data shape and props.
+Read [REGISTRY.md](file:///f:/AQL/FRONTENT/src/components/widgets/REGISTRY.md) first. It is short and lists every preset with the data it needs. Then read the base's section in [WIDGETS.md](file:///f:/AQL/FRONTENT/src/components/widgets/WIDGETS.md) for its exact data shape and props.
 
 Data shapes at a glance:
 
@@ -407,7 +407,7 @@ So the place of an item in the list decides how high it sits on the page. Adding
 
 ### Where the ARD is written
 
-Write it in [GAS/syncAppResources.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/syncAppResources.gs), in the `Dashboard:` key of the resource's block, next to its `ListViews`. That is the final step for the ARD.
+Write it in [GAS/syncAppResources.gs](file:///f:/AQL/GAS/syncAppResources.gs), in the `Dashboard:` key of the resource's block, next to its `ListViews`. That is the final step for the ARD.
 - Use `JSON.stringify([...])` with one item per line, as the file already does.
 - Never write `permission`, `auth` or `users` there.
 - Never edit the live sheet by hand. Never push or deploy. The user runs the push and "Sync App Resources".
@@ -514,8 +514,8 @@ There is no index file and no registry for items. The engine finds every `Dashbo
 
 - Step 0 (the business) comes first, always.
 - The JSDoc block on every DJS and DBI is required. When you change what an item does, update its block in the same edit.
-- Core files (`src/composables/`, `src/utils/`, `src/stores/`, `src/services/`, `src/router/`, `src/components/`) are read-only unless the user says yes. Ask BEFORE you create any new file or exported function, with the audit quote from [AGENTS.md](file:///f:/LITTLE%20LEAP/AQL/AGENTS.md). A DJS or DBI file for the requested items counts as part of the approved plan from step 2d.
-- Read [CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/CORE_ARCHITECTURE_RULES.md) before any edit under `FRONTENT/`.
+- Core files (`src/composables/`, `src/utils/`, `src/stores/`, `src/services/`, `src/router/`, `src/components/`) are read-only unless the user says yes. Ask BEFORE you create any new file or exported function, with the audit quote from [AGENTS.md](file:///f:/AQL/AGENTS.md). A DJS or DBI file for the requested items counts as part of the approved plan from step 2d.
+- Read [CORE_ARCHITECTURE_RULES.md](file:///f:/AQL/Documents/CORE_ARCHITECTURE_RULES.md) before any edit under `FRONTENT/`.
 - A broken tile is always visible. Hide only a healthy tile that has nothing to say.
 - No hidden features. Docs describe the present.
 - Never push or deploy.
@@ -541,4 +541,4 @@ Run `npm --prefix FRONTENT run build` when you add 10 or more files.
 
 When the engine changes (a new DBI key, a change to `ctx` or props, the score, the override order, or the `_ui` lookup), update `Documents/FEATURE_DASHBOARD_ENGINE*.md` AND this prompt in the same turn as the code.
 
-If a gap in this prompt caused a mistake, tell the user, name the gap, and ask to fix it (the Documentation Gap rule in [AGENTS.md](file:///f:/LITTLE%20LEAP/AQL/AGENTS.md)).
+If a gap in this prompt caused a mistake, tell the user, name the gap, and ask to fix it (the Documentation Gap rule in [AGENTS.md](file:///f:/AQL/AGENTS.md)).

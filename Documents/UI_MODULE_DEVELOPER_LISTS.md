@@ -8,7 +8,7 @@
 
 Framework bases in `src/components/contents/` include `List.vue`, `View.vue`, `Create.vue`,
 `Update.vue`, `FormRecord.vue`, `FormChild.vue`, `ViewRecord.vue`. Their full prop surfaces
-are in [`components/REGISTRY.md`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/REGISTRY.md).
+are in [`components/REGISTRY.md`](file:///f:/AQL/FRONTENT/src/components/REGISTRY.md).
 Resolution mirrors §3.
 
 ### 7.1 Per-active-view list overrides — `List<ViewName>`
@@ -187,7 +187,7 @@ and strict ownership (`CreatedBy === user.value?.id`).
 **6. Dispatch CRUD yourself, delegate workflow.** Edit and View are CRUD routes: the cluster
 navigates them directly. Everything else is a workflow action and goes through
 `AdditionalActionsButtons`, which owns eligibility. Render them as loose siblings at one
-visual scale, never in a `q-btn-group` — see [`_config/config.md` §3.5](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/_ui/AQL/_config/config.md).
+visual scale, never in a `q-btn-group` — see [`_config/config.md` §3.5](file:///f:/AQL/FRONTENT/src/_ui/AQL/_config/config.md).
 
 ### 7.4 The View Blueprint — Business-Concept Card Grouping
 

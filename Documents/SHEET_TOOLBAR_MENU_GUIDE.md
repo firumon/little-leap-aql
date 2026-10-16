@@ -126,7 +126,7 @@ Opens the Access Regions management dialog (`adminDialog.html`).
 - **Create**: Requires `Code` (`AAA999`, e.g. `UAE001`) and `Name`. Optional `Parent` (must exist if set; cannot be same as code).
 - **Update**: Select existing region, edit fields, and submit.
 - **Cache**: Automatically invalidates memory cache and increments session auth version.
-- **Canonical Specification**: For hierarchy rules, tree expansion, and universe access, see [ACCESS_REGION_AND_POLICY_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ACCESS_REGION_AND_POLICY_SYSTEM.md#2-core-concepts).
+- **Canonical Specification**: For hierarchy rules, tree expansion, and universe access, see [ACCESS_REGION_AND_POLICY_SYSTEM.md](file:///f:/AQL/Documents/ACCESS_REGION_AND_POLICY_SYSTEM.md#2-core-concepts).
 
 
 ## 6. Roles (`AQL 🚀 > 🛡️ Roles`)
@@ -183,7 +183,7 @@ Admin input needed:
 - PDF options (if needed)
 
 Reference:
-- [FEATURE_REPORTS_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/FEATURE_REPORTS_SYSTEM.md)
+- [FEATURE_REPORTS_SYSTEM.md](file:///f:/AQL/Documents/FEATURE_REPORTS_SYSTEM.md)
 
 ### 7.3 Manage Actions
 Purpose:
@@ -204,7 +204,7 @@ Behavior:
 - Checkboxes in dialog dynamically calculate and format the 5-digit octal string.
 - If policy matches the scope default (`master`: `77111`, `operation`: `37111`, `accounts`: `37010`, `view`/`report`: `71111`), saving sets the cell blank (inherits default).
 - If customized, it is saved as text (e.g. `'07777`) to preserve leading zeros.
-- Canonical specification for `ROPDU` digit definitions, bit weights, and row filtering: see [ACCESS_REGION_AND_POLICY_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ACCESS_REGION_AND_POLICY_SYSTEM.md#3-access-policy-ropdu).
+- Canonical specification for `ROPDU` digit definitions, bit weights, and row filtering: see [ACCESS_REGION_AND_POLICY_SYSTEM.md](file:///f:/AQL/Documents/ACCESS_REGION_AND_POLICY_SYSTEM.md#3-access-policy-ropdu).
 
 ### 7.5 Manage Access Region Source
 Purpose:
@@ -213,7 +213,7 @@ Purpose:
 Behavior:
 - The dialog is sectioned (Self Region, Subject Resources, Subject Failures) with dropdowns, radios, and a live JSON preview.
 - Saving an empty configuration writes a blank cell.
-- Canonical specification for the JSON grammar, place-name resolution, and write-time fallback walk: see [ACCESS_REGION_AND_POLICY_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ACCESS_REGION_AND_POLICY_SYSTEM.md#4-accessregionsource).
+- Canonical specification for the JSON grammar, place-name resolution, and write-time fallback walk: see [ACCESS_REGION_AND_POLICY_SYSTEM.md](file:///f:/AQL/Documents/ACCESS_REGION_AND_POLICY_SYSTEM.md#4-accessregionsource).
 
 
 ### 7.6 Manage Lists
@@ -341,7 +341,7 @@ Use when:
 
 These groups appear in the **frontend application sidebar**, not in the Google Sheet `AQL` menu. They are controlled by `APP.Resources.Menu` JSON arrays (code source: `GAS/syncAppResources.gs`) and are now grouped by business relevance instead of strict scope names.
 
-> **Full documentation of the frontend menu system**: See [UI_SIDEBAR_MENU_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_SIDEBAR_MENU_SYSTEM.md) — covers JSON schema, data flow, permission gating, tree building, route guard, and admin operation.
+> **Full documentation of the frontend menu system**: See [UI_SIDEBAR_MENU_SYSTEM.md](file:///f:/AQL/Documents/UI_SIDEBAR_MENU_SYSTEM.md) — covers JSON schema, data flow, permission gating, tree building, route guard, and admin operation.
 
 ### 9.1 Product Group
 

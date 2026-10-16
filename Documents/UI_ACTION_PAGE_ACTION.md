@@ -32,7 +32,7 @@ Mounted by `Page.vue`. Decides which cluster is live:
   non-standard provider keeps its previous behaviour.
 
 `hasNodes` is exported by `usePageState` (`state.nodes.size > 0`); see
-[UI_PAGE_STATE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_PAGE_STATE.md) §6.4. It is
+[UI_PAGE_STATE.md](file:///f:/AQL/Documents/UI_PAGE_STATE.md) §6.4. It is
 node-count only — for a specific node use `useNode(resource).exists`.
 
 All three clusters are mounted through `useActionResolver` (with the framework component as

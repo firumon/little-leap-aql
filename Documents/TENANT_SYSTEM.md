@@ -28,9 +28,9 @@ A container-bound Apps Script project attached to the `TENANTS` spreadsheet. It 
 * **Script ID**: `1gWyoy-tvOBR61iopJEo2FPpKIme1B8tw-P9IemDTAbCRG9YfbP1-KXxz`
 * **Web App Deployment URL**: `https://script.google.com/macros/s/AKfycbzf37M3i9UE3NfqprIbUCvX8oeKThVyK3qvoVv-KwFI_6JDnTY-_rjDsjINZyYZELdZ/exec`
 * **Local Files**:
-  * [MASTER/.clasp.json](file:///f:/LITTLE%20LEAP/AQL/MASTER/.clasp.json): Connects the local directory to the Master script ID.
-  * [MASTER/appsscript.json](file:///f:/LITTLE%20LEAP/AQL/MASTER/appsscript.json): Manifest containing PWA configurations.
-  * [MASTER/api.gs](file:///f:/LITTLE%20LEAP/AQL/MASTER/api.gs): Implements the `doPost(e)` function. It parses `{ action: "getTenantUrl", tenantCode: "CODE" }` and returns the raw text string containing the tenant's spreadsheet URL.
+  * [MASTER/.clasp.json](file:///f:/AQL/MASTER/.clasp.json): Connects the local directory to the Master script ID.
+  * [MASTER/appsscript.json](file:///f:/AQL/MASTER/appsscript.json): Manifest containing PWA configurations.
+  * [MASTER/api.gs](file:///f:/AQL/MASTER/api.gs): Implements the `doPost(e)` function. It parses `{ action: "getTenantUrl", tenantCode: "CODE" }` and returns the raw text string containing the tenant's spreadsheet URL.
 
 ### C. The Standalone Shared Library (`AqlCore`)
 A standalone Apps Script project containing the core codebase, database models, sheet layouts, triggers, and menu definitions. All tenant spreadsheets import this project as a library under the namespace `AqlCore`.
@@ -41,7 +41,7 @@ A container-bound Apps Script project attached to the development `App` spreadsh
 * **Script ID**: `1sTCRkDJ--z23c0QrF3WuPr94EfktHYdohs_E0zVHpDAfwCW7N0vTL42n`
 
 ### E. The Tenant Wrapper Script Template (`TENANTS/` / `__tenant_app__`)
-* **Location**: [TENANTS/tenant.gs](file:///f:/LITTLE%20LEAP/AQL/TENANTS/tenant.gs)
+* **Location**: [TENANTS/tenant.gs](file:///f:/AQL/TENANTS/tenant.gs)
 * **Purpose**: Serves as a ready-to-copy boilerplate script containing thin forwarder wrappers for all triggers (`onOpen`), API endpoints (`doPost`), toolbar menus, and `google.script.run` backend calls. The template spreadsheet (`__tenant_app__`) has this script pre-bound and configured to reference `AqlCore` as a library with `developmentMode: false`.
 * **Registry & Deployment Automation**:
   * **Live Central Sheet**: Project IDs and Deployment IDs are dynamically retrieved in real-time from the master **`Tenants`** spreadsheet tab via the Master API.
@@ -50,24 +50,24 @@ A container-bound Apps Script project attached to the development `App` spreadsh
     * `npm run tenant:update-libs`: Automatically updates the `AqlCore` library version and pushes to all tenants (without resetting web app permissions).
     * `npm run tenant:deploy`: Deploys new web app versions for all tenants.
     *(e.g., `node scripts/tenant.js push LPAJAEGCC` pushes to a single tenant).*
-* **Synchronization & Maintenance Rule**: If any of the following 3 types of functions are added, removed, or changed in the core `GAS/` codebase, you MUST add or update the corresponding forwarding function in [TENANTS/tenant.gs](file:///f:/LITTLE%20LEAP/AQL/TENANTS/tenant.gs):
+* **Synchronization & Maintenance Rule**: If any of the following 3 types of functions are added, removed, or changed in the core `GAS/` codebase, you MUST add or update the corresponding forwarding function in [TENANTS/tenant.gs](file:///f:/AQL/TENANTS/tenant.gs):
   1. **Spreadsheet Triggers**: Event hooks (like `onOpen`, `onEdit`, `onChange`) captured directly by the container script.
-  2. **Custom Sheet Menu Callbacks**: Target function string names registered in [appMenu.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/appMenu.gs) (e.g. `showCreateUserDialog`).
+  2. **Custom Sheet Menu Callbacks**: Target function string names registered in [appMenu.gs](file:///f:/AQL/GAS/appMenu.gs) (e.g. `showCreateUserDialog`).
   3. **HTML Dialog Callbacks (google.script.run targets)**: Functions called from container-bound HTML modal dialogs/sidebars. Browser clients cannot invoke library namespaces directly (e.g. `google.script.run.AqlCore.myFunc()` is invalid); they must invoke a local wrapper function in `tenant.gs` which forwards the call to the library.
 
 ### D. The Frontend Resolver (PWA)
-* **[api.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/config/api.js)**: Configured to warn in development if `VITE_GAS_URL` is empty instead of throwing an error, allowing the static production build to compile without hardcoded URLs.
-* **[axios.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/boot/axios.js) (Boot File)**:
+* **[api.js](file:///f:/AQL/FRONTENT/src/config/api.js)**: Configured to warn in development if `VITE_GAS_URL` is empty instead of throwing an error, allowing the static production build to compile without hardcoded URLs.
+* **[axios.js](file:///f:/AQL/FRONTENT/src/boot/axios.js) (Boot File)**:
   * Intercepts incoming page requests before Quasar initializes.
   * If a `?t=CODE` query parameter is found in the URL:
     * If `CODE` matches the cached tenant in `localStorage`, it strips the query parameter from the URL address bar using `window.history.replaceState` without reloading.
     * If `CODE` is different or missing from cache, it queries the `VITE_MASTER_GAS_URL` via a POST request, stores the returned tenant URL and code in `localStorage`, and strips the parameter.
   * If no `?t=` is found, it falls back to using the cached tenant URL from `localStorage` as the `apiClient.defaults.baseURL`.
-* **[SelectTenantPage.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/pages/AuthPage/SelectTenantPage.vue)**: 
+* **[SelectTenantPage.vue](file:///f:/AQL/FRONTENT/src/pages/AuthPage/SelectTenantPage.vue)**: 
   * Renders a styled, responsive login-like screen showing the AQL logo and brief description.
   * Prompts the user to enter their tenant code manually if they visit the root URL with no query parameters and have no cached URL.
   * Submits the code, caches the resolved URL, and redirects them to the login flow.
-* **[routes.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/router/routes.js) & [index.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/router/index.js)**: Registers the `/select-tenant` route and adds the router guard to redirect unauthenticated/uncached requests.
+* **[routes.js](file:///f:/AQL/FRONTENT/src/router/routes.js) & [index.js](file:///f:/AQL/FRONTENT/src/router/index.js)**: Registers the `/select-tenant` route and adds the router guard to redirect unauthenticated/uncached requests.
 
 ---
 

@@ -1,4 +1,4 @@
-﻿# AQL Action System Guide
+# AQL Action System Guide
 
 This is the canonical reference for AQL's **Action Subsystem** — the third first-class
 placeholder paradigm alongside `Section.vue` and `Content.vue`.
@@ -234,7 +234,7 @@ export default {
 
 The matching block is spread **flat** onto the action (`props.label`, not `props.PropsFormActionSubmit.label`), and a JS modifier still wins over it. Precedence: `drilled attrs → PropsAction → Props<Identity> → JS modifier`.
 
-Full contract, including the case-insensitivity, function-block and `inheritAttrs` rules: [UI_PAGE_AND_SECTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_PAGE_AND_SECTION_SYSTEM.md) §1.4.1.
+Full contract, including the case-insensitivity, function-block and `inheritAttrs` rules: [UI_PAGE_AND_SECTION_SYSTEM.md](file:///f:/AQL/Documents/UI_PAGE_AND_SECTION_SYSTEM.md) §1.4.1.
 
 ---
 
@@ -244,10 +244,10 @@ Full contract, including the case-insensitivity, function-block and `inheritAttr
 > **Documentation Sync Requirement**: Any modification to the Action subsystem — adding a
 > component under `components/actions/`, changing the resolver's scan order, altering the
 > `actions` array contract, or changing the loading UX — MUST be accompanied by updates to:
-> 1. This document: [UI_ACTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_ACTION_SYSTEM.md)
-> 2. The initialization prompt: [action_customization.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/action_customization.md)
-> 3. The component registry: [components/REGISTRY.md](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/REGISTRY.md)
+> 1. This document: [UI_ACTION_SYSTEM.md](file:///f:/AQL/Documents/UI_ACTION_SYSTEM.md)
+> 2. The initialization prompt: [action_customization.md](file:///f:/AQL/References/Prompt%20Library/Initialization/action_customization.md)
+> 3. The component registry: [components/REGISTRY.md](file:///f:/AQL/FRONTENT/src/components/REGISTRY.md)
 >
 > If the change also touches the Page/Section boundary, update
-> [UI_PAGE_AND_SECTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_PAGE_AND_SECTION_SYSTEM.md)
-> and [page_and_section_system.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/page_and_section_system.md).
+> [UI_PAGE_AND_SECTION_SYSTEM.md](file:///f:/AQL/Documents/UI_PAGE_AND_SECTION_SYSTEM.md)
+> and [page_and_section_system.md](file:///f:/AQL/References/Prompt%20Library/Initialization/page_and_section_system.md).

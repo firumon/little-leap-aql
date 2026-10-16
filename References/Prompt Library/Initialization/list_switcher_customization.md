@@ -1,14 +1,14 @@
-﻿# Scope Boundary: AQL List Switcher Customization
+# Scope Boundary: AQL List Switcher Customization
 
 This prompt instructs how to create or modify custom UI layouts, templates, and dynamic property modifiers for the AQL list switching components (`ListSwitcher` and `ListSwitcherItem`) inside the frontend.
 
 ## 1. Domain Map & Key Files
 
 Before making any changes, locate and read the following base components:
-- Base Container: [ListSwitcher.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/sections/ListSwitcher.vue)
-- Base Switcher Item: [ListSwitcherItem.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/sections/ListSwitcherItem.vue)
-- CSS Spacing & Brand Styles: [custom.scss](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/css/custom.scss)
-- Canonical Guide: [UI_LIST_SWITCHER.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_LIST_SWITCHER.md)
+- Base Container: [ListSwitcher.vue](file:///f:/AQL/FRONTENT/src/components/sections/ListSwitcher.vue)
+- Base Switcher Item: [ListSwitcherItem.vue](file:///f:/AQL/FRONTENT/src/components/sections/ListSwitcherItem.vue)
+- CSS Spacing & Brand Styles: [custom.scss](file:///f:/AQL/FRONTENT/src/css/custom.scss)
+- Canonical Guide: [UI_LIST_SWITCHER.md](file:///f:/AQL/Documents/UI_LIST_SWITCHER.md)
 
 ---
 
@@ -17,13 +17,13 @@ Before making any changes, locate and read the following base components:
 >
 > | File | Owns |
 > |---|---|
-> | [`dateHelpers.js`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/utils/dateHelpers.js) | `parseAnyDate`, `startOfDay`/`endOfDay`, `startOfMonth`/`endOfMonth`, `toDateOnly`, `toDateTime24`, `addDays`/`addMonths`, `dayOfYear`, `isoWeek`, `daysFromToday`. Handles BOTH sheet storage shapes (epoch ms in audit columns, ISO strings in business date columns). **Never hand-roll date parsing or day maths.** |
-> | [`sortHelpers.js`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/utils/sortHelpers.js) | `sortByDate(items, column, direction)` — `column` may be a key or a reader function. Sorts without copying rows (a `{ ...row }` spread would strip the non-enumerable relation getters `$outlet` / `_Parents`); unparseable dates sink to the end in both directions. |
-> | [`appHelpers.js`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/utils/appHelpers.js) | String/identity helpers used by every resolver — `toPascalCase` and friends. |
-> | [`colorHelpers.js`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/utils/colorHelpers.js) | `resolveCssColor(value, fallback)` — Quasar brand names, Material palette names and raw CSS all resolve to one inline custom property. |
-> | [`placeholderProps.js`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/utils/placeholderProps.js) | `resolvePlaceholderProps(props, identity, kind)` — the `Props<Identity>` merge. Call it in a resolver; never re-implement it inline. |
+> | [`dateHelpers.js`](file:///f:/AQL/FRONTENT/src/utils/dateHelpers.js) | `parseAnyDate`, `startOfDay`/`endOfDay`, `startOfMonth`/`endOfMonth`, `toDateOnly`, `toDateTime24`, `addDays`/`addMonths`, `dayOfYear`, `isoWeek`, `daysFromToday`. Handles BOTH sheet storage shapes (epoch ms in audit columns, ISO strings in business date columns). **Never hand-roll date parsing or day maths.** |
+> | [`sortHelpers.js`](file:///f:/AQL/FRONTENT/src/utils/sortHelpers.js) | `sortByDate(items, column, direction)` — `column` may be a key or a reader function. Sorts without copying rows (a `{ ...row }` spread would strip the non-enumerable relation getters `$outlet` / `_Parents`); unparseable dates sink to the end in both directions. |
+> | [`appHelpers.js`](file:///f:/AQL/FRONTENT/src/utils/appHelpers.js) | String/identity helpers used by every resolver — `toPascalCase` and friends. |
+> | [`colorHelpers.js`](file:///f:/AQL/FRONTENT/src/utils/colorHelpers.js) | `resolveCssColor(value, fallback)` — Quasar brand names, Material palette names and raw CSS all resolve to one inline custom property. |
+> | [`placeholderProps.js`](file:///f:/AQL/FRONTENT/src/utils/placeholderProps.js) | `resolvePlaceholderProps(props, identity, kind)` — the `Props<Identity>` merge. Call it in a resolver; never re-implement it inline. |
 >
-> **The rule this enforces**: a pure helper that is not resource knowledge belongs in `src/utils/`. It must NOT be duplicated into a `_ui/` composable, and a `_ui/` composable must NEVER import another resource's composable to borrow one — `_ui/**/OutletRestocks/**` reaching into `_ui/**/OutletVisits/**` is exactly the cross-resource dependency [CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/CORE_ARCHITECTURE_RULES.md) §5 forbids. Promote the helper to `src/utils/` and re-export it from the composable if the old import path must keep working.
+> **The rule this enforces**: a pure helper that is not resource knowledge belongs in `src/utils/`. It must NOT be duplicated into a `_ui/` composable, and a `_ui/` composable must NEVER import another resource's composable to borrow one — `_ui/**/OutletRestocks/**` reaching into `_ui/**/OutletVisits/**` is exactly the cross-resource dependency [CORE_ARCHITECTURE_RULES.md](file:///f:/AQL/Documents/CORE_ARCHITECTURE_RULES.md) §5 forbids. Promote the helper to `src/utils/` and re-export it from the composable if the old import path must keep working.
 
 ## 2. Override Resolution Logic
 
@@ -35,8 +35,8 @@ The registry lookup keys are:
 - Switcher Item: `'ListSwitcherItem'` (files: `ListSwitcherItem.vue` or `ListSwitcherItem.js`)
 
 ### 2.1 Sheet Config Dependency (App.Resources.ListViews)
-- **Sheet Setup**: Manage views via the `ListViews` column in `APP.Resources` spreadsheet. See [AQL Menu Admin Guide](file:///f:/LITTLE%20LEAP/AQL/Documents/SHEET_TOOLBAR_MENU_GUIDE.md#L201-L212).
-- **JSON Schema**: For operators, fields, and config array schema details, see [Resource Columns Guide](file:///f:/LITTLE%20LEAP/AQL/Documents/SCHEMA_RESOURCE_COLUMNS.md).
+- **Sheet Setup**: Manage views via the `ListViews` column in `APP.Resources` spreadsheet. See [AQL Menu Admin Guide](file:///f:/AQL/Documents/SHEET_TOOLBAR_MENU_GUIDE.md#L201-L212).
+- **JSON Schema**: For operators, fields, and config array schema details, see [Resource Columns Guide](file:///f:/AQL/Documents/SCHEMA_RESOURCE_COLUMNS.md).
 - **Conditional Overriding Criteria (Critical)**:
   1. **Empty String (Blank Cell)**: JS modifiers (`ListSwitcher.js`) and Vue overrides (`ListSwitcher.vue`) are **ALLOWED**. Resource falls back to default Active/Inactive views.
   2. **`[]` (Explicit Switch-Off Array)**: JS modifiers and Vue overrides are **DISABLED / IGNORED**. Views switcher is hidden/disabled.
@@ -70,9 +70,9 @@ export default function() {
 > Five keys remain owned by `ListSwitcher`'s per-item derivation and are layered on top, so a modifier or `PropsListSwitcherItem` block **cannot** override them: `item`, `active`, `label`, `icon`, `color`. Customize those through `ListSwitcher`'s own `label` / `icon` function props, which receive the item. Everything else merges normally.
 
 > [!TIP]
-> For plain value tweaks, a `Props<Identity>` block on the page contract avoids the file entirely — `PropsListSwitcher: { maxVisibleItems: 6 }`, or `PropsListSwitcherItem: { … }` for the items. A `.js` modifier still wins over it. See [UI_PAGE_AND_SECTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_PAGE_AND_SECTION_SYSTEM.md) §1.4.1. Note that a per-view item identity (`ListSwitcherItemApproved`) does **not** exist — the item resolver is switcher-wide, resolving the single identity `ListSwitcherItem`.
+> For plain value tweaks, a `Props<Identity>` block on the page contract avoids the file entirely — `PropsListSwitcher: { maxVisibleItems: 6 }`, or `PropsListSwitcherItem: { … }` for the items. A `.js` modifier still wins over it. See [UI_PAGE_AND_SECTION_SYSTEM.md](file:///f:/AQL/Documents/UI_PAGE_AND_SECTION_SYSTEM.md) §1.4.1. Note that a per-view item identity (`ListSwitcherItemApproved`) does **not** exist — the item resolver is switcher-wide, resolving the single identity `ListSwitcherItem`.
 
-**Full example with `filter` trees** — see the working reference at [`src/_ui/AQL/components/master/currencies/ListSwitcher.js`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/_ui/AQL/components/master/currencies/ListSwitcher.js):
+**Full example with `filter` trees** — see the working reference at [`src/_ui/AQL/components/master/currencies/ListSwitcher.js`](file:///f:/AQL/FRONTENT/src/_ui/AQL/components/master/currencies/ListSwitcher.js):
 ```javascript
 export default function() {
   return {
@@ -99,9 +99,9 @@ export default function() {
 - `name` (required): unique identifier, matched against `activeItem` and passed to `setActiveView(name)`.
 - `label` (optional): display text; falls back to `name`.
 - `icon` (optional): Quasar icon name.
-- `color` (optional): any brand name (`positive`, `primary`, ...), Quasar palette color (`red-10`, `light-blue-4`), or raw Hex/RGB value (`#e11d48`); resolved at runtime by `resolveCssColor()` in `src/utils/colorHelpers.js`. Defaults to `'primary'`. See [UI_LIST_SWITCHER.md §4.4](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_LIST_SWITCHER.md#44-dynamic-color-resolution).
+- `color` (optional): any brand name (`positive`, `primary`, ...), Quasar palette color (`red-10`, `light-blue-4`), or raw Hex/RGB value (`#e11d48`); resolved at runtime by `resolveCssColor()` in `src/utils/colorHelpers.js`. Defaults to `'primary'`. See [UI_LIST_SWITCHER.md §4.4](file:///f:/AQL/Documents/UI_LIST_SWITCHER.md#44-dynamic-color-resolution).
 - `default` (optional): marks the view auto-selected on initial load when there's no active URL/query state.
-- `filter` (optional): a **Group** (`{ type: 'group', logic: 'AND'|'OR', items: [...] }`) or **Condition** (`{ type: 'condition', column, operator, value }`) object evaluated per-row via `evaluateFilter()`. See [Resource Columns Guide](file:///f:/LITTLE%20LEAP/AQL/Documents/SCHEMA_RESOURCE_COLUMNS.md) and [UI_LIST_SWITCHER.md §5.1.1](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_LIST_SWITCHER.md#511-filter-json-schema-reference) for the full operator list (`eq`, `neq`, `in`, `not_in`, `gt`, `gte`, `lt`, `lte`, `contains`).
+- `filter` (optional): a **Group** (`{ type: 'group', logic: 'AND'|'OR', items: [...] }`) or **Condition** (`{ type: 'condition', column, operator, value }`) object evaluated per-row via `evaluateFilter()`. See [Resource Columns Guide](file:///f:/AQL/Documents/SCHEMA_RESOURCE_COLUMNS.md) and [UI_LIST_SWITCHER.md §5.1.1](file:///f:/AQL/Documents/UI_LIST_SWITCHER.md#511-filter-json-schema-reference) for the full operator list (`eq`, `neq`, `in`, `not_in`, `gt`, `gte`, `lt`, `lte`, `contains`).
 
 **Items resolution precedence** — `ListSwitcher.vue` uses the first non-null source:
 1. Explicit `items` prop (from this JS modifier, or an explicit template binding).

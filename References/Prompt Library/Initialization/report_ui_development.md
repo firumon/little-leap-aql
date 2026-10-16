@@ -1,8 +1,8 @@
-﻿# AQL Report UI & Feature Development
+# AQL Report UI & Feature Development
 
 > **Scope boundary**: This document covers the frontend user interface, composables, components, and Google Apps Script menu/dialog orchestration for the reports system. It includes `ResourceReports.vue`, `ReportInputDialog.vue`, `useReports.js` composable, `reportManager.html` Dialog, and `appMenu.gs` functions.
 > 
-> **CRITICAL RULE**: When performing Report UI or Feature Development, do **NOT** modify sheet formulas directly unless instructed. For formula logic and layout constraints, refer to [report_formula_generation.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/report_formula_generation.md).
+> **CRITICAL RULE**: When performing Report UI or Feature Development, do **NOT** modify sheet formulas directly unless instructed. For formula logic and layout constraints, refer to [report_formula_generation.md](file:///f:/AQL/References/Prompt%20Library/Initialization/report_formula_generation.md).
 
 Use this document to initialize an AI agent session when the task involves developing new report frontend features, customizing report buttons/cards, adding options/fields to the report input dialog, modifying the Reports composable, or adjusting the Sheets "Manage Reports" menu action.
 
@@ -15,16 +15,16 @@ The AQL report UI system coordinates data from `APP.Resources.Reports` configs t
 *   **Registry Configs**: Report rules are stored in `APP.Resources` in the `Reports` column. The registry controls sheet mapping, location rules (`isRecordLevel`), parameter definitions (`inputs`), and layout overrides (`pdfOptions`).
 *   **Menu Configurations**: The sheet menu action **AQL 🚀 > Manage Reports** renders `GAS/reportManager.html`. Saving inside this dialog writes directly to the `Reports` column and clears all config caches.
 *   **Web Frontend**:
-    *   [actions/ResourceReports.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/actions/ResourceReports.vue) — **preferred**. Report downloads as a page action: resolved via `useActionResolver`, mounted automatically by `PageAction` on non-form pages, by `FormActions` via `actions: [… 'reports' …]`, or directly as `<Action action="ResourceReports" mode="toolbar" />`. Overridable at all 10 `_ui/` tiers as `resourcereports.(vue|js)`. Modes: `fab` / `toolbar` / `card` / `inline`. Record context comes from the injected `resourceRecord`. Spec: [UI_ACTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_ACTION_SYSTEM.md) §3.5; customization routing: [action_customization.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/action_customization.md).
-    *   [Reports/ResourceReports.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/Reports/ResourceReports.vue) — **legacy**, direct-import path (auto-detects active resource context, displays record-level or toolbar-level report buttons). Retained unchanged for existing custom views/pages; do not add new call sites.
-    *   [useReports.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/reports/useReports.js) (Filters reports, preloads dynamic sources, parses inputs into cells, and triggers generation).
-    *   [ReportInputDialog.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/app/ReportInputDialog.vue) (Prompts for user inputs, handles select dropdown lists, date picking, toggles).
+    *   [actions/ResourceReports.vue](file:///f:/AQL/FRONTENT/src/components/actions/ResourceReports.vue) — **preferred**. Report downloads as a page action: resolved via `useActionResolver`, mounted automatically by `PageAction` on non-form pages, by `FormActions` via `actions: [… 'reports' …]`, or directly as `<Action action="ResourceReports" mode="toolbar" />`. Overridable at all 10 `_ui/` tiers as `resourcereports.(vue|js)`. Modes: `fab` / `toolbar` / `card` / `inline`. Record context comes from the injected `resourceRecord`. Spec: [UI_ACTION_SYSTEM.md](file:///f:/AQL/Documents/UI_ACTION_SYSTEM.md) §3.5; customization routing: [action_customization.md](file:///f:/AQL/References/Prompt%20Library/Initialization/action_customization.md).
+    *   [Reports/ResourceReports.vue](file:///f:/AQL/FRONTENT/src/components/Reports/ResourceReports.vue) — **legacy**, direct-import path (auto-detects active resource context, displays record-level or toolbar-level report buttons). Retained unchanged for existing custom views/pages; do not add new call sites.
+    *   [useReports.js](file:///f:/AQL/FRONTENT/src/composables/reports/useReports.js) (Filters reports, preloads dynamic sources, parses inputs into cells, and triggers generation).
+    *   [ReportInputDialog.vue](file:///f:/AQL/FRONTENT/src/components/app/ReportInputDialog.vue) (Prompts for user inputs, handles select dropdown lists, date picking, toggles).
 
 **Key File Coordinates**:
-*   Detailed Guide: [FEATURE_REPORTS_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/FEATURE_REPORTS_SYSTEM.md)
-*   Frontend Components: [ResourceReports.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/Reports/ResourceReports.vue) and [ReportInputDialog.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/app/ReportInputDialog.vue)
-*   Frontend Composable: [useReports.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/reports/useReports.js)
-*   GAS Dialog & Save: [reportManager.html](file:///f:/LITTLE%20LEAP/AQL/GAS/reportManager.html) and [appMenu.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/appMenu.gs)
+*   Detailed Guide: [FEATURE_REPORTS_SYSTEM.md](file:///f:/AQL/Documents/FEATURE_REPORTS_SYSTEM.md)
+*   Frontend Components: [ResourceReports.vue](file:///f:/AQL/FRONTENT/src/components/Reports/ResourceReports.vue) and [ReportInputDialog.vue](file:///f:/AQL/FRONTENT/src/components/app/ReportInputDialog.vue)
+*   Frontend Composable: [useReports.js](file:///f:/AQL/FRONTENT/src/composables/reports/useReports.js)
+*   GAS Dialog & Save: [reportManager.html](file:///f:/AQL/GAS/reportManager.html) and [appMenu.gs](file:///f:/AQL/GAS/appMenu.gs)
 
 ---
 

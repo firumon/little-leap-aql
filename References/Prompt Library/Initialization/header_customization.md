@@ -1,8 +1,8 @@
-﻿# AQL Unified Header Customization Guide (Initialization)
+# AQL Unified Header Customization Guide (Initialization)
 
 Use this document to initialize an AI agent session when the task involves customizing, overriding, or debugging the resource header across any page (Index, Add, Edit, View, Action) in the AQL repository.
 
-> **Scope Boundary**: This document covers both JS logic modifiers and template-based local header customizations, dynamic properties resolution, and back/reload button behaviors. Refer to [CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/CORE_ARCHITECTURE_RULES.md) for general frontend rules.
+> **Scope Boundary**: This document covers both JS logic modifiers and template-based local header customizations, dynamic properties resolution, and back/reload button behaviors. Refer to [CORE_ARCHITECTURE_RULES.md](file:///f:/AQL/Documents/CORE_ARCHITECTURE_RULES.md) for general frontend rules.
 
 ---
 
@@ -10,12 +10,12 @@ Use this document to initialize an AI agent session when the task involves custo
 
 The header uses a **two-tier architecture** that separates resolution (Vite glob registration and override matching) from presentation (rendering and slots):
 
-1. **Orchestrator Shell**: [PageHeader.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/sections/PageHeader.vue)
-   - The central section component loaded via [Section.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/Section.vue).
+1. **Orchestrator Shell**: [PageHeader.vue](file:///f:/AQL/FRONTENT/src/components/sections/PageHeader.vue)
+   - The central section component loaded via [Section.vue](file:///f:/AQL/FRONTENT/src/components/Section.vue).
    - Injects `resourceConfig` and `resourceRecord` page contexts.
-   - [Section.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/Section.vue) resolves custom overrides or modifiers using [useSectionResolver.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/useSectionResolver.js) (which scans `_ui/` for custom components/modifiers under section name `'PageHeader'`).
+   - [Section.vue](file:///f:/AQL/FRONTENT/src/components/Section.vue) resolves custom overrides or modifiers using [useSectionResolver.js](file:///f:/AQL/FRONTENT/src/composables/resources/useSectionResolver.js) (which scans `_ui/` for custom components/modifiers under section name `'PageHeader'`).
    - If a custom template is found, Vue renders it directly. If a JS modifier (`PageHeader.js`) is found, `useSectionResolver` merges configurations, evaluates properties via `evaluateProp`, and renders the base `PageHeader.vue` layer.
-2. **Presentation Foundation**: [Header.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/app/Header.vue)
+2. **Presentation Foundation**: [Header.vue](file:///f:/AQL/FRONTENT/src/components/app/Header.vue)
    - Houses the Quasar flex layout, styling, and standard slots.
    - Renders titles, subtitles, status chips, and back/reload button setups.
 
@@ -52,7 +52,7 @@ The `back` property defined in a local JS modifier override (`PageHeader.js`) is
 ## 4. Local Customization Patterns
 
 ### Pattern 1: JS Logic Modifier (Preferred for prop changes)
-Create a `.js` file inside the resource components directory under custom UI (e.g. `src/_ui/AQL/components/`) to modify the header props. You only need to return the properties you want to override; [useSectionResolver.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/useSectionResolver.js) automatically merges them, and `PageHeader.vue` evaluates any function props via `evaluateProp`, passing `(record, config)` unwrapped context arguments to any function values.
+Create a `.js` file inside the resource components directory under custom UI (e.g. `src/_ui/AQL/components/`) to modify the header props. You only need to return the properties you want to override; [useSectionResolver.js](file:///f:/AQL/FRONTENT/src/composables/resources/useSectionResolver.js) automatically merges them, and `PageHeader.vue` evaluates any function props via `evaluateProp`, passing `(record, config)` unwrapped context arguments to any function values.
 
 #### `src/_ui/AQL/components/master/Products/Index/PageHeader.js`
 ```javascript

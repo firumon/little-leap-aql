@@ -31,8 +31,8 @@ The resolver changes when the sheet or the user changes (sheet edits, login perm
 ### Where it lives and how it travels
 
 1. It lives in the Google Sheet named `App.Resources`. Each resource has one row. The column is named `Dashboard`.
-2. The column is created in [setupAppSheets.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/setupAppSheets.gs).
-3. The server reads the cell and turns it into JSON in [resourceRegistry.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/resourceRegistry.gs).
+2. The column is created in [setupAppSheets.gs](file:///f:/AQL/GAS/setupAppSheets.gs).
+3. The server reads the cell and turns it into JSON in [resourceRegistry.gs](file:///f:/AQL/GAS/resourceRegistry.gs).
 4. It arrives in the app inside metadata as `cfg.ui.dashboard`.
 
 For the complete key ownership table and detailed ARD JSON keys, see [FEATURE_DASHBOARD_ENGINE_CUSTOMIZATION.md](FEATURE_DASHBOARD_ENGINE_CUSTOMIZATION.md).

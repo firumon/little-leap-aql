@@ -1,10 +1,10 @@
-﻿# AQL UI — Design System
+# AQL UI — Design System
 
 The human-readable half of `_ui/AQL/_config/`. `config.js` beside this file holds the
 values; this file says what they mean and why they hold those values.
 
 Read this before changing a token. Read
-[UI_MODULE_DEVELOPER_GUIDE.md §10](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_MODULE_DEVELOPER_GUIDE.md)
+[UI_MODULE_DEVELOPER_GUIDE.md §10](file:///f:/AQL/Documents/UI_MODULE_DEVELOPER_GUIDE.md)
 for the rules that make these tokens mandatory rather than advisory.
 
 ---
@@ -242,7 +242,7 @@ Two accented cards on one page means neither is emphasised.
 ## 4. Where the CSS lives
 
 The rules these class names refer to are in
-[`FRONTENT/src/css/custom.scss`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/css/custom.scss),
+[`FRONTENT/src/css/custom.scss`](file:///f:/AQL/FRONTENT/src/css/custom.scss),
 globally scoped, shared with the framework's own components. No resolver-backed component
 may carry a `<style>` block — a `.vue` override cannot inherit a scoped style, so scoped CSS
 silently breaks the override contract.
@@ -263,5 +263,5 @@ them are AQL's own.
    person who finds it inconvenient.
 3. If the change adds or renames a class, update `custom.scss` in the same commit.
 4. If the change alters what the guide's §10 promises, update
-   [UI_MODULE_DEVELOPER_GUIDE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_MODULE_DEVELOPER_GUIDE.md)
+   [UI_MODULE_DEVELOPER_GUIDE.md](file:///f:/AQL/Documents/UI_MODULE_DEVELOPER_GUIDE.md)
    too.

@@ -262,7 +262,7 @@ state exists for) or under-asks (letting an unpermitted user perform the first).
 
 > [!IMPORTANT]
 > **Zero UI Schema Invention**: `PageAction.js`, action handlers, and custom forms must **never** construct secondary or child business records directly inside `_ui/`. 
-> When a submission on Resource A causes side-effects or creates records in Resource B (e.g. Order → Invoice, Audit → Restock, Approval → Audit Logs), all batch request construction and permission aggregation must be delegated to the primary resource's Layer 2 Domain Payload Builder (`src/_resource/{Scope}/{Resource}/composables/use{Resource}Payload.js`). See [UI_RESOURCE_DOMAIN_LOGIC.md §9](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_RESOURCE_DOMAIN_LOGIC.md#9-domain-payload-chain-architecture) for the full specification.
+> When a submission on Resource A causes side-effects or creates records in Resource B (e.g. Order → Invoice, Audit → Restock, Approval → Audit Logs), all batch request construction and permission aggregation must be delegated to the primary resource's Layer 2 Domain Payload Builder (`src/_resource/{Scope}/{Resource}/composables/use{Resource}Payload.js`). See [UI_RESOURCE_DOMAIN_LOGIC.md §9](file:///f:/AQL/Documents/UI_RESOURCE_DOMAIN_LOGIC.md#9-domain-payload-chain-architecture) for the full specification.
 
 #### Standard Consumption Pattern in `PageAction.js`
 

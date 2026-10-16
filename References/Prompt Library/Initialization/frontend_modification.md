@@ -11,17 +11,17 @@ Use this document to initialize an AI agent session when the task involves modif
 >
 > | File | Owns |
 > |---|---|
-> | [`dateHelpers.js`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/utils/dateHelpers.js) | `parseAnyDate`, `startOfDay`/`endOfDay`, `startOfMonth`/`endOfMonth`, `toDateOnly`, `toDateTime24`, `addDays`/`addMonths`, `dayOfYear`, `isoWeek`, `daysFromToday`. Handles BOTH sheet storage shapes (epoch ms in audit columns, ISO strings in business date columns). **Never hand-roll date parsing or day maths.** |
-> | [`sortHelpers.js`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/utils/sortHelpers.js) | `sortByDate(items, column, direction)` — `column` may be a key or a reader function. Sorts without copying rows (a `{ ...row }` spread would strip the non-enumerable relation getters `$outlet` / `_Parents`); unparseable dates sink to the end in both directions. |
-> | [`appHelpers.js`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/utils/appHelpers.js) | String/identity helpers used by every resolver — `toPascalCase` and friends. |
-> | [`colorHelpers.js`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/utils/colorHelpers.js) | `resolveCssColor(value, fallback)` — Quasar brand names, Material palette names and raw CSS all resolve to one inline custom property. |
-> | [`placeholderProps.js`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/utils/placeholderProps.js) | `resolvePlaceholderProps(props, identity, kind)` — the `Props<Identity>` merge. Call it in a resolver; never re-implement it inline. |
+> | [`dateHelpers.js`](file:///f:/AQL/FRONTENT/src/utils/dateHelpers.js) | `parseAnyDate`, `startOfDay`/`endOfDay`, `startOfMonth`/`endOfMonth`, `toDateOnly`, `toDateTime24`, `addDays`/`addMonths`, `dayOfYear`, `isoWeek`, `daysFromToday`. Handles BOTH sheet storage shapes (epoch ms in audit columns, ISO strings in business date columns). **Never hand-roll date parsing or day maths.** |
+> | [`sortHelpers.js`](file:///f:/AQL/FRONTENT/src/utils/sortHelpers.js) | `sortByDate(items, column, direction)` — `column` may be a key or a reader function. Sorts without copying rows (a `{ ...row }` spread would strip the non-enumerable relation getters `$outlet` / `_Parents`); unparseable dates sink to the end in both directions. |
+> | [`appHelpers.js`](file:///f:/AQL/FRONTENT/src/utils/appHelpers.js) | String/identity helpers used by every resolver — `toPascalCase` and friends. |
+> | [`colorHelpers.js`](file:///f:/AQL/FRONTENT/src/utils/colorHelpers.js) | `resolveCssColor(value, fallback)` — Quasar brand names, Material palette names and raw CSS all resolve to one inline custom property. |
+> | [`placeholderProps.js`](file:///f:/AQL/FRONTENT/src/utils/placeholderProps.js) | `resolvePlaceholderProps(props, identity, kind)` — the `Props<Identity>` merge. Call it in a resolver; never re-implement it inline. |
 >
-> **The rule this enforces**: a pure helper that is not resource knowledge belongs in `src/utils/`. It must NOT be duplicated into a `_ui/` composable, and a `_ui/` composable must NEVER import another resource's composable to borrow one — `_ui/**/OutletRestocks/**` reaching into `_ui/**/OutletVisits/**` is exactly the cross-resource dependency [CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/CORE_ARCHITECTURE_RULES.md) §5 forbids. Promote the helper to `src/utils/` and re-export it from the composable if the old import path must keep working.
+> **The rule this enforces**: a pure helper that is not resource knowledge belongs in `src/utils/`. It must NOT be duplicated into a `_ui/` composable, and a `_ui/` composable must NEVER import another resource's composable to borrow one — `_ui/**/OutletRestocks/**` reaching into `_ui/**/OutletVisits/**` is exactly the cross-resource dependency [CORE_ARCHITECTURE_RULES.md](file:///f:/AQL/Documents/CORE_ARCHITECTURE_RULES.md) §5 forbids. Promote the helper to `src/utils/` and re-export it from the composable if the old import path must keep working.
 
 ## 1. Role Boundaries (Mandatory)
 
-Before proceeding, read and follow the role boundaries defined in [References/Prompt Library/MAP.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt Library/MAP.md). Your default role is `Guide Agent`. To execute frontend modifications, you must be in the `Solo Agent` or `Build Agent` role — state the role switch briefly to the user.
+Before proceeding, read and follow the role boundaries defined in [References/Prompt Library/MAP.md](file:///f:/AQL/References/Prompt Library/MAP.md). Your default role is `Guide Agent`. To execute frontend modifications, you must be in the `Solo Agent` or `Build Agent` role — state the role switch briefly to the user.
 
 ---
 
@@ -40,20 +40,20 @@ AQL's frontend stack consists of Vue 3, Quasar Framework (v2), Pinia state manag
 ## 3. Mandatory Pre-Reads (With Line-Level Links)
 
 Before writing any code under `FRONTENT/`, you must read the following architectural rules:
-* Core Architectural Boundaries: [AQL Frontend Architecture Rules in CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/CORE_ARCHITECTURE_RULES.md#L1-L77)
-* General Frontend Layout conventions: [CORE_OVERVIEW.md](file:///f:/LITTLE%20LEAP/AQL/Documents/CORE_OVERVIEW.md)
-* Login Payload Specification: [API_LOGIN_RESPONSE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/API_LOGIN_RESPONSE.md)
+* Core Architectural Boundaries: [AQL Frontend Architecture Rules in CORE_ARCHITECTURE_RULES.md](file:///f:/AQL/Documents/CORE_ARCHITECTURE_RULES.md#L1-L77)
+* General Frontend Layout conventions: [CORE_OVERVIEW.md](file:///f:/AQL/Documents/CORE_OVERVIEW.md)
+* Login Payload Specification: [API_LOGIN_RESPONSE.md](file:///f:/AQL/Documents/API_LOGIN_RESPONSE.md)
 
 Depending on the widgets or workflows being modified, inspect the current registries:
-* Reusable Components: [components/REGISTRY.md](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/REGISTRY.md)
-* Reusable Composables: [composables/REGISTRY.md](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/REGISTRY.md)
-* If the task involves the dashboard engine or data items: [FEATURE_DASHBOARD_ENGINE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/FEATURE_DASHBOARD_ENGINE.md)
+* Reusable Components: [components/REGISTRY.md](file:///f:/AQL/FRONTENT/src/components/REGISTRY.md)
+* Reusable Composables: [composables/REGISTRY.md](file:///f:/AQL/FRONTENT/src/composables/REGISTRY.md)
+* If the task involves the dashboard engine or data items: [FEATURE_DASHBOARD_ENGINE.md](file:///f:/AQL/Documents/FEATURE_DASHBOARD_ENGINE.md)
 
 If backend metadata configuration, synced resources, or API options are required, refer to:
-* [GAS/Constants.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/Constants.gs) (contains `appOptions` source of truth)
-* [GAS/syncAppResources.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/syncAppResources.gs) (source of truth for synced resources and columns)
-* Backend API Capabilities: [Documents/GAS_API_CAPABILITIES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/GAS_API_CAPABILITIES.md)
-* Architecture & Record Access: [Documents/CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/CORE_ARCHITECTURE_RULES.md) and [Documents/UI_RECORD_ACCESS.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_RECORD_ACCESS.md)
+* [GAS/Constants.gs](file:///f:/AQL/GAS/Constants.gs) (contains `appOptions` source of truth)
+* [GAS/syncAppResources.gs](file:///f:/AQL/GAS/syncAppResources.gs) (source of truth for synced resources and columns)
+* Backend API Capabilities: [Documents/GAS_API_CAPABILITIES.md](file:///f:/AQL/Documents/GAS_API_CAPABILITIES.md)
+* Architecture & Record Access: [Documents/CORE_ARCHITECTURE_RULES.md](file:///f:/AQL/Documents/CORE_ARCHITECTURE_RULES.md) and [Documents/UI_RECORD_ACCESS.md](file:///f:/AQL/Documents/UI_RECORD_ACCESS.md)
 
 ---
 
@@ -72,7 +72,7 @@ If backend metadata configuration, synced resources, or API options are required
 
 ### Step 1: Pre-requisite Discovery & Blast Radius Scan (DO NOT SKIP)
 Before modifying code:
-1. **Search Registry**: Check [components/REGISTRY.md](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/REGISTRY.md) and [composables/REGISTRY.md](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/REGISTRY.md) to see if a reusable block already exists that fulfills or can be extended for this task.
+1. **Search Registry**: Check [components/REGISTRY.md](file:///f:/AQL/FRONTENT/src/components/REGISTRY.md) and [composables/REGISTRY.md](file:///f:/AQL/FRONTENT/src/composables/REGISTRY.md) to see if a reusable block already exists that fulfills or can be extended for this task.
 2. **Blast Radius Scan**: Search the codebase to identify all pages or parent layouts that consume the component or composable you plan to edit.
 3. **Seek Clarification**: Propose your design changes, list impacted files, highlight how the single source of truth is preserved, and seek user confirmation before code implementation.
 
@@ -85,9 +85,9 @@ Before modifying code:
 
 ### Step 3: Registry & Documentation Updates
 1. If a new reusable composable or component is created (or signature changes), log it in the corresponding registry:
-   * [components/REGISTRY.md](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/REGISTRY.md)
-   * [composables/REGISTRY.md](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/REGISTRY.md)
-2. Ensure that any page or layout files added conform to [CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/CORE_ARCHITECTURE_RULES.md) and [UI_RECORD_ACCESS.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_RECORD_ACCESS.md).
+   * [components/REGISTRY.md](file:///f:/AQL/FRONTENT/src/components/REGISTRY.md)
+   * [composables/REGISTRY.md](file:///f:/AQL/FRONTENT/src/composables/REGISTRY.md)
+2. Ensure that any page or layout files added conform to [CORE_ARCHITECTURE_RULES.md](file:///f:/AQL/Documents/CORE_ARCHITECTURE_RULES.md) and [UI_RECORD_ACCESS.md](file:///f:/AQL/Documents/UI_RECORD_ACCESS.md).
 
 ---
 
@@ -124,5 +124,5 @@ To test changes in real time:
 ## 8. Communication Standards
 
 * **Role Declaration**: Explicitly state that you are acting as a **Frontend Developer**.
-* **Docs Declaration**: Explicitly list all required documents read (including [CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/CORE_ARCHITECTURE_RULES.md)) before proceeding with implementation.
+* **Docs Declaration**: Explicitly list all required documents read (including [CORE_ARCHITECTURE_RULES.md](file:///f:/AQL/Documents/CORE_ARCHITECTURE_RULES.md)) before proceeding with implementation.
 * **Architecture Compliance**: If a user request conflicts with the project's architecture rules, explain the conflict clearly and propose the compliant approach.

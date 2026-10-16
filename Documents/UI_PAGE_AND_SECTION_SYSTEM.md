@@ -1,4 +1,4 @@
-﻿# AQL Page and Section System Guide
+# AQL Page and Section System Guide
 
 This is the canonical reference document for developers and AI agents on AQL's dynamic page orchestration and layout section customization.
 
@@ -9,8 +9,8 @@ This is the canonical reference document for developers and AI agents on AQL's d
 > | Paradigm | Placeholder | Resolver | Base folder | Canonical doc |
 > |----------|-------------|----------|-------------|---------------|
 > | Section | `Section.vue` (`AqlSection`) | `useSectionResolver.js` | `components/sections/` | **this document** |
-> | Content | `Content.vue` (`AqlContent`) | `useContentResolver.js` | `components/contents/` | [UI_CONTENT_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_CONTENT_SYSTEM.md) |
-> | Action | `Action.vue` (`AqlAction`) | `useActionResolver.js` | `components/actions/` | [UI_ACTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_ACTION_SYSTEM.md) |
+> | Content | `Content.vue` (`AqlContent`) | `useContentResolver.js` | `components/contents/` | [UI_CONTENT_SYSTEM.md](file:///f:/AQL/Documents/UI_CONTENT_SYSTEM.md) |
+> | Action | `Action.vue` (`AqlAction`) | `useActionResolver.js` | `components/actions/` | [UI_ACTION_SYSTEM.md](file:///f:/AQL/Documents/UI_ACTION_SYSTEM.md) |
 >
 > **`PageAction` is no longer a Section.** It is mounted by `Page.vue` as
 > `<Action action="PageAction" />` through the Action subsystem. Everything about the
@@ -93,7 +93,7 @@ graph TD
 2. **Generic Section Layout**: If no custom page component is found, it renders placeholding `<Section>` components sequentially:
    - Sections in `visibleSectionsBeforeAction` (such as `Header`, `Toolbar`).
    - Content wrapper (`<AqlContentWrapper>`) wrapping the `contents` sections (e.g. list, details, or forms).
-   - Bottom page actions via `<Action action="PageAction" />` — the **Action subsystem**, not a Section. Mounted on every resource page outside `.aql-page-body`, gated only by `pageProps.noActions !== true` (see the callout in §1.1). Full spec: [UI_ACTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_ACTION_SYSTEM.md).
+   - Bottom page actions via `<Action action="PageAction" />` — the **Action subsystem**, not a Section. Mounted on every resource page outside `.aql-page-body`, gated only by `pageProps.noActions !== true` (see the callout in §1.1). Full spec: [UI_ACTION_SYSTEM.md](file:///f:/AQL/Documents/UI_ACTION_SYSTEM.md).
 3. **Context Provider**:
    - Provides `'resourceConfig'` (metadata configuration).
    - Provides `'resourceRecord'` (active record reference and loading state).
@@ -110,7 +110,7 @@ graph TD
 | Empty dataset | `empty` | Card with configurable icon/title/message |
 | Normal | none of the above | `<slot />` (the sections render) |
 
-Independently of those five states, `AqlContentWrapper` also renders a **submission overlay**: a `<q-inner-loading>` + `q-spinner-dots` covering the whole content area whenever `pageState.meta.submitting`/`.saving` is true. It injects `pageState` directly, so no page wiring is needed; the `submitting` prop (default `false`) is an opt-in force flag and `submittingLabel` (default `'Saving…'`) sets the caption. This is the **single** blocking indicator during a dispatch — form action buttons are disabled rather than spinner-loaded. See [UI_ACTION_SYSTEM.md §5](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_ACTION_SYSTEM.md).
+Independently of those five states, `AqlContentWrapper` also renders a **submission overlay**: a `<q-inner-loading>` + `q-spinner-dots` covering the whole content area whenever `pageState.meta.submitting`/`.saving` is true. It injects `pageState` directly, so no page wiring is needed; the `submitting` prop (default `false`) is an opt-in force flag and `submittingLabel` (default `'Saving…'`) sets the caption. This is the **single** blocking indicator during a dispatch — form action buttons are disabled rather than spinner-loaded. See [UI_ACTION_SYSTEM.md §5](file:///f:/AQL/Documents/UI_ACTION_SYSTEM.md).
 
 The `contentWrapperProps` computed in `usePageResolver.js` automatically derives these values per page type:
 
@@ -140,5 +140,5 @@ The `contentWrapperProps` computed in `usePageResolver.js` automatically derives
 
 > [!IMPORTANT]
 > **Documentation Sync Requirement**: Any modifications, refactoring, or additions to the Page/Section system structure (such as expanding page overrides, adding custom Vue-based page customization logic, or rewriting record/resource page flows) MUST be accompanied by updates to:
-> 1. This document: [UI_PAGE_AND_SECTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_PAGE_AND_SECTION_SYSTEM.md)
-> 2. The initialization prompt: [page_and_section_system.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/page_and_section_system.md)
+> 1. This document: [UI_PAGE_AND_SECTION_SYSTEM.md](file:///f:/AQL/Documents/UI_PAGE_AND_SECTION_SYSTEM.md)
+> 2. The initialization prompt: [page_and_section_system.md](file:///f:/AQL/References/Prompt%20Library/Initialization/page_and_section_system.md)

@@ -8,7 +8,7 @@ Use this document to initialize an AI agent session when the task requires modif
 
 ## 1. Role Boundaries (Mandatory)
 
-Before proceeding, read and follow the role boundaries defined in [References/Prompt Library/MAP.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt Library/MAP.md). Your default role is `Guide Agent`. To execute schema changes, you must be in the `Solo Agent` or `Build Agent` role — state the role switch briefly to the user.
+Before proceeding, read and follow the role boundaries defined in [References/Prompt Library/MAP.md](file:///f:/AQL/References/Prompt Library/MAP.md). Your default role is `Guide Agent`. To execute schema changes, you must be in the `Solo Agent` or `Build Agent` role — state the role switch briefly to the user.
 
 ---
 
@@ -18,12 +18,12 @@ AQL's database schema is defined in code (Google Apps Script project) and synced
 
 ### A. The Schema Setup Surface (Apps Script)
 Sheet structures are defined in the `GAS/` directory under separate files according to their scope:
-* **App Scope**: Configured in [setupAppSheets.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/setupAppSheets.gs)
-* **Master Scope**: Configured in [setupMasterSheets.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/setupMasterSheets.gs)
-* **Operation Scope**: Configured in [setupOperationSheets.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/setupOperationSheets.gs)
-* **Accounts Scope**: Configured in [setupAccountSheets.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/setupAccountSheets.gs)
-* **Metadata Sync Config**: Configured in `initAppResourcesCodeConfig()` within [syncAppResources.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/syncAppResources.gs). This config holds UI definitions, validations, default values, post-write hooks, and permission properties.
-* **Shared Utilities**: [setupSheetUtils.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/setupSheetUtils.gs) houses general spreadsheet-normalization helpers (e.g., `setup_normalizeSheetSchema` to dynamically insert columns, reorder headers, and apply formatting without losing historical row data).
+* **App Scope**: Configured in [setupAppSheets.gs](file:///f:/AQL/GAS/setupAppSheets.gs)
+* **Master Scope**: Configured in [setupMasterSheets.gs](file:///f:/AQL/GAS/setupMasterSheets.gs)
+* **Operation Scope**: Configured in [setupOperationSheets.gs](file:///f:/AQL/GAS/setupOperationSheets.gs)
+* **Accounts Scope**: Configured in [setupAccountSheets.gs](file:///f:/AQL/GAS/setupAccountSheets.gs)
+* **Metadata Sync Config**: Configured in `initAppResourcesCodeConfig()` within [syncAppResources.gs](file:///f:/AQL/GAS/syncAppResources.gs). This config holds UI definitions, validations, default values, post-write hooks, and permission properties.
+* **Shared Utilities**: [setupSheetUtils.gs](file:///f:/AQL/GAS/setupSheetUtils.gs) houses general spreadsheet-normalization helpers (e.g., `setup_normalizeSheetSchema` to dynamically insert columns, reorder headers, and apply formatting without losing historical row data).
 
 ### B. Core Data Flow & Propagation
 ```mermaid
@@ -40,17 +40,17 @@ graph TD
 ## 3. Mandatory Pre-Reads (With Line-Level Links)
 
 Before writing any code, you must read the following files:
-* Core Schema Normalizer: [setup_normalizeSheetSchema in setupSheetUtils.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/setupSheetUtils.gs#L15-L49)
-* Core Code-to-Sheet Sync Config: [initAppResourcesCodeConfig in syncAppResources.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/syncAppResources.gs#L11-L60)
-* Canonical Refactoring Procedures: [SCHEMA_REFACTORING_GUIDE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/SCHEMA_REFACTORING_GUIDE.md)
-* Resource Column Definition Guide: [SCHEMA_RESOURCE_COLUMNS.md](file:///f:/LITTLE%20LEAP/AQL/Documents/SCHEMA_RESOURCE_COLUMNS.md)
+* Core Schema Normalizer: [setup_normalizeSheetSchema in setupSheetUtils.gs](file:///f:/AQL/GAS/setupSheetUtils.gs#L15-L49)
+* Core Code-to-Sheet Sync Config: [initAppResourcesCodeConfig in syncAppResources.gs](file:///f:/AQL/GAS/syncAppResources.gs#L11-L60)
+* Canonical Refactoring Procedures: [SCHEMA_REFACTORING_GUIDE.md](file:///f:/AQL/Documents/SCHEMA_REFACTORING_GUIDE.md)
+* Resource Column Definition Guide: [SCHEMA_RESOURCE_COLUMNS.md](file:///f:/AQL/Documents/SCHEMA_RESOURCE_COLUMNS.md)
 
 Depending on the scope of the schema alteration, also read the corresponding sheet structure doc:
-* [SHEET_APP_STRUCTURE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/SHEET_APP_STRUCTURE.md)
-* [SHEET_MASTER_STRUCTURE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/SHEET_MASTER_STRUCTURE.md)
-* [SHEET_OPERATION_STRUCTURE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/SHEET_OPERATION_STRUCTURE.md)
-* [SHEET_ACCOUNTS_STRUCTURE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/SHEET_ACCOUNTS_STRUCTURE.md)
-* [SHEET_PROCUREMENT_STRUCTURE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/SHEET_PROCUREMENT_STRUCTURE.md)
+* [SHEET_APP_STRUCTURE.md](file:///f:/AQL/Documents/SHEET_APP_STRUCTURE.md)
+* [SHEET_MASTER_STRUCTURE.md](file:///f:/AQL/Documents/SHEET_MASTER_STRUCTURE.md)
+* [SHEET_OPERATION_STRUCTURE.md](file:///f:/AQL/Documents/SHEET_OPERATION_STRUCTURE.md)
+* [SHEET_ACCOUNTS_STRUCTURE.md](file:///f:/AQL/Documents/SHEET_ACCOUNTS_STRUCTURE.md)
+* [SHEET_PROCUREMENT_STRUCTURE.md](file:///f:/AQL/Documents/SHEET_PROCUREMENT_STRUCTURE.md)
 
 ---
 
@@ -84,11 +84,11 @@ Once approved by the user:
 1. Update corresponding resource domain logic under `FRONTENT/src/_resource/{Scope}/{Resource}/` to keep domain aggregations, enrichment mappings, and business rules synchronized with the altered schema and `APP.Resources` config.
 2. Update any Vue pages or custom dialogs under `FRONTENT/src/pages/` binding to the altered fields.
 3. Update feature workflows or input parsing in the corresponding composables under `FRONTENT/src/composables/`.
-4. Adhere strictly to the [CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/CORE_ARCHITECTURE_RULES.md), specifically keeping Vue page templates thin and encapsulating business/payload adjustments inside composables.
+4. Adhere strictly to the [CORE_ARCHITECTURE_RULES.md](file:///f:/AQL/Documents/CORE_ARCHITECTURE_RULES.md), specifically keeping Vue page templates thin and encapsulating business/payload adjustments inside composables.
 
 ### Step 4: Documentation Synchronization
-1. Document the column additions, removals, or type changes in the relevant sheet structure document under `Documents/` (e.g., [SHEET_OPERATION_STRUCTURE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/SHEET_OPERATION_STRUCTURE.md)).
-2. If the change modifies schema options or metadata columns, update [SCHEMA_RESOURCE_COLUMNS.md](file:///f:/LITTLE%20LEAP/AQL/Documents/SCHEMA_RESOURCE_COLUMNS.md).
+1. Document the column additions, removals, or type changes in the relevant sheet structure document under `Documents/` (e.g., [SHEET_OPERATION_STRUCTURE.md](file:///f:/AQL/Documents/SHEET_OPERATION_STRUCTURE.md)).
+2. If the change modifies schema options or metadata columns, update [SCHEMA_RESOURCE_COLUMNS.md](file:///f:/AQL/Documents/SCHEMA_RESOURCE_COLUMNS.md).
 3. If dependent Sheet Views or Reports were modified, update their corresponding documentation in `Sheet Formulas/Views/` or `Sheet Formulas/Reports/` and record the change in their `INDEX.md` files.
 
 ---

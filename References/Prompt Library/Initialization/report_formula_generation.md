@@ -1,4 +1,4 @@
-﻿# AQL Report Formula Generation & Maintenance
+# AQL Report Formula Generation & Maintenance
 
 > **Scope boundary**: This document covers Google Sheets report formulas and template configuration only — printable headers, LAMBDA row functions, virtual array calculations. Its references to frontend composables and backend GAS files are read-only.
 > 
@@ -19,10 +19,10 @@ AQL utilizes a hybrid architecture where the web frontend displays data and trig
 4. **Sheet Menu Connection**: Admin actions under the Google Sheet `AQL 🚀` menu (e.g. `Sync APP.Resources from Code`) load the report configs from code to sheet, and `Regenerate App Cache` warms up metadata.
 
 **Key File Locations**:
-- Backend Code: [reportGenerator.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/reportGenerator.gs)
-- Report Workflows: [WORKFLOW_OUTLET_OPERATIONS.md / WORKFLOW_PROCUREMENT.md — Section 1](file:///f:/LITTLE%20LEAP/AQL/Documents/WORKFLOW_OUTLET_OPERATIONS.md / WORKFLOW_PROCUREMENT.md#L97)
-- Sheet Formulas Index: [Sheet Formulas/Reports/INDEX.md](file:///f:/LITTLE%20LEAP/AQL/Sheet%20Formulas/Reports/INDEX.md)
-- Resource Config Guide: [SCHEMA_RESOURCE_COLUMNS.md](file:///f:/LITTLE%20LEAP/AQL/Documents/SCHEMA_RESOURCE_COLUMNS.md)
+- Backend Code: [reportGenerator.gs](file:///f:/AQL/GAS/reportGenerator.gs)
+- Report Workflows: [WORKFLOW_OUTLET_OPERATIONS.md / WORKFLOW_PROCUREMENT.md — Section 1](file:///f:/AQL/Documents/WORKFLOW_OUTLET_OPERATIONS.md / WORKFLOW_PROCUREMENT.md#L97)
+- Sheet Formulas Index: [Sheet Formulas/Reports/INDEX.md](file:///f:/AQL/Sheet%20Formulas/Reports/INDEX.md)
+- Resource Config Guide: [SCHEMA_RESOURCE_COLUMNS.md](file:///f:/AQL/Documents/SCHEMA_RESOURCE_COLUMNS.md)
 
 ---
 
@@ -44,23 +44,23 @@ To maintain a consistent, high-premium printable visual structure, every reporti
 If the user did not explicitly provide the resource name, scope, or column layout, resolve the target resource details, sheet layouts, and spreadsheet file IDs using this sequence:
 
 ### A. Resource and Scope Mapping
-If only a report name is provided, map it to its resource constant and scope in [GAS/Constants.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/Constants.gs):
+If only a report name is provided, map it to its resource constant and scope in [GAS/Constants.gs](file:///f:/AQL/GAS/Constants.gs):
 - **Master Scope**: `CONFIG.MASTER_SHEETS` (e.g., `Products`, `SKUs`, `Warehouses`).
 - **Operation Scope**: `CONFIG.OPERATION_SHEETS` (e.g., `Procurements`, `PurchaseRequisitions`, `OutletRestocks`).
 - **Accounts Scope**: `CONFIG.ACCOUNTS_SHEETS` (e.g., `ChartOfAccounts`, `TaxTransactions`).
 - **Core Scope**: `CONFIG.SHEETS` (e.g., `Users`, `Roles`).
 
 ### B. Resolving Sheet Columns
-Find the sheet columns/headers by reading the corresponding setup file for that scope under [GAS/](file:///f:/LITTLE%20LEAP/AQL/GAS/):
-- **Master Scope**: Refer to [setupMasterSheets.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/setupMasterSheets.gs).
-- **Operation Scope**: Refer to [setupOperationSheets.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/setupOperationSheets.gs).
-- **Accounts Scope**: Refer to [setupAccountSheets.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/setupAccountSheets.gs).
-- **Core Scope**: Refer to [setupAppSheets.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/setupAppSheets.gs).
+Find the sheet columns/headers by reading the corresponding setup file for that scope under [GAS/](file:///f:/AQL/GAS/):
+- **Master Scope**: Refer to [setupMasterSheets.gs](file:///f:/AQL/GAS/setupMasterSheets.gs).
+- **Operation Scope**: Refer to [setupOperationSheets.gs](file:///f:/AQL/GAS/setupOperationSheets.gs).
+- **Accounts Scope**: Refer to [setupAccountSheets.gs](file:///f:/AQL/GAS/setupAccountSheets.gs).
+- **Core Scope**: Refer to [setupAppSheets.gs](file:///f:/AQL/GAS/setupAppSheets.gs).
 
 Inside the setup file, locate the resource's schema definition (e.g., `headers` array) to see exact field indexes and order.
 
 ### C. File ID Lookup via VLOOKUP
-Spreadsheets for each scope are mapped in the `Config` sheet (which is imported in the report file using `IMPORTRANGE` as set up in [setupAppSheets.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/setupAppSheets.gs#L313-L335)). Use `VLOOKUP` to fetch their file IDs dynamically:
+Spreadsheets for each scope are mapped in the `Config` sheet (which is imported in the report file using `IMPORTRANGE` as set up in [setupAppSheets.gs](file:///f:/AQL/GAS/setupAppSheets.gs#L313-L335)). Use `VLOOKUP` to fetch their file IDs dynamically:
 - `VLOOKUP("MasterFileID", Config!A:B, 2, 0)` -> Master Spreadsheet File ID
 - `VLOOKUP("OperationFileID", Config!A:B, 2, 0)` -> Operation Spreadsheet File ID
 - `VLOOKUP("ViewsFileID", Config!A:B, 2, 0)` -> Views Spreadsheet File ID
@@ -70,7 +70,7 @@ Pass these resolved IDs into `IMPORTRANGE` calls inside the report's `LET` formu
 
 ### D. Prioritizing Views for Data Aggregation
 Before importing raw source sheets and building complex joins, always check if a pre-existing view matches the data requirements.
-- **Why**: Views connect, flatten, and denormalize dependent records (e.g., combining SKU, product, and variant fields into a single `SKU` view). Refer to [Sheet Formulas/Views/INDEX.md](file:///f:/LITTLE%20LEAP/AQL/Sheet%20Formulas/Views/INDEX.md) for existing views (e.g., `SKU`, `Outlet`, `WarehouseStock`, `OutletStock`).
+- **Why**: Views connect, flatten, and denormalize dependent records (e.g., combining SKU, product, and variant fields into a single `SKU` view). Refer to [Sheet Formulas/Views/INDEX.md](file:///f:/AQL/Sheet%20Formulas/Views/INDEX.md) for existing views (e.g., `SKU`, `Outlet`, `WarehouseStock`, `OutletStock`).
 - **Priority**: Always use a view as your primary data source if one is available.
 
 ### E. Resolving User Input Cell Dependencies
@@ -162,7 +162,7 @@ List all source sheets and column indexes referenced by the formula:
 Explain the phases of the formula (Order Search, Timeline, Item Loops, Stacking).
 ```
 
-Always update the registry index [INDEX.md](file:///f:/LITTLE%20LEAP/AQL/Sheet%20Formulas/Reports/INDEX.md) to record the new template and its dependencies.
+Always update the registry index [INDEX.md](file:///f:/AQL/Sheet%20Formulas/Reports/INDEX.md) to record the new template and its dependencies.
 
 ---
 
@@ -183,7 +183,7 @@ Always update the registry index [INDEX.md](file:///f:/LITTLE%20LEAP/AQL/Sheet%2
 
 ### B. Documentation
 1. Verify that the formula documentation file exists in `Sheet Formulas/Reports/`.
-2. Verify that [INDEX.md](file:///f:/LITTLE%20LEAP/AQL/Sheet%20Formulas/Reports/INDEX.md) has been updated with the new or modified report entry.
+2. Verify that [INDEX.md](file:///f:/AQL/Sheet%20Formulas/Reports/INDEX.md) has been updated with the new or modified report entry.
 
 ### C. Code Deployment (If Backend Changes Were Made)
 1. Push GAS changes: `npm run gas:push` (or `cd GAS && clasp push`).

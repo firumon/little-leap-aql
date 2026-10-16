@@ -1,6 +1,6 @@
 # AQL Create & Update Content Systems
 
-This document is the complete canonical reference for the `Create` **and** `Update` content systems — the resource create/edit forms built from [Create.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/contents/Create.vue), [Update.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/contents/Update.vue), [FormRecord.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/contents/FormRecord.vue), and [FormChild.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/contents/FormChild.vue). It is a sibling document to [UI_CONTENT_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_CONTENT_SYSTEM.md), which covers the general `contents:` resolver, `List`, and `View`; `Create`/`Update` share that same resolver mechanics (§1 there) but have enough surface area (zero-hardcoding prop contract, five-step visibility precedence, three independent override hierarchies, custom-field storage rule, hydration lifecycle, child soft-deletion) to warrant their own canonical doc.
+This document is the complete canonical reference for the `Create` **and** `Update` content systems — the resource create/edit forms built from [Create.vue](file:///f:/AQL/FRONTENT/src/components/contents/Create.vue), [Update.vue](file:///f:/AQL/FRONTENT/src/components/contents/Update.vue), [FormRecord.vue](file:///f:/AQL/FRONTENT/src/components/contents/FormRecord.vue), and [FormChild.vue](file:///f:/AQL/FRONTENT/src/components/contents/FormChild.vue). It is a sibling document to [UI_CONTENT_SYSTEM.md](file:///f:/AQL/Documents/UI_CONTENT_SYSTEM.md), which covers the general `contents:` resolver, `List`, and `View`; `Create`/`Update` share that same resolver mechanics (§1 there) but have enough surface area (zero-hardcoding prop contract, five-step visibility precedence, three independent override hierarchies, custom-field storage rule, hydration lifecycle, child soft-deletion) to warrant their own canonical doc.
 
 `Create.vue` (content name `Create`, component name `ContentsCreate`) and `Update.vue` (content name `Update`, component name `ContentsUpdate`) are the framework's default create/edit contents, resolved exactly like `List`/`View`:
 
@@ -70,7 +70,7 @@ Section numbers are unchanged, so an existing `§N` reference still resolves —
 - **`Status` handling**: hidden by default and seeded with `statusDefault` (`'Active'`), so it submits without being editable. Pass `showStatus: true` (or `'show'`) — or list `'Status'` in `showFields` — to render it as a normal control instead, in which case it is **not** auto-seeded. Only applies when the resource actually has a `Status` column.
 - **Default value seeding**: any `defaultValues` entry whose header is currently `undefined` on the record is seeded the same way. `defaultValues` may be an object, a function, or an object of functions — see §5. Backend-authored `APP.Resources.DefaultValues` metadata is also folded into the same seeding pass, at the lowest precedence — see §5.1.
 - **Control rendering is type-driven, never hardcoded**: `FormRecord` contains no `field.type === '…'` branches and no Quasar control map. `useFormFields.mapField` resolves each field's props **and** its `fieldType`; the control is then mounted by `resolveFieldComponent(field.fieldType, mode)` → `_fields/<type>/<Add|Edit>.vue` — see §15.
-- **Date fields**: date controls (field type `date`/`datetime`, or any header ending in `Date`) render through `_fields/date/Add.vue`, which wraps [app/Date.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/app/Date.vue) and defaults an empty value to today (`YYYY-MM-DD`) on mount.
+- **Date fields**: date controls (field type `date`/`datetime`, or any header ending in `Date`) render through `_fields/date/Add.vue`, which wraps [app/Date.vue](file:///f:/AQL/FRONTENT/src/components/app/Date.vue) and defaults an empty value to today (`YYYY-MM-DD`) on mount.
 - **Resource options selects**: when `useFormFields` finds an option list under `config.ui.options[Column]` (from `APP.Resources.Options`), that column resolves to `fieldType: 'select'` and renders through `_fields/select/Add.vue` (a filterable `QSelect`) populated from the options array.
 - **Child record caps**: `FormChild`'s `maxRecords` prop (default `0` = unlimited) caps how many added record entries a child bucket may hold — see §12.
 - **Dynamic child suppression**: alongside `hideChild`/`hideChildren`, `Create` also honors a dynamic `hide<ResourceName>: true` (or `hide<Slug>` / `hide<PascalName>`) prop or `$attrs` flag per eligible child — see §11.
@@ -98,7 +98,7 @@ Every Add, Edit, action, and custom sub-route page auto-saves the user's input t
 `localStorage` and restores it on the next visit. It is on by default; no page,
 content, or `_ui/` override has to ask for it.
 
-**Canonical spec: [UI_PAGE_STATE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_PAGE_STATE.md) §10.** Only the
+**Canonical spec: [UI_PAGE_STATE.md](file:///f:/AQL/Documents/UI_PAGE_STATE.md) §10.** Only the
 form-side facts are repeated here.
 
 ### 16.1 What this means for `Create.vue` / `Update.vue` / `FormRecord` / `FormChild`
@@ -142,7 +142,7 @@ user left.
 - A **successful** `submit()` clears the draft.
 - A **failed** submit keeps it — a network or validation failure must not cost the
   user their work.
-- `FormActionReset` and `FormActionCancel` (§ [UI_ACTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_ACTION_SYSTEM.md))
+- `FormActionReset` and `FormActionCancel` (§ [UI_ACTION_SYSTEM.md](file:///f:/AQL/Documents/UI_ACTION_SYSTEM.md))
   both clear it — Reset and leaving via Cancel both mean "discard my unsaved work".
 - Logout keeps it. Drafts are not session data.
 

@@ -58,7 +58,7 @@ Custom JS logic modifier file created at `src/_ui/[UiName]/components/[scope]/[R
 * `fieldConfigs` (object): Specific field definitions.
 
 ##### Date Fields
-Form inputs of type `'date'` render using [AppDate.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/shared/AppDate.vue) for masked typing and a custom calendar pop-up.
+Form inputs of type `'date'` render using [AppDate.vue](file:///f:/AQL/FRONTENT/src/components/shared/AppDate.vue) for masked typing and a custom calendar pop-up.
 
 #### Example Form Modifier
 ```javascript
@@ -98,7 +98,7 @@ export default function (props) {
 
 ### 5.3 `Create` — The Built-In Create Content Component
 
-[Create.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/contents/Create.vue) (registered content name `Create`, component name `ContentsCreate`) is the framework's default resource-creation content, resolved exactly like `List`/`View` via `contents: ['Create']`:
+[Create.vue](file:///f:/AQL/FRONTENT/src/components/contents/Create.vue) (registered content name `Create`, component name `ContentsCreate`) is the framework's default resource-creation content, resolved exactly like `List`/`View` via `contents: ['Create']`:
 
 ```javascript
 // src/pages/Master/create.js
@@ -110,7 +110,7 @@ export default {
 
 `Create` renders the primary resource's input form (`FormRecord`) plus one `FormChild` per eligible child resource (resources whose `ParentResource` equals the active resource) — never a parent-relation form. All input lands directly in the shared `pageState` reactive tree via `setRecord`/`setControls`/`addChild`/`updateChild`; submit is owned entirely by `PageAction` sections. Both components follow a strict **zero-hardcoding contract** — every default label, class, colour, and behaviour is an overrideable prop — and a four-step field-visibility precedence chain: **`showFields` > `hideFields` > `workflowFields`** (with `Status` hidden + seeded `'Active'` by default). Non-schema "custom" fields are routed to `pageState.setControl`/`node.controls`, never `node.record`.
 
-**Full canonical reference — component anatomy, complete prop tables, the visibility precedence chain, `defaultValues`/`fieldProps` function resolution, the three independent override hierarchies (`FormChild<ChildName>`, `FormRecord`, `FormField<Header>` — `_ui/*` only, no framework fallback), whole-content `create.vue`/`create.js` and `update.vue`/`update.js` overrides, `Update.vue`'s hydration lifecycle, and child soft-deletion — lives in [UI_CREATE_AND_UPDATE_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_CREATE_AND_UPDATE_SYSTEM.md).**
+**Full canonical reference — component anatomy, complete prop tables, the visibility precedence chain, `defaultValues`/`fieldProps` function resolution, the three independent override hierarchies (`FormChild<ChildName>`, `FormRecord`, `FormField<Header>` — `_ui/*` only, no framework fallback), whole-content `create.vue`/`create.js` and `update.vue`/`update.js` overrides, `Update.vue`'s hydration lifecycle, and child soft-deletion — lives in [UI_CREATE_AND_UPDATE_SYSTEM.md](file:///f:/AQL/Documents/UI_CREATE_AND_UPDATE_SYSTEM.md).**
 
 ---
 

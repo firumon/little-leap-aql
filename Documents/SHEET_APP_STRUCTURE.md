@@ -20,12 +20,12 @@ This document describes the APP spreadsheet as the control plane for authenticat
 
 ### AccessRegions
 - region hierarchy for scoped access (Code, Name, Parent)
-- canonical specification: [ACCESS_REGION_AND_POLICY_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ACCESS_REGION_AND_POLICY_SYSTEM.md#2-core-concepts)
+- canonical specification: [ACCESS_REGION_AND_POLICY_SYSTEM.md](file:///f:/AQL/Documents/ACCESS_REGION_AND_POLICY_SYSTEM.md#2-core-concepts)
 
 ### Designations
 - hierarchy/authority model
 - columns: `DesignationID`, `Name`, `ParentDesignationID`, `Status`, `AccessRegion`, `DashboardScoreCutoff`, `Description`
-- `AccessRegion` holds the active region scope for users with this designation (resolved during login/profile fetch; see [ACCESS_REGION_AND_POLICY_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ACCESS_REGION_AND_POLICY_SYSTEM.md#23-how-a-user-gets-their-region))
+- `AccessRegion` holds the active region scope for users with this designation (resolved during login/profile fetch; see [ACCESS_REGION_AND_POLICY_SYSTEM.md](file:///f:/AQL/Documents/ACCESS_REGION_AND_POLICY_SYSTEM.md#23-how-a-user-gets-their-region))
 - `DashboardScoreCutoff` is a percentage from `0` to `100`. The app finds the lowest and
   highest current dashboard scores and calculates `threshold = min + (cutoff / 100) × (max - min)`.
   It keeps only items with a score strictly greater than this threshold. Blank or `0` (and any
@@ -42,20 +42,20 @@ This document describes the APP spreadsheet as the control plane for authenticat
 ### Resources
 - runtime metadata registry for backend and frontend
 - includes resource configuration columns such as `AccessPolicy` (5-digit octal ROPDU scope permissions), `AccessRegionSource` (JSON object of region inheritance paths), `Settings` (custom resource setting definitions), `Dashboard` (widget analytics declarations), and `Options` (resource-specific option lists, sitting immediately after `ListViews` and before `CustomUIName`)
-- column meanings are owned by [SCHEMA_RESOURCE_COLUMNS.md](file:///f:/LITTLE%20LEAP/AQL/Documents/SCHEMA_RESOURCE_COLUMNS.md); access policy and region source specifications are owned by [ACCESS_REGION_AND_POLICY_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ACCESS_REGION_AND_POLICY_SYSTEM.md)
+- column meanings are owned by [SCHEMA_RESOURCE_COLUMNS.md](file:///f:/AQL/Documents/SCHEMA_RESOURCE_COLUMNS.md); access policy and region source specifications are owned by [ACCESS_REGION_AND_POLICY_SYSTEM.md](file:///f:/AQL/Documents/ACCESS_REGION_AND_POLICY_SYSTEM.md)
 
 ### Config
 - deployment-specific settings such as file IDs and sync-related values
-- canonical specification and key catalogue: [CONFIG_KEYS_REFERENCE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/CONFIG_KEYS_REFERENCE.md)
+- canonical specification and key catalogue: [CONFIG_KEYS_REFERENCE.md](file:///f:/AQL/Documents/CONFIG_KEYS_REFERENCE.md)
 
 ## Setup
 APP structure is created/refreshed through setup/refactor scripts and related menu actions.
 
 ## Canonical Detail Owners
-- Resource column semantics: [SCHEMA_RESOURCE_COLUMNS.md](file:///f:/LITTLE%20LEAP/AQL/Documents/SCHEMA_RESOURCE_COLUMNS.md)
-- Resource/runtime routing: [SCHEMA_RESOURCE_REGISTRY.md](file:///f:/LITTLE%20LEAP/AQL/Documents/SCHEMA_RESOURCE_REGISTRY.md)
-- Setup flow: [TENANT_NEW_CLIENT_SETUP.md](file:///f:/LITTLE%20LEAP/AQL/Documents/TENANT_NEW_CLIENT_SETUP.md)
-- Config keys catalogue: [CONFIG_KEYS_REFERENCE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/CONFIG_KEYS_REFERENCE.md)
+- Resource column semantics: [SCHEMA_RESOURCE_COLUMNS.md](file:///f:/AQL/Documents/SCHEMA_RESOURCE_COLUMNS.md)
+- Resource/runtime routing: [SCHEMA_RESOURCE_REGISTRY.md](file:///f:/AQL/Documents/SCHEMA_RESOURCE_REGISTRY.md)
+- Setup flow: [TENANT_NEW_CLIENT_SETUP.md](file:///f:/AQL/Documents/TENANT_NEW_CLIENT_SETUP.md)
+- Config keys catalogue: [CONFIG_KEYS_REFERENCE.md](file:///f:/AQL/Documents/CONFIG_KEYS_REFERENCE.md)
 
 ## Maintenance Rule
 Update this file when:

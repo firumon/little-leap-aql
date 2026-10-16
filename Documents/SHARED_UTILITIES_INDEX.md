@@ -185,7 +185,7 @@ The resource's schema, permissions, default values, and data store access.
 
 **Node objects are written by hand.** There is no constructor module — `nodePayloads.js`
 was deleted on 2026-08-29. The Node shape is specified in
-[UI_PAGE_STATE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_PAGE_STATE.md) §5, and
+[UI_PAGE_STATE.md](file:///f:/AQL/Documents/UI_PAGE_STATE.md) §5, and
 `actionKeyFor` lives in
 `FRONTENT/src/composables/resources/pageState/usePageStateActions.js`.
 

@@ -11,29 +11,29 @@ Use this document to initialize an AI agent session when the task involves creat
 AQL's backend is a Google Apps Script (GAS) project that provides a generic, metadata-driven API. All CRUD operations, workflow transitions, and batch saves are handled through a single dispatcher that routes requests to the generic resource API.
 
 ### A. Core File Coordinates
-* **API Dispatcher**: [apiDispatcher.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/apiDispatcher.gs) — routes `doPost` requests to action handlers
-* **Session Proof & Cryptography**: [sessionProof.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/sessionProof.gs) — verifies dynamic rolling sessionKey proofs with asymmetric window (`stored - 2 <= clientGen <= stored + 30`; `SESSION_GEN_WINDOW_BACK = 2`, `SESSION_GEN_WINDOW_AHEAD = 30`), handles encoded `sessionResync` handshake on out-of-window rejections, manages unified `AQL_SESSION_...` cache
-* **Generic Resource API**: [resourceApi.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/resourceApi.gs) — handles get, create, update, bulk, compositeSave, executeAction, batch, record
-* **Resource Registry**: [resourceRegistry.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/resourceRegistry.gs) — resolves resource metadata, permissions, and sheet coordinates
-* **Resource Config (Code → Sheet Sync)**: [syncAppResources.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/syncAppResources.gs) — defines UIFields, RequiredHeaders, validation rules, PostAction hooks
-* **Constants & Options**: [Constants.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/Constants.gs) — app-wide constants and `appOptions`
-* **Auth & Login**: [auth.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/auth.gs) — handles `handleLogin`, session state seeding, profile mutations
+* **API Dispatcher**: [apiDispatcher.gs](file:///f:/AQL/GAS/apiDispatcher.gs) — routes `doPost` requests to action handlers
+* **Session Proof & Cryptography**: [sessionProof.gs](file:///f:/AQL/GAS/sessionProof.gs) — verifies dynamic rolling sessionKey proofs with asymmetric window (`stored - 2 <= clientGen <= stored + 30`; `SESSION_GEN_WINDOW_BACK = 2`, `SESSION_GEN_WINDOW_AHEAD = 30`), handles encoded `sessionResync` handshake on out-of-window rejections, manages unified `AQL_SESSION_...` cache
+* **Generic Resource API**: [resourceApi.gs](file:///f:/AQL/GAS/resourceApi.gs) — handles get, create, update, bulk, compositeSave, executeAction, batch, record
+* **Resource Registry**: [resourceRegistry.gs](file:///f:/AQL/GAS/resourceRegistry.gs) — resolves resource metadata, permissions, and sheet coordinates
+* **Resource Config (Code → Sheet Sync)**: [syncAppResources.gs](file:///f:/AQL/GAS/syncAppResources.gs) — defines UIFields, RequiredHeaders, validation rules, PostAction hooks
+* **Constants & Options**: [Constants.gs](file:///f:/AQL/GAS/Constants.gs) — app-wide constants and `appOptions`
+* **Auth & Login**: [auth.gs](file:///f:/AQL/GAS/auth.gs) — handles `handleLogin`, session state seeding, profile mutations
 * **PostAction Hook Files**: Domain-specific hook scripts:
-  - [stockMovements.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/stockMovements.gs) — warehouse stock balance updates
-  - [procurement.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/procurement.gs) — procurement workflow linking
-  - [outletMovements.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/outletMovements.gs) — outlet stock balance updates
-* **Sheet Utilities**: [sheetHelpers.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/sheetHelpers.gs) — low-level spreadsheet read/write helpers
-* **Archive Engine**: [archiveEngine.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/archiveEngine.gs) — handles periodic spreadsheet archive creation, parent/child row migration, and bottom-up row deletion
-* **Multi-Tenant Wrapper**: [tenant.gs](file:///f:/LITTLE%20LEAP/AQL/TENANTS/tenant.gs) — forwards spreadsheet menu actions, sheet triggers, and HTML dialog callbacks for each tenant sheet
+  - [stockMovements.gs](file:///f:/AQL/GAS/stockMovements.gs) — warehouse stock balance updates
+  - [procurement.gs](file:///f:/AQL/GAS/procurement.gs) — procurement workflow linking
+  - [outletMovements.gs](file:///f:/AQL/GAS/outletMovements.gs) — outlet stock balance updates
+* **Sheet Utilities**: [sheetHelpers.gs](file:///f:/AQL/GAS/sheetHelpers.gs) — low-level spreadsheet read/write helpers
+* **Archive Engine**: [archiveEngine.gs](file:///f:/AQL/GAS/archiveEngine.gs) — handles periodic spreadsheet archive creation, parent/child row migration, and bottom-up row deletion
+* **Multi-Tenant Wrapper**: [tenant.gs](file:///f:/AQL/TENANTS/tenant.gs) — forwards spreadsheet menu actions, sheet triggers, and HTML dialog callbacks for each tenant sheet
 
 ---
 
 ## 2. Mandatory Pre-Reads
 
 Before writing any GAS code:
-* API capabilities: [GAS_API_CAPABILITIES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/GAS_API_CAPABILITIES.md)
-* Implementation patterns: [GAS_PATTERNS.md](file:///f:/LITTLE%20LEAP/AQL/Documents/GAS_PATTERNS.md)
-* Resource config semantics: [SCHEMA_RESOURCE_COLUMNS.md](file:///f:/LITTLE%20LEAP/AQL/Documents/SCHEMA_RESOURCE_COLUMNS.md)
+* API capabilities: [GAS_API_CAPABILITIES.md](file:///f:/AQL/Documents/GAS_API_CAPABILITIES.md)
+* Implementation patterns: [GAS_PATTERNS.md](file:///f:/AQL/Documents/GAS_PATTERNS.md)
+* Resource config semantics: [SCHEMA_RESOURCE_COLUMNS.md](file:///f:/AQL/Documents/SCHEMA_RESOURCE_COLUMNS.md)
 
 ---
 
@@ -71,21 +71,21 @@ Rules:
 ## 4. Step-by-Step Implementation Checklist
 
 ### Step 1: Discovery & Blast Radius
-1. **Check existing capabilities**: Verify in [GAS_API_CAPABILITIES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/GAS_API_CAPABILITIES.md) whether a generic pattern already supports the requirement.
+1. **Check existing capabilities**: Verify in [GAS_API_CAPABILITIES.md](file:///f:/AQL/Documents/GAS_API_CAPABILITIES.md) whether a generic pattern already supports the requirement.
 2. **Search existing hooks**: Use `grep_search` in `GAS/` to find if a PostAction hook already exists for the target resource.
 3. **Identify dependencies**: Search for frontend composables, pages, or stores that call the backend action being modified.
 
 ### Step 2: Implementation
 1. **Prefer extending existing files**: Add new functions to existing hook files rather than creating new `.gs` files.
 2. **Follow hook naming conventions**: `handleResourceName` for base hooks, `handleResourceName_afterCreate` for action-specific hooks.
-3. **Update resource config**: If adding a PostAction, set it in `initAppResourcesCodeConfig()` within [syncAppResources.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/syncAppResources.gs).
-4. **Use sheet helpers**: Use `updateResourceRecordFieldsByCode()`, `getSheetDataAsObjects()` from [sheetHelpers.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/sheetHelpers.gs) rather than raw SpreadsheetApp calls.
-5. **Sync Tenant Wrapper**: If you add or modify sheet menus, spreadsheet triggers, or HTML dialog callbacks (`google.script.run`), you must add or update forwarding functions in [tenant.gs](file:///f:/LITTLE%20LEAP/AQL/TENANTS/tenant.gs).
+3. **Update resource config**: If adding a PostAction, set it in `initAppResourcesCodeConfig()` within [syncAppResources.gs](file:///f:/AQL/GAS/syncAppResources.gs).
+4. **Use sheet helpers**: Use `updateResourceRecordFieldsByCode()`, `getSheetDataAsObjects()` from [sheetHelpers.gs](file:///f:/AQL/GAS/sheetHelpers.gs) rather than raw SpreadsheetApp calls.
+5. **Sync Tenant Wrapper**: If you add or modify sheet menus, spreadsheet triggers, or HTML dialog callbacks (`google.script.run`), you must add or update forwarding functions in [tenant.gs](file:///f:/AQL/TENANTS/tenant.gs).
 
 ### Step 3: Documentation
-1. Update [GAS_PATTERNS.md](file:///f:/LITTLE%20LEAP/AQL/Documents/GAS_PATTERNS.md) if a new pattern was introduced.
-2. Update [GAS_API_CAPABILITIES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/GAS_API_CAPABILITIES.md) if a new capability was added.
-3. **Multi-Tenant Wrapper Sync**: If changes involve spreadsheet triggers, custom menu callbacks, or HTML dialog callbacks, update the forwarding functions in [tenant.gs](file:///f:/LITTLE%20LEAP/AQL/TENANTS/tenant.gs).
+1. Update [GAS_PATTERNS.md](file:///f:/AQL/Documents/GAS_PATTERNS.md) if a new pattern was introduced.
+2. Update [GAS_API_CAPABILITIES.md](file:///f:/AQL/Documents/GAS_API_CAPABILITIES.md) if a new capability was added.
+3. **Multi-Tenant Wrapper Sync**: If changes involve spreadsheet triggers, custom menu callbacks, or HTML dialog callbacks, update the forwarding functions in [tenant.gs](file:///f:/AQL/TENANTS/tenant.gs).
 
 ---
 
@@ -98,7 +98,7 @@ Rules:
 - **DO** use the generic resource API for all CRUD operations.
 - **DO** keep hook functions in domain-specific files (e.g., `stockMovements.gs`, `procurement.gs`).
 - **DO** verify that `payload.record` / `payload.data` nesting is correct — top-level write fields are rejected.
-- **DO** update [tenant.gs](file:///f:/LITTLE%20LEAP/AQL/TENANTS/tenant.gs) whenever adding or modifying sheet menu items, sheet triggers, or HTML dialog callbacks (`google.script.run`).
+- **DO** update [tenant.gs](file:///f:/AQL/TENANTS/tenant.gs) whenever adding or modifying sheet menu items, sheet triggers, or HTML dialog callbacks (`google.script.run`).
 
 ---
 

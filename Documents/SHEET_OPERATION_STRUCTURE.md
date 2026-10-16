@@ -92,7 +92,7 @@ This document describes the current operation-scope sheet families and their rol
 
 ## Notes
 - Exact code prefixes and hook/update behavior are owned by runtime/config docs rather than this file.
-- Use [WORKFLOW_OUTLET_OPERATIONS.md / WORKFLOW_PROCUREMENT.md](F:/LITTLE%20LEAP/AQL/Documents/WORKFLOW_OUTLET_OPERATIONS.md / WORKFLOW_PROCUREMENT.md) for documented module flow details.
+- Use [WORKFLOW_OUTLET_OPERATIONS.md / WORKFLOW_PROCUREMENT.md](F:/AQL/Documents/WORKFLOW_OUTLET_OPERATIONS.md / WORKFLOW_PROCUREMENT.md) for documented module flow details.
 
 ## Maintenance Rule
 Update this file when:

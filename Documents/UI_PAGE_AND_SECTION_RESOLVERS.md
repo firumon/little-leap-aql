@@ -5,7 +5,7 @@
 ---
 
 ### 1.3 The Page Resolver (`src/composables/resources/usePageResolver.js`)
-Handles page-level route resolution and loading, and owns record loading (see §1.3.3). Form state and submission are **not** its concern — those belong to `usePageState` (see [UI_PAGE_STATE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_PAGE_STATE.md)), which `Page.vue` provides alongside it.
+Handles page-level route resolution and loading, and owns record loading (see §1.3.3). Form state and submission are **not** its concern — those belong to `usePageState` (see [UI_PAGE_STATE.md](file:///f:/AQL/Documents/UI_PAGE_STATE.md)), which `Page.vue` provides alongside it.
 
 #### 1.3.0 Route signals (`useRouteConfig.js`)
 Every route signal the resolver (and any component) consumes comes from `useRouteConfig()` — **never** from `useRoute()` directly:
@@ -152,7 +152,7 @@ Neither `resourceRecord.record` nor `resourceRecord.records` hands out raw sheet
 > Filtering and sorting are safe as-is — `Array.prototype.filter`/`sort` carry references through. Only *copying* breaks the contract. Note that a derived property assigned this way lands on the shared cached record, so keep such keys namespaced to the feature and treat them as display-only.
 
 > [!NOTE]
-> This was previously split into a `usePageOrchestrator.js` middle layer, which also carried an action-page form (`actionForm`, `selectedOutcome`, `resolvedActionFields`, …). That path became unreachable once `canonicalPage` started resolving the `_action/:action` route to its **slug** rather than to `'action'`, and workflow actions moved to `ActionDialog` (see [UI_ACTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_ACTION_SYSTEM.md)). The orchestrator has been removed; nothing replaced the action-form half because `ActionDialog` already owns it.
+> This was previously split into a `usePageOrchestrator.js` middle layer, which also carried an action-page form (`actionForm`, `selectedOutcome`, `resolvedActionFields`, …). That path became unreachable once `canonicalPage` started resolving the `_action/:action` route to its **slug** rather than to `'action'`, and workflow actions moved to `ActionDialog` (see [UI_ACTION_SYSTEM.md](file:///f:/AQL/Documents/UI_ACTION_SYSTEM.md)). The orchestrator has been removed; nothing replaced the action-form half because `ActionDialog` already owns it.
 
 #### 1.3.4 The `pageProps` Contract
 `pageProps` is the computed object assembled by `usePageResolver` and `v-bind`-ed onto every `<Section>` placeholder and any full page override. **Section authors must understand every prop in this object.**
@@ -180,7 +180,7 @@ Neither `resourceRecord.record` nor `resourceRecord.records` hands out raw sheet
 
 #### 1.3.5 Spacing Invariants (STRICT)
 
-Canonical statement in [CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/CORE_ARCHITECTURE_RULES.md) §7.1. What they mean for a section author:
+Canonical statement in [CORE_ARCHITECTURE_RULES.md](file:///f:/AQL/Documents/CORE_ARCHITECTURE_RULES.md) §7.1. What they mean for a section author:
 
 **1 — Card gutter.** Every vertical gap between cards, lists or grouped blocks resolves from `pageProps.gutter`. A section reads it off `attrs` and spaces its own children with it:
 
@@ -273,7 +273,7 @@ The JS modifier stays final, matching every other override in the system. A `Pag
 - **A block may be a function** — `PropsList: (props) => ({ perPage: props.dense ? 50 : 25 })` — evaluated with the live props bag.
 - **Non-object blocks are ignored**, arrays included, so a stray string can never be spread onto a component.
 - **Nested identities work at any depth**, because each resolver only claims its own key. `PropsListToday` passes untouched through `Content` → `contents/List.vue` and is claimed by the per-view resolver hop inside it.
-- Helper: [`src/utils/placeholderProps.js`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/utils/placeholderProps.js) (`resolvePlaceholderProps`). It returns `null` when no block matches, so resolvers hand back the original props object and preserve prop identity across unrelated re-renders.
+- Helper: [`src/utils/placeholderProps.js`](file:///f:/AQL/FRONTENT/src/utils/placeholderProps.js) (`resolvePlaceholderProps`). It returns `null` when no block matches, so resolvers hand back the original props object and preserve prop identity across unrelated re-renders.
 
 > [!IMPORTANT]
 > **Drilling makes `inheritAttrs: false` mandatory for any component with a DOM root that sits in a drill path.** `Props*` blocks are objects; with attribute fallthrough enabled Vue writes them onto the root element as `propspageheader="[object Object]"`. Every `sections/`, `contents/` and `actions/` component already declares it (§2.1). `components/abstract/List.vue` declares it too, and re-binds `$attrs.class` / `$attrs.style` explicitly so callers keep styling the list.
@@ -284,7 +284,7 @@ The JS modifier stays final, matching every other override in the system. A `Pag
 ### 1.5 The Page State (`src/composables/resources/usePageState.js`)
 Centralizes the reactive form state shared across the Header, Content, and Action sections. It is the single source of truth for input collection, request building, and submission on a resource page.
 
-> For the complete API reference (node mutations, strategy contract, request builders, triggers, and validation), see the canonical document: [UI_PAGE_STATE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_PAGE_STATE.md).
+> For the complete API reference (node mutations, strategy contract, request builders, triggers, and validation), see the canonical document: [UI_PAGE_STATE.md](file:///f:/AQL/Documents/UI_PAGE_STATE.md).
 
 **Key points for section authors:**
 - `inject('pageState')` gives access to the full `usePageState` return value.

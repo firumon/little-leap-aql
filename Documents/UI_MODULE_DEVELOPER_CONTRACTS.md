@@ -141,7 +141,7 @@ readable without opening the card.
 ## 6. Strict Import Boundaries
 
 > Full detail — every layer's rules stated together with worked examples — lives in
-> [UI_RESOURCE_DOMAIN_LOGIC.md §6](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_RESOURCE_DOMAIN_LOGIC.md).
+> [UI_RESOURCE_DOMAIN_LOGIC.md §6](file:///f:/AQL/Documents/UI_RESOURCE_DOMAIN_LOGIC.md).
 > This section carries the injection-relay pattern in full since it's the piece a component
 > author reaches for directly while authoring UI files.
 
@@ -243,7 +243,7 @@ The test for "does this inject, so is it page-scoped?" is **which pages provide 
 context**, not whether `inject()` appears in the file. One providing page means
 page-scoped. Two pages providing the same context and resolving the same components means
 the composable belongs at the tier those shared components already sit at — see
-[UI_RESOURCE_DOMAIN_LOGIC.md §6.1–6.2](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_RESOURCE_DOMAIN_LOGIC.md).
+[UI_RESOURCE_DOMAIN_LOGIC.md §6.1–6.2](file:///f:/AQL/Documents/UI_RESOURCE_DOMAIN_LOGIC.md).
 
 `OutletRestocks` is the worked example: `Approve.js` and `Reallocate.js` both resolve
 `WarehouseAndLocation` / `ItemAllocating` / `ReviewAllocating` / `ReviewPending` from the

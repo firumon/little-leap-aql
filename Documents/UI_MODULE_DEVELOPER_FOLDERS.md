@@ -160,7 +160,7 @@ defineOptions({ name: 'OutletRestocksViewAllocationDetails', inheritAttrs: false
 
 > [!IMPORTANT]
 > **Custom UI components and forms MUST use the modular base field controls in
-> [`FRONTENT/src/_fields/`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/_fields/)
+> [`FRONTENT/src/_fields/`](file:///f:/AQL/FRONTENT/src/_fields/)
 > — resolved through `resolveFieldComponent(type, mode)` — instead of hand-rolling raw
 > native or Quasar input controls.**
 
@@ -184,7 +184,7 @@ Mounting one by hand has a prop contract of its own — `modelValue`, `record`, 
 a `config` object that carries **everything else**, because the controls declare
 `inheritAttrs: false` and a plain attribute on the placeholder is dropped. That contract,
 and the full type catalogue, live in
-[`_fields/REGISTRY.md`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/_fields/REGISTRY.md).
+[`_fields/REGISTRY.md`](file:///f:/AQL/FRONTENT/src/_fields/REGISTRY.md).
 
 **The `mode` argument follows the value, not the page.** `'add'` when the value does not
 exist yet, `'edit'` when the control is amending one already loaded, `'view'` for read-only

@@ -7,7 +7,7 @@ This is the master orientation and technical baseline document for AQL. It defin
 
 ## 1. What AQL Is
 
-AQL is the operating system for Little Leap's UAE baby-product distribution business. The primary operational heartbeat is:
+AQL is an Enterprise Resource Planning (ERP) software system. The primary operational heartbeat is:
 1. **Distribute products** to retail outlets.
 2. **Track outlet sales & visits** on recurring cycles.
 3. **Collect payments** on strict intervals.
@@ -98,7 +98,7 @@ graph TD
 ### 5.1 Identity & Access Model
 - Authentication occurs via `APP.Users`.
 - Users possess a designation, one or more assigned roles (`APP.RolePermissions`), and optional regional scopes.
-- Detailed auth payload contract: [API_LOGIN_RESPONSE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/API_LOGIN_RESPONSE.md).
+- Detailed auth payload contract: [API_LOGIN_RESPONSE.md](file:///f:/AQL/Documents/API_LOGIN_RESPONSE.md).
 
 ### 5.2 API Communication & Payload Standards
 - All frontend backend calls route through `GasApiService` via `callGasApi`.
@@ -116,13 +116,13 @@ graph TD
 
 ## 6. Where To Read Next
 
-- **Task-Based Document Router**: [CORE_DOC_ROUTING.md](file:///f:/LITTLE%20LEAP/AQL/Documents/CORE_DOC_ROUTING.md)
-- **Agent Collaboration Protocol**: [MAP.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/MAP.md)
-- **Frontend Architecture Rules**: [CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/CORE_ARCHITECTURE_RULES.md)
-- **Commercial & Outlet Operations**: [WORKFLOW_OUTLET_OPERATIONS.md](file:///f:/LITTLE%20LEAP/AQL/Documents/WORKFLOW_OUTLET_OPERATIONS.md)
-- **Procurement & Warehouse Inventory**: [WORKFLOW_PROCUREMENT.md](file:///f:/LITTLE%20LEAP/AQL/Documents/WORKFLOW_PROCUREMENT.md)
-- **Backend API & Patterns**: [GAS_API_CAPABILITIES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/GAS_API_CAPABILITIES.md) & [GAS_PATTERNS.md](file:///f:/LITTLE%20LEAP/AQL/Documents/GAS_PATTERNS.md)
-- **Resource UI Module Generation**: [UI_MODULE_DEVELOPER_GUIDE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_MODULE_DEVELOPER_GUIDE.md)
+- **Task-Based Document Router**: [CORE_DOC_ROUTING.md](file:///f:/AQL/Documents/CORE_DOC_ROUTING.md)
+- **Agent Collaboration Protocol**: [MAP.md](file:///f:/AQL/References/Prompt%20Library/MAP.md)
+- **Frontend Architecture Rules**: [CORE_ARCHITECTURE_RULES.md](file:///f:/AQL/Documents/CORE_ARCHITECTURE_RULES.md)
+- **Commercial & Outlet Operations**: [WORKFLOW_OUTLET_OPERATIONS.md](file:///f:/AQL/Documents/WORKFLOW_OUTLET_OPERATIONS.md)
+- **Procurement & Warehouse Inventory**: [WORKFLOW_PROCUREMENT.md](file:///f:/AQL/Documents/WORKFLOW_PROCUREMENT.md)
+- **Backend API & Patterns**: [GAS_API_CAPABILITIES.md](file:///f:/AQL/Documents/GAS_API_CAPABILITIES.md) & [GAS_PATTERNS.md](file:///f:/AQL/Documents/GAS_PATTERNS.md)
+- **Resource UI Module Generation**: [UI_MODULE_DEVELOPER_GUIDE.md](file:///f:/AQL/Documents/UI_MODULE_DEVELOPER_GUIDE.md)
 
 ---
 

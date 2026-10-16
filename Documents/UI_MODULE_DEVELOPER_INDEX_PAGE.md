@@ -54,7 +54,7 @@ component private to one module.
 **The bases already available — `MetricCards`, `LinearProgress`, `WorkflowFunnel`,
 `AgeingBuckets`, `FilterInput`, `ListSwitcher` — are catalogued with their full prop
 surfaces and hide rules in
-[`components/REGISTRY.md`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/REGISTRY.md).**
+[`components/REGISTRY.md`](file:///f:/AQL/FRONTENT/src/components/REGISTRY.md).**
 Read that before adding a widget; read it before inventing a base.
 
 Five rules bind every widget, whichever base it drives:

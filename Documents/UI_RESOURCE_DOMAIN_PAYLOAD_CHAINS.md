@@ -49,7 +49,7 @@ no envelope, no `{ valid, nodes, permissions }` wrapper, and no constructor modu
 `nodePayloads.js` was deleted on 2026-08-29.
 
 **The full specification lives in
-[UI_PAGE_STATE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_PAGE_STATE.md) §5** — node
+[UI_PAGE_STATE.md](file:///f:/AQL/Documents/UI_PAGE_STATE.md) §5** — node
 properties, action shapes, the derive `on` grammar, permission messages and automatic
 reload cleansing. Read it before writing a builder. In outline:
 
@@ -96,7 +96,7 @@ if (!outletCode) return [{ valid: false, message: 'Select an outlet before submi
 > turn them into GAS requests. Returning ready-made request envelopes forces Layer 3 into
 > `run({ requests })`, which skips `build()` and makes every node on the page inert —
 > validation sees nothing, drafts save nothing, `snapshot()` shows nothing. See
-> [UI_PAGE_STATE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_PAGE_STATE.md) §5A and §5A.2.
+> [UI_PAGE_STATE.md](file:///f:/AQL/Documents/UI_PAGE_STATE.md) §5A and §5A.2.
 
 #### Where the old helpers went
 

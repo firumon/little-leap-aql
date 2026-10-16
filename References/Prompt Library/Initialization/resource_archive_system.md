@@ -13,24 +13,24 @@ It removes archived records from active sheets and client cache to keep the app 
 
 ### Core File Coordinates
 
-* **Canonical Specification**: [FEATURE_ARCHIVE_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/FEATURE_ARCHIVE_SYSTEM.md)
-* **Frontend Archive Store**: [archive.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/stores/archive.js)
-* **Frontend Archive Evaluator**: [archiveEvaluator.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/utils/archiveEvaluator.js)
-* **Frontend Archive Service**: [ArchiveService.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/services/ArchiveService.js)
-* **Frontend Polling Integration**: [polling.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/stores/polling.js)
-* **IndexedDB Eviction Helper**: [IndexedDbService.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/services/IndexedDbService.js) (`deleteResourceRowsByCodes`)
-* **Pinia Eviction Helper**: [state.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/stores/data/state.js) (`removeRows`)
-* **Backend GAS Engine**: [archiveEngine.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/archiveEngine.gs)
-* **Backend API Dispatcher**: [apiDispatcher.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/apiDispatcher.gs)
-* **Backend Registry & Sync**: [resourceRegistry.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/resourceRegistry.gs), [syncAppResources.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/syncAppResources.gs), [setupAppSheets.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/setupAppSheets.gs)
+* **Canonical Specification**: [FEATURE_ARCHIVE_SYSTEM.md](file:///f:/AQL/Documents/FEATURE_ARCHIVE_SYSTEM.md)
+* **Frontend Archive Store**: [archive.js](file:///f:/AQL/FRONTENT/src/stores/archive.js)
+* **Frontend Archive Evaluator**: [archiveEvaluator.js](file:///f:/AQL/FRONTENT/src/utils/archiveEvaluator.js)
+* **Frontend Archive Service**: [ArchiveService.js](file:///f:/AQL/FRONTENT/src/services/ArchiveService.js)
+* **Frontend Polling Integration**: [polling.js](file:///f:/AQL/FRONTENT/src/stores/polling.js)
+* **IndexedDB Eviction Helper**: [IndexedDbService.js](file:///f:/AQL/FRONTENT/src/services/IndexedDbService.js) (`deleteResourceRowsByCodes`)
+* **Pinia Eviction Helper**: [state.js](file:///f:/AQL/FRONTENT/src/stores/data/state.js) (`removeRows`)
+* **Backend GAS Engine**: [archiveEngine.gs](file:///f:/AQL/GAS/archiveEngine.gs)
+* **Backend API Dispatcher**: [apiDispatcher.gs](file:///f:/AQL/GAS/apiDispatcher.gs)
+* **Backend Registry & Sync**: [resourceRegistry.gs](file:///f:/AQL/GAS/resourceRegistry.gs), [syncAppResources.gs](file:///f:/AQL/GAS/syncAppResources.gs), [setupAppSheets.gs](file:///f:/AQL/GAS/setupAppSheets.gs)
 
 ---
 
 ## 2. Mandatory Pre-Reads
 
 Before modifying archive code:
-* Canonical Specification: [FEATURE_ARCHIVE_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/FEATURE_ARCHIVE_SYSTEM.md)
-* Architecture Rules: [CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/CORE_ARCHITECTURE_RULES.md)
+* Canonical Specification: [FEATURE_ARCHIVE_SYSTEM.md](file:///f:/AQL/Documents/FEATURE_ARCHIVE_SYSTEM.md)
+* Architecture Rules: [CORE_ARCHITECTURE_RULES.md](file:///f:/AQL/Documents/CORE_ARCHITECTURE_RULES.md)
 
 ---
 

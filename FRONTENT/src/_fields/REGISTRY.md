@@ -63,7 +63,7 @@ whatever surface the caller owns. `config` keys: `label`/`title`, `caption`/`des
 Most controls are mounted for you by the form generator (`useFormFields` → `FormRecord`).
 A **workflow form** — one whose primary input is a derived tree rather than the resource's
 own columns — mounts single controls itself
-([UI_MODULE_DEVELOPER_GUIDE.md §13.0](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_MODULE_DEVELOPER_GUIDE.md)).
+([UI_MODULE_DEVELOPER_GUIDE.md §13.0](file:///f:/AQL/Documents/UI_MODULE_DEVELOPER_GUIDE.md)).
 When it does, this is the contract.
 
 **Resolve; never deep-import.** `resolveFieldComponent(type, mode)` and

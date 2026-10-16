@@ -3,7 +3,7 @@
 The canonical, self-contained spec for `FRONTENT/src/_resource/**/*` — the UI-agnostic
 business/workflow logic layer in the **3-Layer UI Architecture** — and the strict one-way import boundary that connects it to
 the UI presentation layer (`_ui/`). Referenced by
-[UI_MODULE_DEVELOPER_GUIDE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_MODULE_DEVELOPER_GUIDE.md),
+[UI_MODULE_DEVELOPER_GUIDE.md](file:///f:/AQL/Documents/UI_MODULE_DEVELOPER_GUIDE.md),
 which covers UI-side generation; this document owns everything about the domain layer
 itself and the boundary rules around it.
 
@@ -316,5 +316,5 @@ export function editablePreset (items) {
 > Any change to the three-layer boundary, the strict import chain, the injection-relay
 > pattern, or the Domain Payload Chain Architecture MUST be reflected in:
 > 1. This document.
-> 2. [UI_MODULE_DEVELOPER_GUIDE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_MODULE_DEVELOPER_GUIDE.md) if its condensed summary of this system needs to change.
-> 3. [resource_ui_module_developer.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/resource_ui_module_developer.md) if its execution checklist references the changed rule.
+> 2. [UI_MODULE_DEVELOPER_GUIDE.md](file:///f:/AQL/Documents/UI_MODULE_DEVELOPER_GUIDE.md) if its condensed summary of this system needs to change.
+> 3. [resource_ui_module_developer.md](file:///f:/AQL/References/Prompt%20Library/Initialization/resource_ui_module_developer.md) if its execution checklist references the changed rule.

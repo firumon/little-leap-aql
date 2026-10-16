@@ -1,4 +1,4 @@
-﻿# Initialization: Implementation Plan Writing
+# Initialization: Implementation Plan Writing
 
 > **Scope boundary**: This document covers writing implementation plans only. Its codebase discovery steps tell you to read source files directly — do NOT load other init prompts for context. Reference CORE_ARCHITECTURE_RULES.md, GAS_PATTERNS.md, and other canonical docs by path.
 
@@ -12,9 +12,9 @@ Before drafting the implementation plan, you must be fully prepared and educated
 1. **Unrestricted Reading**: You are NOT limited to reading specific files or documents. Read and refer to all source code files, schemas, configs, and documents across the entire repository to gather complete background information.
 2. **Context Exploration**: Explore all dependencies, execution flows, and related modules to ensure that the plan is comprehensive, accurate, and minimizes regressions.
 3. **Mandatory Reference Check**: 
-   - Read [Documents/CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/CORE_ARCHITECTURE_RULES.md) to ensure the plan strictly follows the repository's frontend and backend structural boundaries.
-   - Reference [Documents/SCHEMA_RESOURCE_COLUMNS.md](file:///f:/LITTLE%20LEAP/AQL/Documents/SCHEMA_RESOURCE_COLUMNS.md) and related sheet structure files to align planning changes with the sheet data schemas.
-   - Read [PLANS/_TEMPLATE.md](file:///f:/LITTLE%20LEAP/AQL/PLANS/_TEMPLATE.md) to ensure the plan structure matches the standard template format.
+   - Read [Documents/CORE_ARCHITECTURE_RULES.md](file:///f:/AQL/Documents/CORE_ARCHITECTURE_RULES.md) to ensure the plan strictly follows the repository's frontend and backend structural boundaries.
+   - Reference [Documents/SCHEMA_RESOURCE_COLUMNS.md](file:///f:/AQL/Documents/SCHEMA_RESOURCE_COLUMNS.md) and related sheet structure files to align planning changes with the sheet data schemas.
+   - Read [PLANS/_TEMPLATE.md](file:///f:/AQL/PLANS/_TEMPLATE.md) to ensure the plan structure matches the standard template format.
 
 ---
 
@@ -22,11 +22,11 @@ Before drafting the implementation plan, you must be fully prepared and educated
 
 All proposed changes in the implementation plan must strictly conform to current AQL repository coding standards and architecture rules:
 1. **Frontend Standards (Quasar/Vue 3)**:
-   - Adhere to the Vue Reactivity Contract outlined in [Documents/CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/CORE_ARCHITECTURE_RULES.md).
+   - Adhere to the Vue Reactivity Contract outlined in [Documents/CORE_ARCHITECTURE_RULES.md](file:///f:/AQL/Documents/CORE_ARCHITECTURE_RULES.md).
    - Pages must remain thin, serving as orchestrators, while business logic resides inside composables and state resides in Pinia stores.
    - No parallel arrays for mapping UI state; use single unified objects/arrays.
 2. **Backend Standards (Google Apps Script)**:
-   - Adhere to the generic CRUD and batch processing APIs in [Documents/GAS_PATTERNS.md](file:///f:/LITTLE%20LEAP/AQL/Documents/GAS_PATTERNS.md).
+   - Adhere to the generic CRUD and batch processing APIs in [Documents/GAS_PATTERNS.md](file:///f:/AQL/Documents/GAS_PATTERNS.md).
    - Align backend logic with existing Apps Script patterns (`resourceApi.gs`, post-write action hooks).
    - Do not hardcode sheet or resource names.
    - Do not duplicate resource-specific logic in `resourceApi.gs`; use PostAction hooks.
@@ -67,9 +67,9 @@ For each file and step, specify:
    - `Created By: [AgentName]`
    - `Executed By: [AgentName] | pending`
 3. **Architectural Alignment**:
-   - Plans must strictly adhere to the Quasar/Vue frontend boundaries in [Documents/CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/CORE_ARCHITECTURE_RULES.md) (unidirectional data flow, computed aggregates, thin page shells).
-   - Plans must adhere to backend boundaries in [Documents/GAS_PATTERNS.md](file:///f:/LITTLE%20LEAP/AQL/Documents/GAS_PATTERNS.md) (no hardcoding of resource names, generic CRUD, batch operations).
-4. **Data Schemas**: Align all plan changes with [Documents/SCHEMA_RESOURCE_COLUMNS.md](file:///f:/LITTLE%20LEAP/AQL/Documents/SCHEMA_RESOURCE_COLUMNS.md) and related structural documents.
+   - Plans must strictly adhere to the Quasar/Vue frontend boundaries in [Documents/CORE_ARCHITECTURE_RULES.md](file:///f:/AQL/Documents/CORE_ARCHITECTURE_RULES.md) (unidirectional data flow, computed aggregates, thin page shells).
+   - Plans must adhere to backend boundaries in [Documents/GAS_PATTERNS.md](file:///f:/AQL/Documents/GAS_PATTERNS.md) (no hardcoding of resource names, generic CRUD, batch operations).
+4. **Data Schemas**: Align all plan changes with [Documents/SCHEMA_RESOURCE_COLUMNS.md](file:///f:/AQL/Documents/SCHEMA_RESOURCE_COLUMNS.md) and related structural documents.
 5. **Directory Existence**: If the `PLANS/` directory does not exist, create it before saving the plan file.
 
 ---

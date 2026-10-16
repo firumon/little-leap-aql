@@ -1,4 +1,4 @@
-﻿---
+---
 name: AQL Content & Page Customization Agent
 description: Specialized initialization prompt for creating, inspecting, or modifying content components (List and other `contents:` entries), per-active-view overrides, form layouts, details cards, and collapsible form sections under Content.
 ---
@@ -9,15 +9,15 @@ This document defines initialization parameters for agents tasked with resource-
 
 ## Required Pre-Reads
 Before creating or modifying any local Content components:
-1. **System Specifications**: Read [UI_CONTENT_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_CONTENT_SYSTEM.md) to review the `contents:` page contract, the `Content.vue` / `useContentResolver.js` resolution chain, the built-in `List` content component, `useListStrategy.js` defaults, and per-active-view override rules.
-2. **Architecture Constraints**: Read [CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/CORE_ARCHITECTURE_RULES.md) for strict formatting rules (e.g. no `<style>` blocks in local components).
-3. **If the task CREATES or restructures a content component** (rather than overriding one for a resource): also read [UI_RENDERABLE_CONTRACT.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_RENDERABLE_CONTRACT.md) and load [renderable_contract.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/renderable_contract.md). Every overridable cell must route through `abstract/Renderable.js`, or the new component is closed to `_ui/` customization from day one.
+1. **System Specifications**: Read [UI_CONTENT_SYSTEM.md](file:///f:/AQL/Documents/UI_CONTENT_SYSTEM.md) to review the `contents:` page contract, the `Content.vue` / `useContentResolver.js` resolution chain, the built-in `List` content component, `useListStrategy.js` defaults, and per-active-view override rules.
+2. **Architecture Constraints**: Read [CORE_ARCHITECTURE_RULES.md](file:///f:/AQL/Documents/CORE_ARCHITECTURE_RULES.md) for strict formatting rules (e.g. no `<style>` blocks in local components).
+3. **If the task CREATES or restructures a content component** (rather than overriding one for a resource): also read [UI_RENDERABLE_CONTRACT.md](file:///f:/AQL/Documents/UI_RENDERABLE_CONTRACT.md) and load [renderable_contract.md](file:///f:/AQL/References/Prompt%20Library/Initialization/renderable_contract.md). Every overridable cell must route through `abstract/Renderable.js`, or the new component is closed to `_ui/` customization from day one.
 
 > [!IMPORTANT]
 > **Field rendering is out of scope for this prompt.** Individual form controls and detail/table value cells are NOT rendered by the content components — they are delegated to the base field subsystem at `src/_fields/<type>/{Add,Edit,View}.vue`, resolved through `resolveFieldComponent(type, mode)`. If the task is "make this column render as a link / currency / status chip", or "change how a field type looks", stop and route to the right prompt instead:
-> - Form-side (`Create`/`Update`/`FormRecord`/`FormChild`) → [content_create_and_update_customization.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/content_create_and_update_customization.md) §0
-> - View-side (`ViewRecord`/`ViewChildCompact`) → [view_customization.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/view_customization.md) §0
-> - The subsystem itself → [`FRONTENT/src/_fields/README.md`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/_fields/README.md)
+> - Form-side (`Create`/`Update`/`FormRecord`/`FormChild`) → [content_create_and_update_customization.md](file:///f:/AQL/References/Prompt%20Library/Initialization/content_create_and_update_customization.md) §0
+> - View-side (`ViewRecord`/`ViewChildCompact`) → [view_customization.md](file:///f:/AQL/References/Prompt%20Library/Initialization/view_customization.md) §0
+> - The subsystem itself → [`FRONTENT/src/_fields/README.md`](file:///f:/AQL/FRONTENT/src/_fields/README.md)
 >
 > A change to one field type there applies to **every** resource, in add, edit, and view — which is usually what is actually wanted, and is never achievable through a per-resource content override.
 
@@ -28,13 +28,13 @@ Before creating or modifying any local Content components:
 >
 > | File | Owns |
 > |---|---|
-> | [`dateHelpers.js`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/utils/dateHelpers.js) | `parseAnyDate`, `startOfDay`/`endOfDay`, `startOfMonth`/`endOfMonth`, `toDateOnly`, `toDateTime24`, `addDays`/`addMonths`, `dayOfYear`, `isoWeek`, `daysFromToday`. Handles BOTH sheet storage shapes (epoch ms in audit columns, ISO strings in business date columns). **Never hand-roll date parsing or day maths.** |
-> | [`sortHelpers.js`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/utils/sortHelpers.js) | `sortByDate(items, column, direction)` — `column` may be a key or a reader function. Sorts without copying rows (a `{ ...row }` spread would strip the non-enumerable relation getters `$outlet` / `_Parents`); unparseable dates sink to the end in both directions. |
-> | [`appHelpers.js`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/utils/appHelpers.js) | String/identity helpers used by every resolver — `toPascalCase` and friends. |
-> | [`colorHelpers.js`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/utils/colorHelpers.js) | `resolveCssColor(value, fallback)` — Quasar brand names, Material palette names and raw CSS all resolve to one inline custom property. |
-> | [`placeholderProps.js`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/utils/placeholderProps.js) | `resolvePlaceholderProps(props, identity, kind)` — the `Props<Identity>` merge. Call it in a resolver; never re-implement it inline. |
+> | [`dateHelpers.js`](file:///f:/AQL/FRONTENT/src/utils/dateHelpers.js) | `parseAnyDate`, `startOfDay`/`endOfDay`, `startOfMonth`/`endOfMonth`, `toDateOnly`, `toDateTime24`, `addDays`/`addMonths`, `dayOfYear`, `isoWeek`, `daysFromToday`. Handles BOTH sheet storage shapes (epoch ms in audit columns, ISO strings in business date columns). **Never hand-roll date parsing or day maths.** |
+> | [`sortHelpers.js`](file:///f:/AQL/FRONTENT/src/utils/sortHelpers.js) | `sortByDate(items, column, direction)` — `column` may be a key or a reader function. Sorts without copying rows (a `{ ...row }` spread would strip the non-enumerable relation getters `$outlet` / `_Parents`); unparseable dates sink to the end in both directions. |
+> | [`appHelpers.js`](file:///f:/AQL/FRONTENT/src/utils/appHelpers.js) | String/identity helpers used by every resolver — `toPascalCase` and friends. |
+> | [`colorHelpers.js`](file:///f:/AQL/FRONTENT/src/utils/colorHelpers.js) | `resolveCssColor(value, fallback)` — Quasar brand names, Material palette names and raw CSS all resolve to one inline custom property. |
+> | [`placeholderProps.js`](file:///f:/AQL/FRONTENT/src/utils/placeholderProps.js) | `resolvePlaceholderProps(props, identity, kind)` — the `Props<Identity>` merge. Call it in a resolver; never re-implement it inline. |
 >
-> **The rule this enforces**: a pure helper that is not resource knowledge belongs in `src/utils/`. It must NOT be duplicated into a `_ui/` composable, and a `_ui/` composable must NEVER import another resource's composable to borrow one — `_ui/**/OutletRestocks/**` reaching into `_ui/**/OutletVisits/**` is exactly the cross-resource dependency [CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/CORE_ARCHITECTURE_RULES.md) §5 forbids. Promote the helper to `src/utils/` and re-export it from the composable if the old import path must keep working.
+> **The rule this enforces**: a pure helper that is not resource knowledge belongs in `src/utils/`. It must NOT be duplicated into a `_ui/` composable, and a `_ui/` composable must NEVER import another resource's composable to borrow one — `_ui/**/OutletRestocks/**` reaching into `_ui/**/OutletVisits/**` is exactly the cross-resource dependency [CORE_ARCHITECTURE_RULES.md](file:///f:/AQL/Documents/CORE_ARCHITECTURE_RULES.md) §5 forbids. Promote the helper to `src/utils/` and re-export it from the composable if the old import path must keep working.
 
 ## 1. Context Tracing Protocol
 
@@ -43,10 +43,10 @@ To custom-tailor content layouts:
 2. **Confirm the page contract**: Check `src/pages/[scope]/[page].js` for `contents: [...]` (e.g. `contents: ['List']`) to know which content name(s) render on that page.
 3. **Find Target Override Paths**: Check if overrides already exist under `src/_ui/[UiName]/components/[scope]/[ResourceName]/[page]/`.
 4. **Analyze Overriding Strategy**:
-   - Cheapest first: a **`Props<Identity>` block on the page contract** needs no override file at all. `PropsList: { layout: 'grid' }` or `PropsListToday: { … }` in `_ui/.../[page].js` is spread flat onto that content. Use it for plain value adjustments that don't need record/config context. A `.js` modifier still overrides it. See [UI_PAGE_AND_SECTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_PAGE_AND_SECTION_SYSTEM.md) §1.4.1 and this doc's §4.1.
+   - Cheapest first: a **`Props<Identity>` block on the page contract** needs no override file at all. `PropsList: { layout: 'grid' }` or `PropsListToday: { … }` in `_ui/.../[page].js` is spread flat onto that content. Use it for plain value adjustments that don't need record/config context. A `.js` modifier still overrides it. See [UI_PAGE_AND_SECTION_SYSTEM.md](file:///f:/AQL/Documents/UI_PAGE_AND_SECTION_SYSTEM.md) §1.4.1 and this doc's §4.1.
    - Prefer **JS Logic Modifiers** (`[Content].js` under custom UI, e.g. `list.js`) for simple adjustments (column/layout overrides, chip/meta tweaks, custom labels).
    - Use **Vue Template SFC Overrides** (`[Content].vue` under custom UI) ONLY if the page requires complex non-standard UI elements, custom slots, or specialized inputs.
-     > Before reaching for a `.vue` override, check whether a **component-valued prop** does the job from a `.js` modifier instead — `btn: VisitActionButtons`, `metaCaption: SomePill`. Any prop routed through `abstract/Renderable.js` accepts a component definition, which replaces that one cell without swapping component identity (a `.vue` override remounts the list and kills its row transitions). See [UI_RENDERABLE_CONTRACT.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_RENDERABLE_CONTRACT.md) §1. A `.vue` override is correct only when the **structure** changes — row arrangement, extra sections, a different wrapper.
+     > Before reaching for a `.vue` override, check whether a **component-valued prop** does the job from a `.js` modifier instead — `btn: VisitActionButtons`, `metaCaption: SomePill`. Any prop routed through `abstract/Renderable.js` accepts a component definition, which replaces that one cell without swapping component identity (a `.vue` override remounts the list and kills its row transitions). See [UI_RENDERABLE_CONTRACT.md](file:///f:/AQL/Documents/UI_RENDERABLE_CONTRACT.md) §1. A `.vue` override is correct only when the **structure** changes — row arrangement, extra sections, a different wrapper.
    - Use a **per-active-view override** (`List<ViewName>.vue`/`.js`, e.g. `ListApproved.js`) ONLY when the customization should apply while one specific list view/filter chip is selected, not to the resource's default list rendering.
 
 ---

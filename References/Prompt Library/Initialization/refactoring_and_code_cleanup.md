@@ -44,7 +44,7 @@ Work in this order. The top items delete the most.
 8. **The same logic in two files.** Line up files that sound alike — two payload builders, an old composable and a new one. Also check sibling resources under the same domain.
 9. **Twin helpers.** Several small functions doing the same check on different fields. Replace with one that takes the key.
 10. **Repeated markup.** The same `.vue` block pasted with only a label changed. Use `v-for`.
-11. **Helpers the repo already has.** Something already in `FRONTENT/src/utils/` (see [SHARED_UTILITIES_INDEX.md](file:///f:/LITTLE%20LEAP/AQL/Documents/SHARED_UTILITIES_INDEX.md)), or a constant list another module already owns and exports.
+11. **Helpers the repo already has.** Something already in `FRONTENT/src/utils/` (see [SHARED_UTILITIES_INDEX.md](file:///f:/AQL/Documents/SHARED_UTILITIES_INDEX.md)), or a constant list another module already owns and exports.
 
 ### Noise
 12. **Comment bloat.** JSDoc, file-header blocks, banners, and comments that repeat the next line. The repo rule is no comment by default.

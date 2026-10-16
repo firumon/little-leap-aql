@@ -18,8 +18,8 @@ When headers/columns change, use the setup/refactor workflow rather than making 
 - workflow/action-related columns should remain aligned with current process design
 
 ## Canonical Detail Owners
-- Resource metadata semantics: [SCHEMA_RESOURCE_COLUMNS.md](F:/LITTLE%20LEAP/AQL/Documents/SCHEMA_RESOURCE_COLUMNS.md)
-- Setup flow: [TENANT_NEW_CLIENT_SETUP.md](F:/LITTLE%20LEAP/AQL/Documents/TENANT_NEW_CLIENT_SETUP.md)
+- Resource metadata semantics: [SCHEMA_RESOURCE_COLUMNS.md](F:/AQL/Documents/SCHEMA_RESOURCE_COLUMNS.md)
+- Setup flow: [TENANT_NEW_CLIENT_SETUP.md](F:/AQL/Documents/TENANT_NEW_CLIENT_SETUP.md)
 
 ## Maintenance Rule
 Update this file when:

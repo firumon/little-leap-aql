@@ -21,27 +21,27 @@ Determine which aspects of the API are involved:
 ## 2. Mandatory Pre-Reads (With Line-Level Links)
 
 Read only the files relevant to the query or task at hand:
-- **Backend API dispatcher & routing**: [apiDispatcher.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/apiDispatcher.gs#L10-L49)
-- **Protected Action Router**: [apiDispatcher.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/apiDispatcher.gs#L393-L443)
-- **Batch Action Handler**: [apiDispatcher.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/apiDispatcher.gs#L471-L500)
-- **Generic CRUD handlers**: [resourceApi.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/resourceApi.gs#L7-L82)
-- **Record Fetch handler**: [resourceApi.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/resourceApi.gs#L84-L125)
-- **Composite Save handler**: [resourceApi.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/resourceApi.gs#L1296-L1320)
-- **Post-Write Hook dispatcher**: [resourceApi.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/resourceApi.gs#L301-L323)
+- **Backend API dispatcher & routing**: [apiDispatcher.gs](file:///f:/AQL/GAS/apiDispatcher.gs#L10-L49)
+- **Protected Action Router**: [apiDispatcher.gs](file:///f:/AQL/GAS/apiDispatcher.gs#L393-L443)
+- **Batch Action Handler**: [apiDispatcher.gs](file:///f:/AQL/GAS/apiDispatcher.gs#L471-L500)
+- **Generic CRUD handlers**: [resourceApi.gs](file:///f:/AQL/GAS/resourceApi.gs#L7-L82)
+- **Record Fetch handler**: [resourceApi.gs](file:///f:/AQL/GAS/resourceApi.gs#L84-L125)
+- **Composite Save handler**: [resourceApi.gs](file:///f:/AQL/GAS/resourceApi.gs#L1296-L1320)
+- **Post-Write Hook dispatcher**: [resourceApi.gs](file:///f:/AQL/GAS/resourceApi.gs#L301-L323)
 - **Frontend services & HTTP configuration**:
-  - Environment Variables: [.env](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/.env) (defines `VITE_GAS_URL`)
-  - Config Loader: [api.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/config/api.js) (exports `GAS_URL`)
-  - Core API HTTP Client: [ApiClientService.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/services/ApiClientService.js)
-  - Quasar Axios Bootstrapper: [axios.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/boot/axios.js) (attaches `$api` instance)
-  - GAS API Service: [GasApiService.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/services/GasApiService.js#L205-L257)
-  - Resource Input/Output & Sync Service: [ResourceIoService.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/services/ResourceIoService.js#L209-L300)
-  - IndexedDB Persistence: [IndexedDbService.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/services/IndexedDbService.js)
-  - IndexedDB Cache Layer: [IndexedDbCacheService.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/services/IndexedDbCacheService.js)
+  - Environment Variables: [.env](file:///f:/AQL/FRONTENT/.env) (defines `VITE_GAS_URL`)
+  - Config Loader: [api.js](file:///f:/AQL/FRONTENT/src/config/api.js) (exports `GAS_URL`)
+  - Core API HTTP Client: [ApiClientService.js](file:///f:/AQL/FRONTENT/src/services/ApiClientService.js)
+  - Quasar Axios Bootstrapper: [axios.js](file:///f:/AQL/FRONTENT/src/boot/axios.js) (attaches `$api` instance)
+  - GAS API Service: [GasApiService.js](file:///f:/AQL/FRONTENT/src/services/GasApiService.js#L205-L257)
+  - Resource Input/Output & Sync Service: [ResourceIoService.js](file:///f:/AQL/FRONTENT/src/services/ResourceIoService.js#L209-L300)
+  - IndexedDB Persistence: [IndexedDbService.js](file:///f:/AQL/FRONTENT/src/services/IndexedDbService.js)
+  - IndexedDB Cache Layer: [IndexedDbCacheService.js](file:///f:/AQL/FRONTENT/src/services/IndexedDbCacheService.js)
 - **Frontend Pinia Stores (`FRONTENT/src/stores`)**:
-  - Generic Data Store: [data.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/stores/data.js) (owns memory caching and synchronization events)
-  - Resource Status Store: [resourceStatus.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/stores/resourceStatus.js) (tracks loading, syncing, error, and hydration states)
-- **GAS API Capabilities Guide**: [GAS_API_CAPABILITIES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/GAS_API_CAPABILITIES.md)
-- **GAS Backend Patterns Guide**: [GAS_PATTERNS.md](file:///f:/LITTLE%20LEAP/AQL/Documents/GAS_PATTERNS.md)
+  - Generic Data Store: [data.js](file:///f:/AQL/FRONTENT/src/stores/data.js) (owns memory caching and synchronization events)
+  - Resource Status Store: [resourceStatus.js](file:///f:/AQL/FRONTENT/src/stores/resourceStatus.js) (tracks loading, syncing, error, and hydration states)
+- **GAS API Capabilities Guide**: [GAS_API_CAPABILITIES.md](file:///f:/AQL/Documents/GAS_API_CAPABILITIES.md)
+- **GAS Backend Patterns Guide**: [GAS_PATTERNS.md](file:///f:/AQL/Documents/GAS_PATTERNS.md)
 
 ---
 
@@ -59,7 +59,7 @@ Read only the files relevant to the query or task at hand:
 }
 ```
 - **Dynamic Session Security**: Protected requests carry a rolling `sessionKey` computed from UUID parameters and client generation counter. Verified by `verifySessionProof` in `GAS/sessionProof.gs` with asymmetric window (`stored - 2 <= clientGen <= stored + 30`; `SESSION_GEN_WINDOW_BACK = 2`, `SESSION_GEN_WINDOW_AHEAD = 30`). Out-of-window rejections return an encoded `sessionResync` token so the client can resync its generation counter and retry once without logout.
-- **Strict Payload Nesting**: For write actions (`create`, `update`, `bulk`, `record`, `compositeSave`, `executeAction`), fields must reside under nested keys (e.g. `payload.record`, `payload.data`, or `payload.records`). Direct top-level payload properties will be rejected by `validateStrictNestedPayload` in [apiDispatcher.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/apiDispatcher.gs#L148-L169).
+- **Strict Payload Nesting**: For write actions (`create`, `update`, `bulk`, `record`, `compositeSave`, `executeAction`), fields must reside under nested keys (e.g. `payload.record`, `payload.data`, or `payload.records`). Direct top-level payload properties will be rejected by `validateStrictNestedPayload` in [apiDispatcher.gs](file:///f:/AQL/GAS/apiDispatcher.gs#L148-L169).
 
 ### B. Canonical Response Envelope
 ```json
@@ -87,7 +87,7 @@ Read only the files relevant to the query or task at hand:
 ### C. Sequential Batch API Actions
 - Enables chaining multiple CRUD or custom actions in a single HTTP request.
 - Sub-responses are accumulated sequentially. Later sub-requests can access generated codes from previous ones via `$ref` objects (e.g., `{ "$ref": "PurchaseRequisitions.latest.code" }`).
-- Reference resolution is managed completely by [handleBatchActions](file:///f:/LITTLE%20LEAP/AQL/GAS/apiDispatcher.gs#L471-L500) on the backend. No stringification of `$ref` is allowed on the frontend.
+- Reference resolution is managed completely by [handleBatchActions](file:///f:/AQL/GAS/apiDispatcher.gs#L471-L500) on the backend. No stringification of `$ref` is allowed on the frontend.
 
 ### D. PostAction Side-Effect Hooks
 - Mapped in `APP.Resources` config via `PostAction` column (managed in `GAS/syncAppResources.gs`).
@@ -96,10 +96,10 @@ Read only the files relevant to the query or task at hand:
 - Triggered safely: hook execution failures are logged but do not block or fail the primary write transaction.
 
 ### E. Frontend State & Ingestion Flow
-- **Ingestion**: When `executeGasApi` resolves a successful request, it captures the resource delta map in `data.resources` and runs [ingestResourcePayloads](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/services/GasApiService.js#L128-L190).
-- **Persistence**: `ingestResourcePayloads` invokes `upsertResourceRows` in [IndexedDbService.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/services/IndexedDbService.js), writing new/modified records directly to IndexedDB.
-- **Pinia Hydration**: `IndexedDbCacheService.js` publishes row upsert events. The Pinia data store [data.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/stores/data.js#L130-L132) listens to these via `onRowsUpserted` and reactively keeps the in-memory `rows` array in sync.
-- **Sync Status**: The resource status store [resourceStatus.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/stores/resourceStatus.js) tracks the synchronization state (`syncing`, `hydrated`, `lastSyncAt`, `lastError`) to drive UI loaders and empty states.
+- **Ingestion**: When `executeGasApi` resolves a successful request, it captures the resource delta map in `data.resources` and runs [ingestResourcePayloads](file:///f:/AQL/FRONTENT/src/services/GasApiService.js#L128-L190).
+- **Persistence**: `ingestResourcePayloads` invokes `upsertResourceRows` in [IndexedDbService.js](file:///f:/AQL/FRONTENT/src/services/IndexedDbService.js), writing new/modified records directly to IndexedDB.
+- **Pinia Hydration**: `IndexedDbCacheService.js` publishes row upsert events. The Pinia data store [data.js](file:///f:/AQL/FRONTENT/src/stores/data.js#L130-L132) listens to these via `onRowsUpserted` and reactively keeps the in-memory `rows` array in sync.
+- **Sync Status**: The resource status store [resourceStatus.js](file:///f:/AQL/FRONTENT/src/stores/resourceStatus.js) tracks the synchronization state (`syncing`, `hydrated`, `lastSyncAt`, `lastError`) to drive UI loaders and empty states.
 
 ---
 
@@ -139,7 +139,7 @@ Read only the files relevant to the query or task at hand:
 
 ## 7. Maintenance Rule
 
-Update this instruction file and related API documentation (such as [GAS_API_CAPABILITIES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/GAS_API_CAPABILITIES.md) and [GAS_PATTERNS.md](file:///f:/LITTLE%20LEAP/AQL/Documents/GAS_PATTERNS.md)) when:
+Update this instruction file and related API documentation (such as [GAS_API_CAPABILITIES.md](file:///f:/AQL/Documents/GAS_API_CAPABILITIES.md) and [GAS_PATTERNS.md](file:///f:/AQL/Documents/GAS_PATTERNS.md)) when:
 - Any new backend API action is introduced or an existing action's payload contract is altered.
 - The structure or required properties of the canonical request/response envelopes change.
 - New frontend services, Pinia stores, configuration files, or boot files handling API/server communication are introduced, deprecated, or renamed.

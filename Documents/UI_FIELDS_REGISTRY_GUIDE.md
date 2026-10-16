@@ -8,7 +8,7 @@
 
 The type-driven presentation layer that renders every control in `FormRecord` and every value cell in `ViewRecord`/`ViewChildCompact`. The containers hold **no** type branches — they resolve a component and mount it.
 
-> Component-level reference (full `config` merge order, alias table, "how to add a type"): [`FRONTENT/src/_fields/README.md`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/_fields/README.md). The view-side integration is documented in [UI_VIEW_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_VIEW_SYSTEM.md) §4.
+> Component-level reference (full `config` merge order, alias table, "how to add a type"): [`FRONTENT/src/_fields/README.md`](file:///f:/AQL/FRONTENT/src/_fields/README.md). The view-side integration is documented in [UI_VIEW_SYSTEM.md](file:///f:/AQL/Documents/UI_VIEW_SYSTEM.md) §4.
 
 ### 15.1 Directory Structure — the "Option A" Pattern
 

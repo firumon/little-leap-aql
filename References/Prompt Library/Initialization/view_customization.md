@@ -1,4 +1,4 @@
-﻿---
+---
 name: AQL View Content Customization
 description: Initialization prompt for creating custom UI overrides (Vue SFC, JS object, JS function) for View content system (ViewRecord, ViewColumn, ViewParent, ViewChild).
 ---
@@ -8,9 +8,9 @@ description: Initialization prompt for creating custom UI overrides (Vue SFC, JS
 This document defines initialization parameters for agents creating custom UI overrides for the `View` content system under `src/_ui/[UiName]/components/`.
 
 ## Required Pre-Reads
-1. **System Specifications**: Read [UI_VIEW_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_VIEW_SYSTEM.md) for full override path lookups, component contracts, JS modifier APIs, and the base field subsystem (§4).
-2. **Architecture Constraints**: Read [CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/CORE_ARCHITECTURE_RULES.md).
-3. **Base field components** (only when the task is about how a *field type* renders rather than a single resource's column): Read [`FRONTENT/src/_fields/README.md`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/_fields/README.md).
+1. **System Specifications**: Read [UI_VIEW_SYSTEM.md](file:///f:/AQL/Documents/UI_VIEW_SYSTEM.md) for full override path lookups, component contracts, JS modifier APIs, and the base field subsystem (§4).
+2. **Architecture Constraints**: Read [CORE_ARCHITECTURE_RULES.md](file:///f:/AQL/Documents/CORE_ARCHITECTURE_RULES.md).
+3. **Base field components** (only when the task is about how a *field type* renders rather than a single resource's column): Read [`FRONTENT/src/_fields/README.md`](file:///f:/AQL/FRONTENT/src/_fields/README.md).
 
 ---
 

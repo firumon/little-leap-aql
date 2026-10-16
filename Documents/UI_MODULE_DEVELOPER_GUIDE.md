@@ -11,23 +11,23 @@ because they are catalogues that go stale the moment they are duplicated:
 
 | Subsystem | Canonical spec |
 |---|---|
-| Implemented `_fields` types, and how to mount one by hand | [`_fields/REGISTRY.md`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/_fields/REGISTRY.md) |
-| Reusable component bases — every generic Section/Content/app component, its props and its hide rules | [`components/REGISTRY.md`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/REGISTRY.md) |
-| A UI's own design tokens — card shell, motion, spacing, tap targets | `_ui/{UiName}/_config/config.md` (e.g. [`_ui/AQL/_config/config.md`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/_ui/AQL/_config/config.md)) |
+| Implemented `_fields` types, and how to mount one by hand | [`_fields/REGISTRY.md`](file:///f:/AQL/FRONTENT/src/_fields/REGISTRY.md) |
+| Reusable component bases — every generic Section/Content/app component, its props and its hide rules | [`components/REGISTRY.md`](file:///f:/AQL/FRONTENT/src/components/REGISTRY.md) |
+| A UI's own design tokens — card shell, motion, spacing, tap targets | `_ui/{UiName}/_config/config.md` (e.g. [`_ui/AQL/_config/config.md`](file:///f:/AQL/FRONTENT/src/_ui/AQL/_config/config.md)) |
 
 Plus the subsystem specs this guide summarizes inline and links out to for full detail:
 
 | Subsystem | Canonical spec |
 |---|---|
-| Resource domain logic, import boundaries & payload chains | [UI_RESOURCE_DOMAIN_LOGIC.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_RESOURCE_DOMAIN_LOGIC.md) |
-| Pages & Sections | [UI_PAGE_AND_SECTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_PAGE_AND_SECTION_SYSTEM.md) |
-| Contents | [UI_CONTENT_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_CONTENT_SYSTEM.md) |
-| Actions | [UI_ACTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_ACTION_SYSTEM.md) |
-| Create / Update forms | [UI_CREATE_AND_UPDATE_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_CREATE_AND_UPDATE_SYSTEM.md) |
-| View content | [UI_VIEW_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_VIEW_SYSTEM.md) |
-| Page state / submission | [UI_PAGE_STATE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_PAGE_STATE.md) |
-| Resource schema (`_fields`, `Relations`) | [SCHEMA_RESOURCE_COLUMNS.md](file:///f:/LITTLE%20LEAP/AQL/Documents/SCHEMA_RESOURCE_COLUMNS.md) |
-| Architecture constraints | [CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/CORE_ARCHITECTURE_RULES.md) |
+| Resource domain logic, import boundaries & payload chains | [UI_RESOURCE_DOMAIN_LOGIC.md](file:///f:/AQL/Documents/UI_RESOURCE_DOMAIN_LOGIC.md) |
+| Pages & Sections | [UI_PAGE_AND_SECTION_SYSTEM.md](file:///f:/AQL/Documents/UI_PAGE_AND_SECTION_SYSTEM.md) |
+| Contents | [UI_CONTENT_SYSTEM.md](file:///f:/AQL/Documents/UI_CONTENT_SYSTEM.md) |
+| Actions | [UI_ACTION_SYSTEM.md](file:///f:/AQL/Documents/UI_ACTION_SYSTEM.md) |
+| Create / Update forms | [UI_CREATE_AND_UPDATE_SYSTEM.md](file:///f:/AQL/Documents/UI_CREATE_AND_UPDATE_SYSTEM.md) |
+| View content | [UI_VIEW_SYSTEM.md](file:///f:/AQL/Documents/UI_VIEW_SYSTEM.md) |
+| Page state / submission | [UI_PAGE_STATE.md](file:///f:/AQL/Documents/UI_PAGE_STATE.md) |
+| Resource schema (`_fields`, `Relations`) | [SCHEMA_RESOURCE_COLUMNS.md](file:///f:/AQL/Documents/SCHEMA_RESOURCE_COLUMNS.md) |
+| Architecture constraints | [CORE_ARCHITECTURE_RULES.md](file:///f:/AQL/Documents/CORE_ARCHITECTURE_RULES.md) |
 
 ---
 
@@ -203,7 +203,7 @@ Run this per new module. Each step cites the section that governs it.
 | Domain predicate duplicated across two `_ui/{Ui}/` trees for the same resource | Business logic was left in `_ui/` instead of `src/_resource/` — extract it (§4). |
 | Row/card spacing ignores the page's `gutter` | A list-like component is hardcoding `q-gutter-y-*` or `q-mb-*` instead of taking the `gutter` token (§10.2). |
 | A card looks subtly different from its neighbours | It hardcoded a shell class instead of reading the UI's `cardClass` (§10.1). |
-| A manually mounted `_fields` control ignores its label or test hook | The value was passed as an attribute; `_fields` controls set `inheritAttrs: false` and read `config` ([`_fields/REGISTRY.md`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/_fields/REGISTRY.md)). |
+| A manually mounted `_fields` control ignores its label or test hook | The value was passed as an attribute; `_fields` controls set `inheritAttrs: false` and read `config` ([`_fields/REGISTRY.md`](file:///f:/AQL/FRONTENT/src/_fields/REGISTRY.md)). |
 | A field type gains an alias or a prepared-props branch and one control doesn't follow it | That control deep-imports `_fields/{type}/Add.vue` instead of calling `resolveFieldComponent` (§2.4). |
 | Cards in a grouped list sit at a different rhythm from the rest of the page | Spacing was put in `card-class`; it is appearance only, and spacing goes through the list's `gutter` prop (§10.1). |
 | A control's tap size stops matching the rest of the UI after a token change | It hardcoded `min-width`/`min-height` instead of binding `tapTargetStyle` (§10.5). |
@@ -220,18 +220,18 @@ Run this per new module. Each step cites the section that governs it.
 > Any change to the resolver model, the page-contract conventions, the Index widget rules,
 > the form-shape decision, the View blueprint, or the visual contract MUST be reflected in:
 > 1. This document.
-> 2. [resource_ui_module_developer.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/resource_ui_module_developer.md) — its condensed checklist must stay in sync with §14 above; this is the one deliberate duplication in this guide's ecosystem.
-> 3. [CORE_DOC_ROUTING.md](file:///f:/LITTLE%20LEAP/AQL/Documents/CORE_DOC_ROUTING.md) if the routing rule for resource-UI-module generation changes.
-> 4. [AGENTS.md](file:///f:/LITTLE%20LEAP/AQL/AGENTS.md) if the Query Classification or Initialization Prompt Routing entries change.
+> 2. [resource_ui_module_developer.md](file:///f:/AQL/References/Prompt%20Library/Initialization/resource_ui_module_developer.md) — its condensed checklist must stay in sync with §14 above; this is the one deliberate duplication in this guide's ecosystem.
+> 3. [CORE_DOC_ROUTING.md](file:///f:/AQL/Documents/CORE_DOC_ROUTING.md) if the routing rule for resource-UI-module generation changes.
+> 4. [AGENTS.md](file:///f:/AQL/AGENTS.md) if the Query Classification or Initialization Prompt Routing entries change.
 >
 > Ownership of the three catalogues this guide links rather than restates:
 > - A `_fields` type, or the manual field-mounting contract →
->   [`_fields/REGISTRY.md`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/_fields/REGISTRY.md).
+>   [`_fields/REGISTRY.md`](file:///f:/AQL/FRONTENT/src/_fields/REGISTRY.md).
 > - A reusable Section/Content/app component, its props or its hide rule →
->   [`components/REGISTRY.md`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/REGISTRY.md).
+>   [`components/REGISTRY.md`](file:///f:/AQL/FRONTENT/src/components/REGISTRY.md).
 > - A UI's design tokens and their rationale → that UI's `_ui/{Ui}/_config/config.md`.
 >
 > A change to the three-layer boundary, the strict import chain, or the injection-relay
 > pattern is owned by
-> [UI_RESOURCE_DOMAIN_LOGIC.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_RESOURCE_DOMAIN_LOGIC.md) —
+> [UI_RESOURCE_DOMAIN_LOGIC.md](file:///f:/AQL/Documents/UI_RESOURCE_DOMAIN_LOGIC.md) —
 > update it first, then sync this document's §4/§6 summaries to match.

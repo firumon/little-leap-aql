@@ -107,16 +107,16 @@ Once a new Section component is created, you **MUST** update this file to docume
 * Example overrides (both JS logic modifiers and Vue overrides).
 
 #### Current Sections Catalog
-* **[Header.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/sections/Header.vue)**: Renders the top branding panel, back arrows, status chips, and reload buttons.
+* **[Header.vue](file:///f:/AQL/FRONTENT/src/components/sections/Header.vue)**: Renders the top branding panel, back arrows, status chips, and reload buttons.
   * *Props*: `title`, `subtitle`, `chip`, `chipColor`, `chipTextColor`, `back`, `reload`, `backIcon`, `reloadIcon`, `leftIconColor`, `icon`, `iconColor`.
   * *Defaults*: Derived automatically from routing metadata and `resourceConfig.ui.menus`.
-* **[FilterInput.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/sections/FilterInput.vue)**: Renders a text input for filtering or searching record datasets, supporting debounce and custom icons.
+* **[FilterInput.vue](file:///f:/AQL/FRONTENT/src/components/sections/FilterInput.vue)**: Renders a text input for filtering or searching record datasets, supporting debounce and custom icons.
   * *Props*: `outlined`, `debounce`, `placeholder`, `icon`, `iconColor`, `clearable`, `clearIcon`, `label`.
   * *Defaults*: Binds dynamically to `filterTerm` or `searchTerm` inside `resourceRecord` (falls back to local state). Default icon is `'filter_list'`.
-* **[ListSwitcher.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/sections/ListSwitcher.vue)**: Renders a premium pill/segment-style switcher bar for switching between named list views or states.
-  * For full catalog specification, customization scenarios, dynamic modifiers, and responsive overflow logic, refer to the canonical [AQL Frontend List Switcher Guide](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_LIST_SWITCHER.md).
-* **[MetricCards.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/sections/MetricCards.vue)**: Renders a horizontal row of dashboard stat counters — "12 overdue visits", "8 due today", and similar key operational metrics. See §2.4 below.
-* **[LinearProgress.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/sections/LinearProgress.vue)**: Renders graphical linear progress bars for completion tracking — "14 / 25 completed visits (56%)". See §2.5 below.
+* **[ListSwitcher.vue](file:///f:/AQL/FRONTENT/src/components/sections/ListSwitcher.vue)**: Renders a premium pill/segment-style switcher bar for switching between named list views or states.
+  * For full catalog specification, customization scenarios, dynamic modifiers, and responsive overflow logic, refer to the canonical [AQL Frontend List Switcher Guide](file:///f:/AQL/Documents/UI_LIST_SWITCHER.md).
+* **[MetricCards.vue](file:///f:/AQL/FRONTENT/src/components/sections/MetricCards.vue)**: Renders a horizontal row of dashboard stat counters — "12 overdue visits", "8 due today", and similar key operational metrics. See §2.4 below.
+* **[LinearProgress.vue](file:///f:/AQL/FRONTENT/src/components/sections/LinearProgress.vue)**: Renders graphical linear progress bars for completion tracking — "14 / 25 completed visits (56%)". See §2.5 below.
 
 
 ---

@@ -31,28 +31,28 @@ The multi-tenant architecture dynamically resolves the correct tenant backend Ap
 
 When modifying or investigating, inspect these files:
 * **Frontend Boot & Router**:
-  * [axios.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/boot/axios.js): Handles query parameter lookup, `localStorage` caching, and URL cleansing.
-  * [api.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/config/api.js): Warns instead of throws if build-time `VITE_GAS_URL` is empty.
-  * [routes.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/router/routes.js): Registers the `/select-tenant` route.
-  * [index.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/router/index.js): Redirects requests lacking cached URLs to `/select-tenant`.
-  * [SelectTenantPage.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/pages/AuthPage/SelectTenantPage.vue): Manual entry page for tenant code.
+  * [axios.js](file:///f:/AQL/FRONTENT/src/boot/axios.js): Handles query parameter lookup, `localStorage` caching, and URL cleansing.
+  * [api.js](file:///f:/AQL/FRONTENT/src/config/api.js): Warns instead of throws if build-time `VITE_GAS_URL` is empty.
+  * [routes.js](file:///f:/AQL/FRONTENT/src/router/routes.js): Registers the `/select-tenant` route.
+  * [index.js](file:///f:/AQL/FRONTENT/src/router/index.js): Redirects requests lacking cached URLs to `/select-tenant`.
+  * [SelectTenantPage.vue](file:///f:/AQL/FRONTENT/src/pages/AuthPage/SelectTenantPage.vue): Manual entry page for tenant code.
 * **Master Backend Scripts**:
-  * [api.gs](file:///f:/LITTLE%20LEAP/AQL/MASTER/api.gs): Master `doPost(e)` action for tenant-to-url resolution.
-  * [appsscript.json](file:///f:/LITTLE%20LEAP/AQL/MASTER/appsscript.json): Master Apps Script manifest.
-  * [.clasp.json](file:///f:/LITTLE%20LEAP/AQL/MASTER/.clasp.json): Master script ID association.
+  * [api.gs](file:///f:/AQL/MASTER/api.gs): Master `doPost(e)` action for tenant-to-url resolution.
+  * [appsscript.json](file:///f:/AQL/MASTER/appsscript.json): Master Apps Script manifest.
+  * [.clasp.json](file:///f:/AQL/MASTER/.clasp.json): Master script ID association.
 * **Deployment & Setup**:
-  * [deploy-master-gas.js](file:///f:/LITTLE%20LEAP/AQL/scripts/deploy-master-gas.js): Reads `.env` for `VITE_MASTER_GAS_URL` and redeploys to that ID.
-  * [package.json](file:///f:/LITTLE%20LEAP/AQL/package.json): Defines script commands for master management.
+  * [deploy-master-gas.js](file:///f:/AQL/scripts/deploy-master-gas.js): Reads `.env` for `VITE_MASTER_GAS_URL` and redeploys to that ID.
+  * [package.json](file:///f:/AQL/package.json): Defines script commands for master management.
 * **Tenant Wrapper Script**:
-  * [tenant.gs](file:///f:/LITTLE%20LEAP/AQL/TENANTS/tenant.gs): Boilerplate wrapper script template containing forwarding wrappers for all triggers, custom sheet menu callbacks, and HTML dialog functions.
+  * [tenant.gs](file:///f:/AQL/TENANTS/tenant.gs): Boilerplate wrapper script template containing forwarding wrappers for all triggers, custom sheet menu callbacks, and HTML dialog functions.
 
 ---
 
 ## 3. Wrapper Script Template Sync Rules
 
-When editing functions inside the core `GAS/` codebase, you MUST update [tenant.gs](file:///f:/LITTLE%20LEAP/AQL/TENANTS/tenant.gs) if modifications affect any of these 3 public-facing function types:
+When editing functions inside the core `GAS/` codebase, you MUST update [tenant.gs](file:///f:/AQL/TENANTS/tenant.gs) if modifications affect any of these 3 public-facing function types:
 1. **Spreadsheet Triggers**: Event hooks (like `onOpen`, `onEdit`, `onChange`) captured directly by the container script.
-2. **Custom Sheet Menu Callbacks**: Target function string names registered in [appMenu.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/appMenu.gs) (e.g. `showCreateUserDialog`).
+2. **Custom Sheet Menu Callbacks**: Target function string names registered in [appMenu.gs](file:///f:/AQL/GAS/appMenu.gs) (e.g. `showCreateUserDialog`).
 3. **HTML Dialog Callbacks (google.script.run targets)**: Functions called from container-bound HTML modal dialogs/sidebars. Browser clients cannot invoke library namespaces directly (e.g. `google.script.run.AqlCore.myFunc()` is invalid); they must invoke a local wrapper function in `tenant.gs` which forwards the call to the library.
 
 ---
@@ -60,7 +60,7 @@ When editing functions inside the core `GAS/` codebase, you MUST update [tenant.
 ## 4. Tenant Onboarding & Library Upgrades
 
 * **Adding a New Tenant**: 
-  1. **Folder & Generation**: Follow the [New Client Setup Guide](file:///f:/LITTLE%20LEAP/AQL/Documents/TENANT_NEW_CLIENT_SETUP.md) to copy the template spreadsheet (`__tenant_app__`) and generate scoped sheets. The template spreadsheet already has the up-to-date wrapper script bound and configured to reference `AqlCore` library.
+  1. **Folder & Generation**: Follow the [New Client Setup Guide](file:///f:/AQL/Documents/TENANT_NEW_CLIENT_SETUP.md) to copy the template spreadsheet (`__tenant_app__`) and generate scoped sheets. The template spreadsheet already has the up-to-date wrapper script bound and configured to reference `AqlCore` library.
   2. **Authorize permissions**: Select the `onOpen` function in the new tenant's online Apps Script editor and click **Run** to authorize the script. Refresh the Google Sheet to display the menu.
   3. **Set Script Property**: In the Apps Script settings, add a Script Property named `APP_FILE_ID` with the value set to the spreadsheet ID of the tenant's new `App` file.
   4. **Deploy Web App**: Deploy the project as a Web App (Execute as: `Me`, Who has access: `Anyone`) and copy the Web App URL.
@@ -70,7 +70,7 @@ When editing functions inside the core `GAS/` codebase, you MUST update [tenant.
 * **Upgrading AqlCore Library Version**:
   1. Push local changes to `AqlCore` and `AQL` using `npm run gas:push` (which runs `push-gas.js`). Publish a new version in `AqlCore`.
   2. Push library version upgrade to all tenants: `npm run tenant:update-libs`. (This automatically queries the latest version, updates `appsscript.json`, and pushes the manifest to all tenants without resetting web app access permissions).
-  3. **Step-by-Step Spreadsheet Setup**: For full instructions on folder creation, generating spreadsheets using the menu, setting up configuration/file IDs, routing custom resources, and running refactoring scripts, see the [New Client Setup Guide](file:///f:/LITTLE%20LEAP/AQL/Documents/TENANT_NEW_CLIENT_SETUP.md).
+  3. **Step-by-Step Spreadsheet Setup**: For full instructions on folder creation, generating spreadsheets using the menu, setting up configuration/file IDs, routing custom resources, and running refactoring scripts, see the [New Client Setup Guide](file:///f:/AQL/Documents/TENANT_NEW_CLIENT_SETUP.md).
 
 ---
 

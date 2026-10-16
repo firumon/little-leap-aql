@@ -114,7 +114,7 @@ subfolder is specifically for the injection relay and anything that depends on i
 > (§6.2) to the tier those shared components already sit at. `Approve.js` and
 > `Reallocate.js` are the worked example: both resolve the same four content cards, which
 > live at the resource tier precisely so neither page owns them
-> ([UI_MODULE_DEVELOPER_GUIDE.md §3.1](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_MODULE_DEVELOPER_GUIDE.md)).
+> ([UI_MODULE_DEVELOPER_GUIDE.md §3.1](file:///f:/AQL/Documents/UI_MODULE_DEVELOPER_GUIDE.md)).
 > A `.vue` file has exactly one import line per composable, so forcing a page-scoped copy
 > of the composable would have forced a copy of all four cards too — reintroducing the
 > exact drift shared placement exists to prevent.
@@ -123,7 +123,7 @@ subfolder is specifically for the injection relay and anything that depends on i
 
 A UI Composable sits at **the same tier as the most general component that imports it** —
 never higher, never lower. This is the composable-side mirror of the component tier rule
-([UI_MODULE_DEVELOPER_GUIDE.md §3.1](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_MODULE_DEVELOPER_GUIDE.md)),
+([UI_MODULE_DEVELOPER_GUIDE.md §3.1](file:///f:/AQL/Documents/UI_MODULE_DEVELOPER_GUIDE.md)),
 "share by placement, not by copying":
 
 | Consumers | Folder |

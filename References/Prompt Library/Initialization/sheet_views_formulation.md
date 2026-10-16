@@ -1,4 +1,4 @@
-﻿# AQL Sheet Views Formulation
+# AQL Sheet Views Formulation
 
 > **Scope boundary**: This document covers Google Sheets View formulas only — denormalized data views, IMPORTRANGE, VLOOKUP, Config sheet patterns. Its pre-reads reference sheet structure docs — read them by path. Do NOT load other init prompts.
 
@@ -18,18 +18,18 @@ AQL **Views** are specialized Google Sheets that consolidate, flatten, and denor
 5. The frontend reads View sheets as read-only data sources (no CRUD operations).
 
 ### B. Core File Coordinates
-* **Views Index**: [Sheet Formulas/Views/INDEX.md](file:///f:/LITTLE%20LEAP/AQL/Sheet%20Formulas/Views/INDEX.md) — catalog of all view sheets and their dependencies
-* **Reports Index**: [Sheet Formulas/Reports/INDEX.md](file:///f:/LITTLE%20LEAP/AQL/Sheet%20Formulas/Reports/INDEX.md) — catalog of all report templates
-* **View Documentation Files**: Individual `.md` files under `Sheet Formulas/Views/` (e.g., [SKU.md](file:///f:/LITTLE%20LEAP/AQL/Sheet%20Formulas/Views/SKU.md), [WarehouseStock.md](file:///f:/LITTLE%20LEAP/AQL/Sheet%20Formulas/Views/WarehouseStock.md))
+* **Views Index**: [Sheet Formulas/Views/INDEX.md](file:///f:/AQL/Sheet%20Formulas/Views/INDEX.md) — catalog of all view sheets and their dependencies
+* **Reports Index**: [Sheet Formulas/Reports/INDEX.md](file:///f:/AQL/Sheet%20Formulas/Reports/INDEX.md) — catalog of all report templates
+* **View Documentation Files**: Individual `.md` files under `Sheet Formulas/Views/` (e.g., [SKU.md](file:///f:/AQL/Sheet%20Formulas/Views/SKU.md), [WarehouseStock.md](file:///f:/AQL/Sheet%20Formulas/Views/WarehouseStock.md))
 
 ---
 
 ## 2. Mandatory Pre-Reads
 
 Before writing or modifying any View formula:
-* Views catalog: [Sheet Formulas/Views/INDEX.md](file:///f:/LITTLE%20LEAP/AQL/Sheet%20Formulas/Views/INDEX.md)
+* Views catalog: [Sheet Formulas/Views/INDEX.md](file:///f:/AQL/Sheet%20Formulas/Views/INDEX.md)
 * The specific View's existing documentation under `Sheet Formulas/Views/`
-* Source sheet structure docs: relevant file under `Documents/` (e.g., [SHEET_MASTER_STRUCTURE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/SHEET_MASTER_STRUCTURE.md), [SHEET_OPERATION_STRUCTURE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/SHEET_OPERATION_STRUCTURE.md))
+* Source sheet structure docs: relevant file under `Documents/` (e.g., [SHEET_MASTER_STRUCTURE.md](file:///f:/AQL/Documents/SHEET_MASTER_STRUCTURE.md), [SHEET_OPERATION_STRUCTURE.md](file:///f:/AQL/Documents/SHEET_OPERATION_STRUCTURE.md))
 
 ---
 
@@ -59,7 +59,7 @@ For each View, create or update a `.md` file under `Sheet Formulas/Views/` with:
 4. **The raw Google Sheets formula**
 5. **Detailed logic breakdown** — step-by-step explanation of what the formula does
 
-Always update [INDEX.md](file:///f:/LITTLE%20LEAP/AQL/Sheet%20Formulas/Views/INDEX.md) when adding or modifying views.
+Always update [INDEX.md](file:///f:/AQL/Sheet%20Formulas/Views/INDEX.md) when adding or modifying views.
 
 ---
 
@@ -81,5 +81,5 @@ Always update [INDEX.md](file:///f:/LITTLE%20LEAP/AQL/Sheet%20Formulas/Views/IND
 
 1. **Formula Check**: Open the View sheet in Google Sheets and verify no `#REF!`, `#N/A`, or `#VALUE!` errors.
 2. **Data Accuracy**: Spot-check 3-5 rows against the raw source sheets to verify correct denormalization.
-3. **Documentation Sync**: Verify the `.md` file matches the live formula and [INDEX.md](file:///f:/LITTLE%20LEAP/AQL/Sheet%20Formulas/Views/INDEX.md) is updated.
+3. **Documentation Sync**: Verify the `.md` file matches the live formula and [INDEX.md](file:///f:/AQL/Sheet%20Formulas/Views/INDEX.md) is updated.
 4. **Downstream Impact**: If an existing View was modified, check if any Reports reference it (search `Sheet Formulas/Reports/`).

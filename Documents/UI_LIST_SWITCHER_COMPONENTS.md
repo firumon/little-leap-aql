@@ -59,7 +59,7 @@ Every entry inside the resolved `items` array — whether sourced from a `ListSw
 | `filter` | `Object` | No | A filter tree (**Group** or **Condition** object — see [Section 5.1.1](#511-filter-json-schema-reference)) evaluated against each row via `evaluateFilter()` to determine view membership and counts. Omitting it matches all rows. |
 
 **How `ListSwitcher.vue` passes these down to `ListSwitcherItem.vue`:**
-- For each visible item, `buildItemProps(item)` ([ListSwitcher.vue#L227-L236](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/sections/ListSwitcher.vue#L227-L236)) spreads the raw `item` object as attrs, then explicitly sets:
+- For each visible item, `buildItemProps(item)` ([ListSwitcher.vue#L227-L236](file:///f:/AQL/FRONTENT/src/components/sections/ListSwitcher.vue#L227-L236)) spreads the raw `item` object as attrs, then explicitly sets:
   - `item`: the raw object itself (for `ListSwitcherItem` to read `item.count` or other custom metadata).
   - `active`: `true` when `finalAttrs.value.activeItem === item.name`.
   - `label` / `icon`: resolved via the container's own `label`/`icon` prop-resolver functions first (if `ListSwitcher` was given a `label`/`icon` prop or JS-modifier override), falling back to `item.label`/`item.icon`/`item.name`.
@@ -80,7 +80,7 @@ The switcher has **no hardcoded per-color CSS variants**. Any color string confi
 | **Raw CSS color** | `#e11d48`, `#0284c7`, `rgb(2 132 199)`, `var(--my-token)` | Passed through untouched. |
 | **Unrecognised / blank** | `''`, `not-a-color` | Falls back to `var(--q-primary)`. |
 
-* **Resolver**: `resolveCssColor(color, fallback)` in [`FRONTENT/src/utils/colorHelpers.js`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/utils/colorHelpers.js). It is DOM-safe (returns the fallback when `document` is unavailable) and memoises palette lookups.
+* **Resolver**: `resolveCssColor(color, fallback)` in [`FRONTENT/src/utils/colorHelpers.js`](file:///f:/AQL/FRONTENT/src/utils/colorHelpers.js). It is DOM-safe (returns the fallback when `document` is unavailable) and memoises palette lookups.
 * **Consumers**:
   * `ListSwitcherItem.vue` → `itemStyle` sets `--aql-switcher-color` on active items only.
   * `ListSwitcher.vue` → `moreButtonStyle` does the same for the "More" overflow button when the active view lives inside the dropdown; `menuItemStyle(item)` colors the active dropdown entry inline (no `text-<color>` class, so hex values work).

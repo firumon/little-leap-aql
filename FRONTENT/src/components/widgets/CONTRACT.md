@@ -1,7 +1,7 @@
 # Dashboard Widget Contract
 
 > Read this **before** writing any widget. It fixes the boring parts, so all widgets look like one family.
-> Companion file: [FEATURE_DASHBOARD_ENGINE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/FEATURE_DASHBOARD_ENGINE.md).
+> Companion file: [FEATURE_DASHBOARD_ENGINE.md](file:///f:/AQL/Documents/FEATURE_DASHBOARD_ENGINE.md).
 >
 > **The three widget documents:**
 > - [REGISTRY.md](REGISTRY.md): Picks a preset. Only preset names go in the sheet.

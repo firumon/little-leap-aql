@@ -1,4 +1,4 @@
-﻿# AQL Reports System
+# AQL Reports System
 
 ## 1. End-to-End Report Architecture
 
@@ -189,7 +189,7 @@ are overridable.
 ### A1. ResourceReports Action (`FRONTENT/src/components/actions/ResourceReports.vue`) — preferred
 A first-class member of the **Action subsystem**, so it resolves through
 `useActionResolver` and is overridable at all 10 `_ui/` tiers as `resourcereports.(vue|js)`.
-Canonical spec: [UI_ACTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_ACTION_SYSTEM.md) §3.5.
+Canonical spec: [UI_ACTION_SYSTEM.md](file:///f:/AQL/Documents/UI_ACTION_SYSTEM.md) §3.5.
 *   **Mount points**: `PageAction` mounts it automatically on every non-form page; or
     mount it directly as `<Action action="ResourceReports" mode="toolbar" />`. The
     sticky form bar (`FormActions`) does **not** host it — it renders `FormAction*`
@@ -207,9 +207,9 @@ Canonical spec: [UI_ACTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_
     horizontal **pill** footprint — icon + short `label` (default `'Reports'`) — in
     `teal-7` with white text. `card`/`inline` buttons carry `.aql-form-action-btn` +
     `.aql-report-action-btn`.
-*   **Input dialog**: [`app/ReportInputDialog.vue`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/app/ReportInputDialog.vue)
+*   **Input dialog**: [`app/ReportInputDialog.vue`](file:///f:/AQL/FRONTENT/src/components/app/ReportInputDialog.vue)
     is a thin body over the shared
-    [`shared/AqlDialog.vue`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/shared/AqlDialog.vue)
+    [`shared/AqlDialog.vue`](file:///f:/AQL/FRONTENT/src/components/shared/AqlDialog.vue)
     shell — it supplies only the field list; header, banner, footer and transitions
     come from the shell. Fields render at Quasar's standard (non-`dense`) height for
     comfortable touch targets, per the mobile-first contract (ARCHITECTURE RULES §7).

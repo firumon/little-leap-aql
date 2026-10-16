@@ -1,4 +1,4 @@
-﻿# Scope Boundary: AQL List View Filters & Dynamic Tokens
+# Scope Boundary: AQL List View Filters & Dynamic Tokens
 
 This prompt governs the **filter evaluation layer** behind `APP.Resources.ListViews` — the filter
 tree schema, the comparison operators, and the dynamic token system (`$startOfMonth`, `$daysIn:7`,
@@ -9,9 +9,9 @@ logged-in user.
 changing how a condition is evaluated, keeping the GAS admin dialog in sync.
 
 **NOT in scope** — route elsewhere:
-- Visual layout of the switcher pills/tabs → [list_switcher_customization.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/list_switcher_customization.md)
-- How the list body renders rows for an active view → [content_customization.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/content_customization.md)
-- Adding the `ListViews` column itself / sheet setup → [database_schema_alteration.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/database_schema_alteration.md)
+- Visual layout of the switcher pills/tabs → [list_switcher_customization.md](file:///f:/AQL/References/Prompt%20Library/Initialization/list_switcher_customization.md)
+- How the list body renders rows for an active view → [content_customization.md](file:///f:/AQL/References/Prompt%20Library/Initialization/content_customization.md)
+- Adding the `ListViews` column itself / sheet setup → [database_schema_alteration.md](file:///f:/AQL/References/Prompt%20Library/Initialization/database_schema_alteration.md)
 
 ---
 
@@ -20,13 +20,13 @@ changing how a condition is evaluated, keeping the GAS admin dialog in sync.
 >
 > | File | Owns |
 > |---|---|
-> | [`dateHelpers.js`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/utils/dateHelpers.js) | `parseAnyDate`, `startOfDay`/`endOfDay`, `startOfMonth`/`endOfMonth`, `toDateOnly`, `toDateTime24`, `addDays`/`addMonths`, `dayOfYear`, `isoWeek`, `daysFromToday`. Handles BOTH sheet storage shapes (epoch ms in audit columns, ISO strings in business date columns). **Never hand-roll date parsing or day maths.** |
-> | [`sortHelpers.js`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/utils/sortHelpers.js) | `sortByDate(items, column, direction)` — `column` may be a key or a reader function. Sorts without copying rows (a `{ ...row }` spread would strip the non-enumerable relation getters `$outlet` / `_Parents`); unparseable dates sink to the end in both directions. |
-> | [`appHelpers.js`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/utils/appHelpers.js) | String/identity helpers used by every resolver — `toPascalCase` and friends. |
-> | [`colorHelpers.js`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/utils/colorHelpers.js) | `resolveCssColor(value, fallback)` — Quasar brand names, Material palette names and raw CSS all resolve to one inline custom property. |
-> | [`placeholderProps.js`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/utils/placeholderProps.js) | `resolvePlaceholderProps(props, identity, kind)` — the `Props<Identity>` merge. Call it in a resolver; never re-implement it inline. |
+> | [`dateHelpers.js`](file:///f:/AQL/FRONTENT/src/utils/dateHelpers.js) | `parseAnyDate`, `startOfDay`/`endOfDay`, `startOfMonth`/`endOfMonth`, `toDateOnly`, `toDateTime24`, `addDays`/`addMonths`, `dayOfYear`, `isoWeek`, `daysFromToday`. Handles BOTH sheet storage shapes (epoch ms in audit columns, ISO strings in business date columns). **Never hand-roll date parsing or day maths.** |
+> | [`sortHelpers.js`](file:///f:/AQL/FRONTENT/src/utils/sortHelpers.js) | `sortByDate(items, column, direction)` — `column` may be a key or a reader function. Sorts without copying rows (a `{ ...row }` spread would strip the non-enumerable relation getters `$outlet` / `_Parents`); unparseable dates sink to the end in both directions. |
+> | [`appHelpers.js`](file:///f:/AQL/FRONTENT/src/utils/appHelpers.js) | String/identity helpers used by every resolver — `toPascalCase` and friends. |
+> | [`colorHelpers.js`](file:///f:/AQL/FRONTENT/src/utils/colorHelpers.js) | `resolveCssColor(value, fallback)` — Quasar brand names, Material palette names and raw CSS all resolve to one inline custom property. |
+> | [`placeholderProps.js`](file:///f:/AQL/FRONTENT/src/utils/placeholderProps.js) | `resolvePlaceholderProps(props, identity, kind)` — the `Props<Identity>` merge. Call it in a resolver; never re-implement it inline. |
 >
-> **The rule this enforces**: a pure helper that is not resource knowledge belongs in `src/utils/`. It must NOT be duplicated into a `_ui/` composable, and a `_ui/` composable must NEVER import another resource's composable to borrow one — `_ui/**/OutletRestocks/**` reaching into `_ui/**/OutletVisits/**` is exactly the cross-resource dependency [CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/CORE_ARCHITECTURE_RULES.md) §5 forbids. Promote the helper to `src/utils/` and re-export it from the composable if the old import path must keep working.
+> **The rule this enforces**: a pure helper that is not resource knowledge belongs in `src/utils/`. It must NOT be duplicated into a `_ui/` composable, and a `_ui/` composable must NEVER import another resource's composable to borrow one — `_ui/**/OutletRestocks/**` reaching into `_ui/**/OutletVisits/**` is exactly the cross-resource dependency [CORE_ARCHITECTURE_RULES.md](file:///f:/AQL/Documents/CORE_ARCHITECTURE_RULES.md) §5 forbids. Promote the helper to `src/utils/` and re-export it from the composable if the old import path must keep working.
 
 ## 1. Domain Map & Key Files
 
@@ -34,13 +34,13 @@ Read these before editing anything:
 
 | File | Role |
 | :--- | :--- |
-| [`FRONTENT/src/utils/tokenEvaluator.js`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/utils/tokenEvaluator.js) | **Token registry + `COERCES` primitive library + the whole condition evaluator** (`prepareCondition` / `prepareFilter` / `evaluatePreparedFilter` / `evaluateFilter`) and the `useTokenEvaluator()` composable, which binds `{ user }` from the auth store. The single source of truth for token behaviour. |
-| [`FRONTENT/src/utils/dateHelpers.js`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/utils/dateHelpers.js) | Date parse/normalise helpers. Calculations delegate to `date-fns`; only `parseAnyDate` is hand-rolled. |
-| [`FRONTENT/src/composables/useListViews.js`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/useListViews.js) | Auto-generated views, active-view state, per-view counts. Consumes the evaluator; re-exports `prepareFilter` / `evaluatePreparedFilter` / `evaluateFilter` for existing importers. |
-| [`FRONTENT/src/composables/resources/useResourceConfig.js`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/useResourceConfig.js) | `normalizeVisibleWhen` / `isActionVisible` — the SECOND consumer of the evaluator. An action's `visibleWhen` accepts the same tokens a list-view filter does. |
-| [`GAS/listViewsManager.html`](file:///f:/LITTLE%20LEAP/AQL/GAS/listViewsManager.html) | **Admin dialog (list views).** Its `TOKENS` array is a hand-maintained mirror of the frontend registry. |
-| [`GAS/actionManager.html`](file:///f:/LITTLE%20LEAP/AQL/GAS/actionManager.html) | **Admin dialog (actions).** Carries a second hand-maintained `TOKENS` mirror for the "Visible When" value picker. |
-| [`Documents/UI_LIST_SWITCHER.md`](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_LIST_SWITCHER.md) | **Canonical spec.** Section 5.2 is the token reference. |
+| [`FRONTENT/src/utils/tokenEvaluator.js`](file:///f:/AQL/FRONTENT/src/utils/tokenEvaluator.js) | **Token registry + `COERCES` primitive library + the whole condition evaluator** (`prepareCondition` / `prepareFilter` / `evaluatePreparedFilter` / `evaluateFilter`) and the `useTokenEvaluator()` composable, which binds `{ user }` from the auth store. The single source of truth for token behaviour. |
+| [`FRONTENT/src/utils/dateHelpers.js`](file:///f:/AQL/FRONTENT/src/utils/dateHelpers.js) | Date parse/normalise helpers. Calculations delegate to `date-fns`; only `parseAnyDate` is hand-rolled. |
+| [`FRONTENT/src/composables/useListViews.js`](file:///f:/AQL/FRONTENT/src/composables/useListViews.js) | Auto-generated views, active-view state, per-view counts. Consumes the evaluator; re-exports `prepareFilter` / `evaluatePreparedFilter` / `evaluateFilter` for existing importers. |
+| [`FRONTENT/src/composables/resources/useResourceConfig.js`](file:///f:/AQL/FRONTENT/src/composables/resources/useResourceConfig.js) | `normalizeVisibleWhen` / `isActionVisible` — the SECOND consumer of the evaluator. An action's `visibleWhen` accepts the same tokens a list-view filter does. |
+| [`GAS/listViewsManager.html`](file:///f:/AQL/GAS/listViewsManager.html) | **Admin dialog (list views).** Its `TOKENS` array is a hand-maintained mirror of the frontend registry. |
+| [`GAS/actionManager.html`](file:///f:/AQL/GAS/actionManager.html) | **Admin dialog (actions).** Carries a second hand-maintained `TOKENS` mirror for the "Visible When" value picker. |
+| [`Documents/UI_LIST_SWITCHER.md`](file:///f:/AQL/Documents/UI_LIST_SWITCHER.md) | **Canonical spec.** Section 5.2 is the token reference. |
 
 ---
 
@@ -186,7 +186,7 @@ In GAS, set `param: '3'` so `onTokenSelect` seeds `$monthsAgo:3` and the admin o
 
 ### 4.3 Add a user token
 
-Read the payload shape from `buildAuthUserPayload` in [`GAS/auth.gs`](file:///f:/LITTLE%20LEAP/AQL/GAS/auth.gs)
+Read the payload shape from `buildAuthUserPayload` in [`GAS/auth.gs`](file:///f:/AQL/GAS/auth.gs)
 — **do not guess field names**. It exposes `id`, `name`, `email`, `avatar`, `accessRegion`,
 `designation`, `roles`, `role`. Note `UserID` is mapped to `id`, not `code`.
 

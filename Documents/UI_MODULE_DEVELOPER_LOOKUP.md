@@ -146,7 +146,7 @@ page names it.
 ## 4. Correct Business Logic Placement — The 3-Layer UI Boundary
 
 > Full detail — folder structure, every rule, and worked examples — lives in
-> [UI_RESOURCE_DOMAIN_LOGIC.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_RESOURCE_DOMAIN_LOGIC.md).
+> [UI_RESOURCE_DOMAIN_LOGIC.md](file:///f:/AQL/Documents/UI_RESOURCE_DOMAIN_LOGIC.md).
 > This section is the summary a module generator needs inline; read the linked doc before
 > writing any `src/_resource/` file.
 
@@ -170,14 +170,14 @@ are data/config, never a second code path).
 Progress/workflow vocabularies, state-transition predicates, stateful workflow aggregates
 that back a wizard/action page, and payload/request builders — everything that answers
 "what can this record do right now, and why." Full list:
-[UI_RESOURCE_DOMAIN_LOGIC.md §3](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_RESOURCE_DOMAIN_LOGIC.md).
+[UI_RESOURCE_DOMAIN_LOGIC.md §3](file:///f:/AQL/Documents/UI_RESOURCE_DOMAIN_LOGIC.md).
 
 ### 4.3 What stays in `_ui/{Ui}/composables/`
 
 Presentation-only helpers that assemble display from a Layer-2 predicate but are not
 themselves a business rule — row presets, per-view formatting, and the injection-relay
 composable (§6.2). Full list:
-[UI_RESOURCE_DOMAIN_LOGIC.md §4](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_RESOURCE_DOMAIN_LOGIC.md).
+[UI_RESOURCE_DOMAIN_LOGIC.md §4](file:///f:/AQL/Documents/UI_RESOURCE_DOMAIN_LOGIC.md).
 
 ### 4.4 Shape
 
@@ -188,7 +188,7 @@ Layer 2 export takes `record`/`records` **only** — never a `config` parameter.
 `allowed()` — never route-derived, never passed in by the caller. Multi-resource logic is
 composed by importing multiple named domain modules from the UI side, not by parameterizing
 one function over different configs. See
-[UI_RESOURCE_DOMAIN_LOGIC.md §3.2 and §5](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_RESOURCE_DOMAIN_LOGIC.md)
+[UI_RESOURCE_DOMAIN_LOGIC.md §3.2 and §5](file:///f:/AQL/Documents/UI_RESOURCE_DOMAIN_LOGIC.md)
 for the full rule and worked example.
 
 ### 4.4b The domain composition cascade
@@ -206,14 +206,14 @@ Three rules govern the chain, and the module you are generating must satisfy all
    `Map` indexes built in one pass; consumers read them in `O(1)`.
 
 Full rule, index schemas and self-check:
-[UI_RESOURCE_DOMAIN_LOGIC.md §10](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_RESOURCE_DOMAIN_LOGIC.md).
+[UI_RESOURCE_DOMAIN_LOGIC.md §10](file:///f:/AQL/Documents/UI_RESOURCE_DOMAIN_LOGIC.md).
 
 **Discovering a gap mid-build.** If, while building a page, you find that a domain helper,
 aggregation or cross-resource projection is missing from Layer 2, do NOT write it in the
 page or its UI composable. Name the gap, say which resource module owns it, ask the user to
 confirm, then implement it in that Layer 2 module to the full invariant set and consume it
 from the page. Protocol:
-[UI_RESOURCE_DOMAIN_LOGIC.md §10.6](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_RESOURCE_DOMAIN_LOGIC.md).
+[UI_RESOURCE_DOMAIN_LOGIC.md §10.6](file:///f:/AQL/Documents/UI_RESOURCE_DOMAIN_LOGIC.md).
 
 ### 4.5 One workflow vocabulary per resource
 

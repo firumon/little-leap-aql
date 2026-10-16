@@ -201,7 +201,7 @@ The sheet shallow-merges over the DBI. If the DBI provides `{ color: 'primary', 
   }
   ```
   Functions cannot be written in the sheet cell.
-- For complete prop lists supported by each widget base, see [WIDGETS.md](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/widgets/WIDGETS.md).
+- For complete prop lists supported by each widget base, see [WIDGETS.md](file:///f:/AQL/FRONTENT/src/components/widgets/WIDGETS.md).
 
 ---
 

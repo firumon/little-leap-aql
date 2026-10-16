@@ -75,7 +75,7 @@ Every one of these resolves through `resolveFieldComponent(type, mode)` into
 `src/_fields/<type>/` — the priority list decides **which type**, never which raw
 Quasar control. For what each resolved type renders, which aliases map to it, and how to
 mount one by hand, see
-[`_fields/REGISTRY.md`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/_fields/REGISTRY.md).
+[`_fields/REGISTRY.md`](file:///f:/AQL/FRONTENT/src/_fields/REGISTRY.md).
 
 ### 13.2 Cross-reference option labels
 

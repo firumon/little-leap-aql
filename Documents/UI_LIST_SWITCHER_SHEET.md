@@ -9,7 +9,7 @@
 The list view items and filtering are derived dynamically from the Google Sheets database configurations.
 
 ### 5.1. Sheet Config Relationship
-* **Spreadsheet Setup**: Managed under the `ListViews` column of the `APP.Resources` sheet. See the [AQL Menu Admin Guide](file:///f:/LITTLE%20LEAP/AQL/Documents/SHEET_TOOLBAR_MENU_GUIDE.md#L201-L212).
+* **Spreadsheet Setup**: Managed under the `ListViews` column of the `APP.Resources` sheet. See the [AQL Menu Admin Guide](file:///f:/AQL/Documents/SHEET_TOOLBAR_MENU_GUIDE.md#L201-L212).
 * **JSON Array Structure**: The cell contains a JSON array of item objects:
   ```json
   [
@@ -28,7 +28,7 @@ The list view items and filtering are derived dynamically from the Google Sheets
     }
   ]
   ```
-* **Admin Dialog**: The `AQL 🚀 → Manage List Views` dialog ([`GAS/listViewsManager.html`](file:///f:/LITTLE%20LEAP/AQL/GAS/listViewsManager.html)) writes this JSON. Its **Chip Color** field is a free-text input backed by a `colorSuggestions` datalist — pick a brand/palette suggestion or type any Quasar palette name or Hex code. A live swatch previews brand names and raw CSS colors; palette names (`red-10`) show a neutral swatch because they can only be resolved by the frontend at runtime. See [Section 4.4](#44-dynamic-color-resolution) for accepted formats.
+* **Admin Dialog**: The `AQL 🚀 → Manage List Views` dialog ([`GAS/listViewsManager.html`](file:///f:/AQL/GAS/listViewsManager.html)) writes this JSON. Its **Chip Color** field is a free-text input backed by a `colorSuggestions` datalist — pick a brand/palette suggestion or type any Quasar palette name or Hex code. A live swatch previews brand names and raw CSS colors; palette names (`red-10`) show a neutral swatch because they can only be resolved by the frontend at runtime. See [Section 4.4](#44-dynamic-color-resolution) for accepted formats.
 
 ### 5.1.1. Filter JSON Schema Reference
 The `filter` property does not support a raw array at its root. It must be either a **Group Object** or a **Condition Object**:
@@ -58,7 +58,7 @@ The frontend evaluator supports the following operator keys:
 - `lte`: Less than or equal to.
 - `contains`: Checks if the column value contains the search string (substring match).
 
-For source code implementation, see `evaluateFilter` in [useListViews.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/useListViews.js).
+For source code implementation, see `evaluateFilter` in [useListViews.js](file:///f:/AQL/FRONTENT/src/composables/useListViews.js).
 
 ---
 
@@ -68,7 +68,7 @@ A condition `value` may be a **token string** instead of a literal. Tokens resol
 time against the clock and the logged-in user, so one sheet-authored view stays correct as the
 date rolls over or a different user signs in.
 
-Registry: [`src/utils/tokenEvaluator.js`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/utils/tokenEvaluator.js).
+Registry: [`src/utils/tokenEvaluator.js`](file:///f:/AQL/FRONTENT/src/utils/tokenEvaluator.js).
 Token names are **case-insensitive** (`$startofmonth` works). In the **Manage Lists** admin
 dialog they appear in the grouped `Token...` dropdown next to each condition's value input.
 
@@ -104,7 +104,7 @@ including under `neq` / `not_in`.
 > `2026-08-02T20:00:00.000Z` buckets as 2 Aug regardless of the viewer's timezone. This matches
 > the long-standing `.slice(0, 10)` behaviour in `useOutletVisits` and keeps day buckets stable
 > across regions. Date arithmetic itself is delegated to `date-fns`; only the parse/dispatch step
-> in [`dateHelpers.js`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/utils/dateHelpers.js) is AQL-specific.
+> in [`dateHelpers.js`](file:///f:/AQL/FRONTENT/src/utils/dateHelpers.js) is AQL-specific.
 
 #### 5.2.2. Date & Time Tokens
 
@@ -138,7 +138,7 @@ including under `neq` / `not_in`.
 > the epoch family on a blank or unparseable column: the NaN guard does not fire, the
 > column reads as `''`, and `lt`/`neq` therefore still match those rows. This is
 > deliberate consistency with `$date` / `$month`, not an oversight — see invariant 4 in
-> [list_view_tokens.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/list_view_tokens.md).
+> [list_view_tokens.md](file:///f:/AQL/References/Prompt%20Library/Initialization/list_view_tokens.md).
 > Pair it with a `notEmpty` condition when blanks must be excluded.
 
 #### 5.2.3. Relative-Day Tokens (Parameterised)
@@ -245,8 +245,8 @@ A literal list may mix tokens and plain values — `["Viewer", "$userRoles"]` fl
 
 #### 5.2.6. Adding a Token
 
-1. Add the entry to `TOKENS` in [`tokenEvaluator.js`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/utils/tokenEvaluator.js), with `value(params, ctx)` as a plain extractor plus its `coerce` / `coerceToken` pipelines. Add a new primitive to `COERCES` only if no composition of the existing ones fits.
-2. Mirror it in the `TOKENS` array in [`GAS/listViewsManager.html`](file:///f:/LITTLE%20LEAP/AQL/GAS/listViewsManager.html) so admins can pick it from the dropdown. Parameterised tokens set `param` to the seeded default.
+1. Add the entry to `TOKENS` in [`tokenEvaluator.js`](file:///f:/AQL/FRONTENT/src/utils/tokenEvaluator.js), with `value(params, ctx)` as a plain extractor plus its `coerce` / `coerceToken` pipelines. Add a new primitive to `COERCES` only if no composition of the existing ones fits.
+2. Mirror it in the `TOKENS` array in [`GAS/listViewsManager.html`](file:///f:/AQL/GAS/listViewsManager.html) so admins can pick it from the dropdown. Parameterised tokens set `param` to the seeded default.
 3. Document it in the tables above.
 
 Pipeline names are validated at module load — an unknown `COERCES` key throws immediately
@@ -274,7 +274,7 @@ The views switcher respects sheet-driven constraints explicitly inside the base 
    - **Behavior**: Custom UI JS modifiers and Vue overrides are **DISABLED / IGNORED**. 
    - **Details**: The list views are fully configured via sheet filters. Custom UI templates and JS modifiers are bypassed to enforce standard sheet-driven tabs.
 
-This conditional bypass logic is implemented inside [ViewSwitcher.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/sections/ViewSwitcher.vue) by evaluating the `isOverrideAllowed` computed property.
+This conditional bypass logic is implemented inside [ViewSwitcher.vue](file:///f:/AQL/FRONTENT/src/components/sections/ViewSwitcher.vue) by evaluating the `isOverrideAllowed` computed property.
 
 
 ---

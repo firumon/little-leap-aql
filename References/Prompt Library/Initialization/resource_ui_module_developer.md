@@ -15,32 +15,32 @@ exactly what the module's business workflow calls for (see Step 0).
 domain prompts. Read this prompt's directives below first; if Step 0 determines the task is
 single-piece, defer immediately to the matching narrower prompt and stop reading here:
 
-- One Content/List override → [content_customization.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/content_customization.md)
-- One Create/Update form change → [content_create_and_update_customization.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/content_create_and_update_customization.md)
-- One View column/card change → [view_customization.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/view_customization.md)
-- One Section (chrome, header, metric widget) → [page_and_section_system.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/page_and_section_system.md)
-- One Action/FAB/sticky-bar change → [action_customization.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/action_customization.md)
-- A new reusable render component under `src/components/{abstract,app,contents,sections}/` → [renderable_contract.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/renderable_contract.md) (load additively)
+- One Content/List override → [content_customization.md](file:///f:/AQL/References/Prompt%20Library/Initialization/content_customization.md)
+- One Create/Update form change → [content_create_and_update_customization.md](file:///f:/AQL/References/Prompt%20Library/Initialization/content_create_and_update_customization.md)
+- One View column/card change → [view_customization.md](file:///f:/AQL/References/Prompt%20Library/Initialization/view_customization.md)
+- One Section (chrome, header, metric widget) → [page_and_section_system.md](file:///f:/AQL/References/Prompt%20Library/Initialization/page_and_section_system.md)
+- One Action/FAB/sticky-bar change → [action_customization.md](file:///f:/AQL/References/Prompt%20Library/Initialization/action_customization.md)
+- A new reusable render component under `src/components/{abstract,app,contents,sections}/` → [renderable_contract.md](file:///f:/AQL/References/Prompt%20Library/Initialization/renderable_contract.md) (load additively)
 
 ## Required Pre-Reads
 
-1. **Canonical spec**: [UI_MODULE_DEVELOPER_GUIDE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_MODULE_DEVELOPER_GUIDE.md).
+1. **Canonical spec**: [UI_MODULE_DEVELOPER_GUIDE.md](file:///f:/AQL/Documents/UI_MODULE_DEVELOPER_GUIDE.md).
    - **For Full Module Generation**: Read in full as the authoritative hub.
    - **For Single-Piece Tasks or Context-Equipped Sessions**: Reference **only the matching sections** needed for that specific piece:
-     - **Button / FAB / Sticky Action / Workflow Trigger**: Read §8 (*Actions — Dispatch, Handlers & FABs*) and [UI_ACTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_ACTION_SYSTEM.md).
-     - **Card Header / Page Chrome / Metric Widget**: Read §2, §5 (*Page Contracts & `Props<Identity>`*) and [UI_PAGE_AND_SECTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_PAGE_AND_SECTION_SYSTEM.md).
-     - **List View / Row Presentation / Row Action**: Read §7.1–§7.3, §9.3–§9.4 and [UI_CONTENT_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_CONTENT_SYSTEM.md).
-     - **View Details / Business-Concept Card**: Read §7.4–§7.5 and [UI_VIEW_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_VIEW_SYSTEM.md).
-     - **Create / Edit Form / Wizard Step**: Read §7.6, §11, [UI_CREATE_AND_UPDATE_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_CREATE_AND_UPDATE_SYSTEM.md), and [UI_PAGE_STATE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_PAGE_STATE.md).
-2. **Resource domain logic & import boundaries** — [UI_RESOURCE_DOMAIN_LOGIC.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_RESOURCE_DOMAIN_LOGIC.md) — read in full before writing any `src/_resource/` file (Step 2) or any UI Composable (Step 3).
-3. **Architecture constraints & record access** — [CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/CORE_ARCHITECTURE_RULES.md) and [UI_RECORD_ACCESS.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_RECORD_ACCESS.md).
+     - **Button / FAB / Sticky Action / Workflow Trigger**: Read §8 (*Actions — Dispatch, Handlers & FABs*) and [UI_ACTION_SYSTEM.md](file:///f:/AQL/Documents/UI_ACTION_SYSTEM.md).
+     - **Card Header / Page Chrome / Metric Widget**: Read §2, §5 (*Page Contracts & `Props<Identity>`*) and [UI_PAGE_AND_SECTION_SYSTEM.md](file:///f:/AQL/Documents/UI_PAGE_AND_SECTION_SYSTEM.md).
+     - **List View / Row Presentation / Row Action**: Read §7.1–§7.3, §9.3–§9.4 and [UI_CONTENT_SYSTEM.md](file:///f:/AQL/Documents/UI_CONTENT_SYSTEM.md).
+     - **View Details / Business-Concept Card**: Read §7.4–§7.5 and [UI_VIEW_SYSTEM.md](file:///f:/AQL/Documents/UI_VIEW_SYSTEM.md).
+     - **Create / Edit Form / Wizard Step**: Read §7.6, §11, [UI_CREATE_AND_UPDATE_SYSTEM.md](file:///f:/AQL/Documents/UI_CREATE_AND_UPDATE_SYSTEM.md), and [UI_PAGE_STATE.md](file:///f:/AQL/Documents/UI_PAGE_STATE.md).
+2. **Resource domain logic & import boundaries** — [UI_RESOURCE_DOMAIN_LOGIC.md](file:///f:/AQL/Documents/UI_RESOURCE_DOMAIN_LOGIC.md) — read in full before writing any `src/_resource/` file (Step 2) or any UI Composable (Step 3).
+3. **Architecture constraints & record access** — [CORE_ARCHITECTURE_RULES.md](file:///f:/AQL/Documents/CORE_ARCHITECTURE_RULES.md) and [UI_RECORD_ACCESS.md](file:///f:/AQL/Documents/UI_RECORD_ACCESS.md).
 4. **The three catalogues** the guide links rather than restates. Read the one your step needs — never restate their contents in a module:
-   - [`_fields/REGISTRY.md`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/_fields/REGISTRY.md) — every implemented field type, and the contract for mounting one by hand (Step 5).
-   - [`components/REGISTRY.md`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/REGISTRY.md) — every reusable Section/Content/app base, its props and its hide rules (Step 4).
-   - `_ui/{Ui}/_config/config.md` — that UI's design tokens and why they hold their values (Step 8). For the default UI: [`_ui/AQL/_config/config.md`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/_ui/AQL/_config/config.md).
-5. **Resource schema** — [SCHEMA_RESOURCE_COLUMNS.md](file:///f:/LITTLE%20LEAP/AQL/Documents/SCHEMA_RESOURCE_COLUMNS.md) for `_fields`/`UIFields`/`Relations` structure.
-6. **Page state** — [UI_PAGE_STATE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_PAGE_STATE.md) — mandatory for any Add/Edit/wizard/action page.
-7. Subsystem specs as needed: [UI_PAGE_AND_SECTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_PAGE_AND_SECTION_SYSTEM.md), [UI_CONTENT_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_CONTENT_SYSTEM.md), [UI_ACTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_ACTION_SYSTEM.md), [UI_CREATE_AND_UPDATE_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_CREATE_AND_UPDATE_SYSTEM.md), [UI_VIEW_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_VIEW_SYSTEM.md).
+   - [`_fields/REGISTRY.md`](file:///f:/AQL/FRONTENT/src/_fields/REGISTRY.md) — every implemented field type, and the contract for mounting one by hand (Step 5).
+   - [`components/REGISTRY.md`](file:///f:/AQL/FRONTENT/src/components/REGISTRY.md) — every reusable Section/Content/app base, its props and its hide rules (Step 4).
+   - `_ui/{Ui}/_config/config.md` — that UI's design tokens and why they hold their values (Step 8). For the default UI: [`_ui/AQL/_config/config.md`](file:///f:/AQL/FRONTENT/src/_ui/AQL/_config/config.md).
+5. **Resource schema** — [SCHEMA_RESOURCE_COLUMNS.md](file:///f:/AQL/Documents/SCHEMA_RESOURCE_COLUMNS.md) for `_fields`/`UIFields`/`Relations` structure.
+6. **Page state** — [UI_PAGE_STATE.md](file:///f:/AQL/Documents/UI_PAGE_STATE.md) — mandatory for any Add/Edit/wizard/action page.
+7. Subsystem specs as needed: [UI_PAGE_AND_SECTION_SYSTEM.md](file:///f:/AQL/Documents/UI_PAGE_AND_SECTION_SYSTEM.md), [UI_CONTENT_SYSTEM.md](file:///f:/AQL/Documents/UI_CONTENT_SYSTEM.md), [UI_ACTION_SYSTEM.md](file:///f:/AQL/Documents/UI_ACTION_SYSTEM.md), [UI_CREATE_AND_UPDATE_SYSTEM.md](file:///f:/AQL/Documents/UI_CREATE_AND_UPDATE_SYSTEM.md), [UI_VIEW_SYSTEM.md](file:///f:/AQL/Documents/UI_VIEW_SYSTEM.md).
 
 ---
 
@@ -52,7 +52,7 @@ Before touching any file, decide what kind of request this is. Use this table:
 |---|---|
 | A brand new module, or "build the whole X module" (Index + Add/Edit + View together) | This is a **FULL MODULE**. Read the whole guide. Do Steps 1–10 below, in order. |
 | A single page, or one piece of a module that already exists (just the list, just the Edit form, just one button, just one card) | This is a **PARTIAL** task. Do NOT run the full pipeline. If the session is already equipped with context, reference **only the relevant guide section** above (or the narrower domain prompt) and execute directly. |
-| The word "dashboard", or anything that sounds like a report/summary/chart over ALL TIME or a whole month | **STOP before building anything.** Per guide §9, an Index page shows only live/open queues — it is not a dashboard. A real dashboard belongs to the separate Dashboard system ([dashboard_implementation.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/dashboard_implementation.md)). Ask the user which one they mean before doing anything. Do not ask when the request clearly says dashboard widgets, cards, tiles, charts, KPIs or stats: hand off straight to that prompt. |
+| The word "dashboard", or anything that sounds like a report/summary/chart over ALL TIME or a whole month | **STOP before building anything.** Per guide §9, an Index page shows only live/open queues — it is not a dashboard. A real dashboard belongs to the separate Dashboard system ([dashboard_implementation.md](file:///f:/AQL/References/Prompt%20Library/Initialization/dashboard_implementation.md)). Ask the user which one they mean before doing anything. Do not ask when the request clearly says dashboard widgets, cards, tiles, charts, KPIs or stats: hand off straight to that prompt. |
 | Anything about a **list** (a table of records, a filter, a view tab) | Read only guide §7.1–§7.3 (per-view overrides, row presentation, row actions) and §9.4 (how a list already builds itself from the resource's fields). Do not rebuild the whole Index page for a list-only ask. |
 | The request is missing pieces — e.g. it doesn't say what the Edit page should contain, or the workflow steps aren't clear | Do **not** guess. Ask the user and wait for their answer before writing any file. |
 
@@ -105,7 +105,7 @@ case build UI and domain side by side: as each piece of logic gets written, clas
 first — is this about how something looks (UI), or what the record can do and what state it
 is in (domain)? Route it immediately; never park business logic in a `_ui/` file
 "temporarily." Full detail:
-[UI_RESOURCE_DOMAIN_LOGIC.md §8](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_RESOURCE_DOMAIN_LOGIC.md).
+[UI_RESOURCE_DOMAIN_LOGIC.md §8](file:///f:/AQL/Documents/UI_RESOURCE_DOMAIN_LOGIC.md).
 
 Rules, no exceptions:
 - Named pure exports + a `use{Feature}()` wrapper (guide §2.2, §4.4). The pure half is what
@@ -115,7 +115,7 @@ Rules, no exceptions:
   headers/permissions/`allowed()`.
 - **One workflow vocabulary** — states, order, and their label/colour/icon — declared here
   and read by every widget, chip, badge and gate (guide §4.5).
-- **Domain Payload Chains for Cross-Resource Mutations** — cross-resource side-effects (e.g. Order → Invoice, Audit → Restock) live exclusively in Layer 2 payload builders calling sibling domain builders. All builders return **Node Objects**, or an array of them; one that cannot build returns `[{ valid: false, message }]` ([UI_PAGE_STATE_NODES.md §5](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_PAGE_STATE_NODES.md)). There is no `{ valid, requests, permissions, … }` envelope.
+- **Domain Payload Chains for Cross-Resource Mutations** — cross-resource side-effects (e.g. Order → Invoice, Audit → Restock) live exclusively in Layer 2 payload builders calling sibling domain builders. All builders return **Node Objects**, or an array of them; one that cannot build returns `[{ valid: false, message }]` ([UI_PAGE_STATE_NODES.md §5](file:///f:/AQL/Documents/UI_PAGE_STATE_NODES.md)). There is no `{ valid, requests, permissions, … }` envelope.
 - No `inject()`, no `ref()` unless every caller is inside a UI Composable.
 - No import of a Pinia store, a service module, or anything under `_ui/`.
 
@@ -186,14 +186,14 @@ disagree (guide §7.4).
 5. **Route values correctly** (guide §13.5): real headers through `setRecord`; intent and
    working state through `setControls`. Deduplicate child lines by business key during
    seeding. Place draft toggle before comment box.
-6. **The live node IS the batch** ([UI_PAGE_STATE_NODES.md §5.7A–§5.7D](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_PAGE_STATE_NODES.md)) — build the page in this order:
+6. **The live node IS the batch** ([UI_PAGE_STATE_NODES.md §5.7A–§5.7D](file:///f:/AQL/Documents/UI_PAGE_STATE_NODES.md)) — build the page in this order:
    - Layer 2 exports `build<Resource>InitNodes`, whose record is `resourceRow(RESOURCE, { …page stance })`, carrying the node's `controls`, its `derive` rules and its `permissions`.
    - `Add.js` `ready` calls `pageState.resetForResource(RESOURCE)` then `pageState.applyNodes(build<Resource>InitNodes(…))`. It lists no columns of its own.
    - Every UI setter writes ONE column and stops. Each consequence — a refilled price, a cleared link, a default warehouse — is a Layer 2 `derive` handler on that node, keyed, and `immediate: false` where it would overwrite the seed.
    - A secondary node (a ledger movement, a tax row) is created and dropped by a `derive` through `applyNodes`, because its existence IS the answer to "does this also write there". `build()` does not check permissions; `applyNodes` does.
    - `PageAction.js` `submit` asks Layer 2's `validate<Resource>Draft` and returns `{ valid: false, message }` or nothing. It builds no nodes and requests no reload.
    - A derive fires only on a CHANGE, so a default the node opens with is seeded in the builder, or settled once after the master rows load.
-7. **One form surface for every card** ([UI_MODULE_DEVELOPER_FORM_ARCH.md §13.7](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_MODULE_DEVELOPER_FORM_ARCH.md)) — `use<Resource>FormFields` holds NO state (no `ref()`): reads of the live node plus one-column setters, imported by every card. Lifecycle (`onMounted`, hydration `watch`) goes in a separate `use<Resource>FormSeed(mode)` imported by exactly ONE card, because a composable six cards call mounts six times. **Never build option lists or any projection over a record set there** — it is memoized per call site, so it re-runs once per card; publish them from the owning resource's Layer 2 module behind `recordSource.remember(...)`.
+7. **One form surface for every card** ([UI_MODULE_DEVELOPER_FORM_ARCH.md §13.7](file:///f:/AQL/Documents/UI_MODULE_DEVELOPER_FORM_ARCH.md)) — `use<Resource>FormFields` holds NO state (no `ref()`): reads of the live node plus one-column setters, imported by every card. Lifecycle (`onMounted`, hydration `watch`) goes in a separate `use<Resource>FormSeed(mode)` imported by exactly ONE card, because a composable six cards call mounts six times. **Never build option lists or any projection over a record set there** — it is memoized per call site, so it re-runs once per card; publish them from the owning resource's Layer 2 module behind `recordSource.remember(...)`.
 6. **Multi-step wizards** (guide §13.6): step assignments via `Props<Component>: { step: N }`;
    sticky bar with `get actions()` getter; review step read-only with active choices open and
    downstream inventory projections closed; latch `entryProgress` for stable button labels.
@@ -252,7 +252,7 @@ Intermediate containers keep default `inheritAttrs: true`; leaf components expli
 
 ## Step 10 — Self-Check, Verify & Commit
 
-Import boundaries & Domain Chains (guide §6, [UI_RESOURCE_DOMAIN_LOGIC.md §9](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_RESOURCE_DOMAIN_LOGIC.md#9-domain-payload-chain-architecture)):
+Import boundaries & Domain Chains (guide §6, [UI_RESOURCE_DOMAIN_LOGIC.md §9](file:///f:/AQL/Documents/UI_RESOURCE_DOMAIN_LOGIC.md#9-domain-payload-chain-architecture)):
 
 - [ ] Every `.vue` under `_ui/` imports only UI Composables — zero `inject(` or Core Composable imports in `.vue` files.
 - [ ] Every UI Composable imports only Resource Composables + generic Core Composables.

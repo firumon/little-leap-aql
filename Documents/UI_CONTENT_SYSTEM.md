@@ -38,7 +38,7 @@ export default {
 }
 ```
 
-`Page.vue` (`FRONTENT/src/pages/Page.vue`) renders one [Content.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/Content.vue) per entry inside `AqlContentWrapper`, forwarding the full `pageProps` object (page, scope, resource, uiName, and all orchestrator state) as attributes:
+`Page.vue` (`FRONTENT/src/pages/Page.vue`) renders one [Content.vue](file:///f:/AQL/FRONTENT/src/components/Content.vue) per entry inside `AqlContentWrapper`, forwarding the full `pageProps` object (page, scope, resource, uiName, and all orchestrator state) as attributes:
 
 ```html
 <Content
@@ -49,7 +49,7 @@ export default {
 />
 ```
 
-`Content.vue` is a thin orchestrator: it merges `$attrs` with the `content` identity into `preparedProps` and hands that to [useContentResolver.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/useContentResolver.js), which performs the actual lookup. While resolving it shows a spinner; if nothing matches it renders a "Content Not Defined" card naming the missing `content`/`page`/`resource`/`scope` combination.
+`Content.vue` is a thin orchestrator: it merges `$attrs` with the `content` identity into `preparedProps` and hands that to [useContentResolver.js](file:///f:/AQL/FRONTENT/src/composables/resources/useContentResolver.js), which performs the actual lookup. While resolving it shows a spinner; if nothing matches it renders a "Content Not Defined" card naming the missing `content`/`page`/`resource`/`scope` combination.
 
 ### Registries (built once at startup via `import.meta.glob`)
 - **Framework registry**: everything under `src/components/**/*.{vue,js}` (keyed by lowercase path, e.g. `components/contents/list.vue`).
@@ -76,7 +76,7 @@ export default {
 Path segments are lowercased for lookup; `resource` (a slug, e.g. `stock-movements`) is PascalCased then lowercased (`stockmovements`) to match folder naming.
 
 > [!IMPORTANT]
-> **This normalization is enforced everywhere a resource slug feeds a glob-registry folder lookup**, not just in `useContentResolver.js` itself — both the `View` system (`ViewRecord.vue`'s `viewrecord.(vue|js)`, `ViewChildren.vue`'s `viewchild*.(vue|js)`, `ViewParent.vue`'s `viewparent*.(vue|js)`, and `useViewColumnResolver.js`'s `viewcolumn*.(vue|js)`) and the `Create`/`Update` system (`FormRecord.vue`, `Create.vue`, `Update.vue`, `FormChild.vue` — see [UI_CREATE_AND_UPDATE_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_CREATE_AND_UPDATE_SYSTEM.md) §9) run every resource slug through `toPascalCase(slug).toLowerCase()` before building a candidate path. A kebab-case slug (`outlet-visits`) becomes `outletvisits`, never `outlet-visits` — hyphens never appear in a glob-registry key because folder names are PascalCase-derived. Resource **menu routes** (`ui.menus[].route`, e.g. `/operation/outlet-visits`) and URL params (`route.params.resourceSlug`) ARE genuinely kebab-case in production — confirmed against live seed data in `GAS/syncAppResources.gs` — which is exactly why this normalization step exists: it converts a real kebab-case slug into the PascalCase-derived glob key. `useResourceNav.js`'s `findScopeBySlug` and `useRouteConfig.js`'s `resourceConfig` fallback correspondingly strip hyphens (`.replace(/-/g, '')`) rather than assume PascalCase input, for the same reason.
+> **This normalization is enforced everywhere a resource slug feeds a glob-registry folder lookup**, not just in `useContentResolver.js` itself — both the `View` system (`ViewRecord.vue`'s `viewrecord.(vue|js)`, `ViewChildren.vue`'s `viewchild*.(vue|js)`, `ViewParent.vue`'s `viewparent*.(vue|js)`, and `useViewColumnResolver.js`'s `viewcolumn*.(vue|js)`) and the `Create`/`Update` system (`FormRecord.vue`, `Create.vue`, `Update.vue`, `FormChild.vue` — see [UI_CREATE_AND_UPDATE_SYSTEM.md](file:///f:/AQL/Documents/UI_CREATE_AND_UPDATE_SYSTEM.md) §9) run every resource slug through `toPascalCase(slug).toLowerCase()` before building a candidate path. A kebab-case slug (`outlet-visits`) becomes `outletvisits`, never `outlet-visits` — hyphens never appear in a glob-registry key because folder names are PascalCase-derived. Resource **menu routes** (`ui.menus[].route`, e.g. `/operation/outlet-visits`) and URL params (`route.params.resourceSlug`) ARE genuinely kebab-case in production — confirmed against live seed data in `GAS/syncAppResources.gs` — which is exactly why this normalization step exists: it converts a real kebab-case slug into the PascalCase-derived glob key. `useResourceNav.js`'s `findScopeBySlug` and `useRouteConfig.js`'s `resourceConfig` fallback correspondingly strip hyphens (`.replace(/-/g, '')`) rather than assume PascalCase input, for the same reason.
 
 ### Custom Templates vs. JS Logic Modifiers
 - **Vue Template Override (`.vue`)**: must contain a `<template>` block; **replaces the base content entirely**, and props flow through unmodified so the override can read `$attrs` directly.
@@ -86,14 +86,14 @@ Path segments are lowercased for lookup; `resource` (a slug, e.g. `stock-movemen
 
 ## 2. `List` — The Built-In List Content Component
 
-[List.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/contents/List.vue) (registered content name `List`, component name `ContentsList`) is the framework's default Index-page content. It:
+[List.vue](file:///f:/AQL/FRONTENT/src/components/contents/List.vue) (registered content name `List`, component name `ContentsList`) is the framework's default Index-page content. It:
 
 1. Reads `resourceRecord.filteredRecords` (falling back to `resourceRecord.records`) and `resourceRecord.loading`, injected from the page.
-2. Derives label/caption/meta/highlight/chip resolvers from [useListStrategy.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/useListStrategy.js) (see §3) as its baseline (`strategyProps`).
+2. Derives label/caption/meta/highlight/chip resolvers from [useListStrategy.js](file:///f:/AQL/FRONTENT/src/composables/resources/useListStrategy.js) (see §3) as its baseline (`strategyProps`).
 3. Layers any explicitly-passed props on top (`explicitProps` — anything the caller set that isn't `undefined`), so a page contract or JS modifier can override any single strategy-derived value (`layout`, `label`, `chipColor`, etc.) without touching the rest.
 4. Builds `preparedResolverProps` — the content-resolver identity used to find a per-active-view override — merging, **in priority order**: explicit `page`/`scope`/`resource`/`uiName` **props**, then the same as forwarded **attributes**, then `resourceConfig` context (`resourceConfig.page`, `.scope`, `.resourceSlug`, `.customUIName`), with `page` defaulting to `'index'`. This lets a manual `<List page="..." resource="..." />` usage override the ambient page/resource context, e.g. embedding a different resource's list inside a custom section.
 5. Determines `content: 'List<ActiveViewName>'` (PascalCased) whenever a list view is active (see §4), otherwise plain `'List'`.
-6. Feeds `preparedResolverProps` into `useContentResolver`, with [AppList.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/app/AppList.vue) as the `defaultComponent` fallback.
+6. Feeds `preparedResolverProps` into `useContentResolver`, with [AppList.vue](file:///f:/AQL/FRONTENT/src/components/app/AppList.vue) as the `defaultComponent` fallback.
 7. Renders either the resolved override component (when a view is active and a `List<ViewName>` match exists) or `AppList` directly with `finalProps` — gated on `activeViewName` specifically to avoid the resolver ever matching this file's own registered `List` content key and recursing into itself.
 8. Handles item clicks: caller-supplied `onItemClick`, else navigation to a `record` sub-route when `target` is set, else the default `view` page.
 
@@ -183,7 +183,7 @@ export default {
 }
 ```
 
-The block is spread flat — `ListToday` reads `props.layout`. A `ListToday.js` modifier still wins over `PropsListToday`. See [UI_PAGE_AND_SECTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_PAGE_AND_SECTION_SYSTEM.md) §1.4.1 for the full contract.
+The block is spread flat — `ListToday` reads `props.layout`. A `ListToday.js` modifier still wins over `PropsListToday`. See [UI_PAGE_AND_SECTION_SYSTEM.md](file:///f:/AQL/Documents/UI_PAGE_AND_SECTION_SYSTEM.md) §1.4.1 for the full contract.
 
 > [!NOTE]
 > `contents/List.vue` builds its per-view resolver bag from `$attrs` **first**, then its own strategy/explicit props. Without that, `finalProps` was assembled from *declared* props only (see `explicitProps`) and every key an ancestor drilled down without a matching `defineProps` entry — including `PropsListToday` — was dropped before the per-view resolver ever ran.
@@ -191,6 +191,6 @@ The block is spread flat — `ListToday` reads `props.layout`. A `ListToday.js` 
 ---
 
 > [!IMPORTANT]
-> **Content overrides do not control field rendering.** Individual form controls and detail/table value cells are delegated to the base field subsystem at `src/_fields/<type>/{Add,Edit,View}.vue`, resolved through `resolveFieldComponent(type, mode)` — the content components hold no type branches. Changing how a *field type* looks means editing that type's SFC (which applies to every resource, in add/edit/view); changing how *one column of one resource* looks means a `FormField<Header>` / `ViewColumn<Col>` override. See [UI_CREATE_AND_UPDATE_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_CREATE_AND_UPDATE_SYSTEM.md) §15 and [UI_VIEW_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_VIEW_SYSTEM.md) §4.
+> **Content overrides do not control field rendering.** Individual form controls and detail/table value cells are delegated to the base field subsystem at `src/_fields/<type>/{Add,Edit,View}.vue`, resolved through `resolveFieldComponent(type, mode)` — the content components hold no type branches. Changing how a *field type* looks means editing that type's SFC (which applies to every resource, in add/edit/view); changing how *one column of one resource* looks means a `FormField<Header>` / `ViewColumn<Col>` override. See [UI_CREATE_AND_UPDATE_SYSTEM.md](file:///f:/AQL/Documents/UI_CREATE_AND_UPDATE_SYSTEM.md) §15 and [UI_VIEW_SYSTEM.md](file:///f:/AQL/Documents/UI_VIEW_SYSTEM.md) §4.
 
 ---

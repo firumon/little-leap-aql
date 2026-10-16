@@ -44,7 +44,7 @@ Clear description of what task/workflow this prompt governs.
 ### B. Mandatory Pre-Reads (With Line-Level Links)
 List every file the agent must read before writing code.
 - Format: `[filename](file:///absolute/path/to/file#LStart-LEnd)`
-- Example: Read the `compositeSave` handler in [resourceApi.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/resourceApi.gs#L450-L520).
+- Example: Read the `compositeSave` handler in [resourceApi.gs](file:///f:/AQL/GAS/resourceApi.gs#L450-L520).
 
 ### C. Data Flow & Schema Matrix
 Identify exactly how data is structured and how it moves:

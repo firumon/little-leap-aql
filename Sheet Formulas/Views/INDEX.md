@@ -21,11 +21,11 @@ The following is a list of all view sheets defined in this directory. Click the 
 
 | View Sheet | Link to Formula / Details | Short Description |
 | :--- | :--- | :--- |
-| **SKU** | [SKU.md](file:///f:/LITTLE%20LEAP/AQL/Sheet%20Formulas/Views/SKU.md) | Consolidates normalized product, variant, SKU, and Unit of Measure (UOM) records from the Master sheet into a single flattened schema. Generates JSON representations of variants. |
-| **PriceListInline** | [PriceListInline.md](file:///f:/LITTLE%20LEAP/AQL/Sheet%20Formulas/Views/PriceListInline.md) | Flattens price lists that store SKU-to-price mappings as JSON objects. Extracts and expands them into a tabular list mapping each SKU and price to its own row with SKU details. |
-| **Outlet** | [Outlet.md](file:///f:/LITTLE%20LEAP/AQL/Sheet%20Formulas/Views/Outlet.md) | Merges basic outlet profiles and contacts with their corresponding operating rules (e.g. stock limits, credit limits, visit frequency, price lists). |
-| **WarehouseStock** | [WarehouseStock.md](file:///f:/LITTLE%20LEAP/AQL/Sheet%20Formulas/Views/WarehouseStock.md) | Calculates current inventory levels across warehouses and storage locations by summing transaction movements, filtering out zero/negative balances, and looking up SKU data. |
-| **OutletStock** | [OutletStock.md](file:///f:/LITTLE%20LEAP/AQL/Sheet%20Formulas/Views/OutletStock.md) | Aggregates outlet inventory levels by summing outlet stock movements, filtering out zero/negative balances, and joining outlet metadata and SKU details. |
+| **SKU** | [SKU.md](file:///f:/AQL/Sheet%20Formulas/Views/SKU.md) | Consolidates normalized product, variant, SKU, and Unit of Measure (UOM) records from the Master sheet into a single flattened schema. Generates JSON representations of variants. |
+| **PriceListInline** | [PriceListInline.md](file:///f:/AQL/Sheet%20Formulas/Views/PriceListInline.md) | Flattens price lists that store SKU-to-price mappings as JSON objects. Extracts and expands them into a tabular list mapping each SKU and price to its own row with SKU details. |
+| **Outlet** | [Outlet.md](file:///f:/AQL/Sheet%20Formulas/Views/Outlet.md) | Merges basic outlet profiles and contacts with their corresponding operating rules (e.g. stock limits, credit limits, visit frequency, price lists). |
+| **WarehouseStock** | [WarehouseStock.md](file:///f:/AQL/Sheet%20Formulas/Views/WarehouseStock.md) | Calculates current inventory levels across warehouses and storage locations by summing transaction movements, filtering out zero/negative balances, and looking up SKU data. |
+| **OutletStock** | [OutletStock.md](file:///f:/AQL/Sheet%20Formulas/Views/OutletStock.md) | Aggregates outlet inventory levels by summing outlet stock movements, filtering out zero/negative balances, and joining outlet metadata and SKU details. |
 
 ---
 
@@ -35,6 +35,6 @@ The following is a list of all view sheets defined in this directory. Click the 
 > **Schema Change Warning**: View formulas perform index-based VLOOKUPs, filters, and queries against external source sheets (e.g. `Products`, `SKUs`, `UOMs`, `Outlets`, etc.). Reordering, inserting, or removing columns in those source sheets will cause formula breakdowns.
 
 ### Document Maintenance Rules
-1. **Synchronized Updates**: Whenever a formula, configuration reference, or column dependency changes in a View sheet, the corresponding `.md` file and this [INDEX.md](file:///f:/LITTLE%20LEAP/AQL/Sheet%20Formulas/Views/INDEX.md) must be updated immediately to maintain alignment.
+1. **Synchronized Updates**: Whenever a formula, configuration reference, or column dependency changes in a View sheet, the corresponding `.md` file and this [INDEX.md](file:///f:/AQL/Sheet%20Formulas/Views/INDEX.md) must be updated immediately to maintain alignment.
 2. **Column Indexes**: When editing raw master schemas, review view sheets to update VLOOKUP column offsets.
 

@@ -138,14 +138,14 @@ pageState.setActions('Complete', null)              // unqueue
 
 `fields.<Header>` and `targets.<targetKey>.<Column>` are the same two wire buckets §7.0.1
 describes — the path IS the address the envelope uses. Full contract in
-[UI_PAGE_STATE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_PAGE_STATE.md) §15.1.
+[UI_PAGE_STATE.md](file:///f:/AQL/Documents/UI_PAGE_STATE.md) §15.1.
 
 The batched path never stores a wire request. `includeAdditionalAction` runs the pipeline
 to resolve the config and the field schema, then keeps
 `{ key, resource, code, actionConfig, data: { fields, targets } }`. `build()` turns each
 entry into its `executeAction` envelope via
 `executeActionRequest(resource, code, actionConfig, data)` — see
-[UI_PAGE_STATE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_PAGE_STATE.md) §15.2.
+[UI_PAGE_STATE.md](file:///f:/AQL/Documents/UI_PAGE_STATE.md) §15.2.
 
 Both paths now submit through `pageState`. What the popup must NOT do is share the HOST
 page's instance: `pageState.run()` gates on `validationErrors`, which validates that page's
@@ -160,7 +160,7 @@ validates nodes, not action fields.
 
 The batched path exists for the case the popup cannot express: *create a record **and**
 run a workflow action on it, atomically, in one batch*. Full contract in
-[UI_PAGE_STATE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_PAGE_STATE.md) §6.4 / §7.
+[UI_PAGE_STATE.md](file:///f:/AQL/Documents/UI_PAGE_STATE.md) §6.4 / §7.
 
 ```javascript
 // A page that creates a visit and immediately stamps it Postponed.
@@ -239,7 +239,7 @@ caller cannot clear a column it never knew about.
 
 An object or an array of objects, ANDed. Absent or empty ⇒ always visible. Evaluated
 **client-side only**, by `isActionVisible` (`useResourceConfig.js`) through
-[`src/utils/tokenEvaluator.js`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/utils/tokenEvaluator.js)
+[`src/utils/tokenEvaluator.js`](file:///f:/AQL/FRONTENT/src/utils/tokenEvaluator.js)
 — it decides what is OFFERED, never what is permitted. Permission is `can<Action>`, enforced
 server-side.
 

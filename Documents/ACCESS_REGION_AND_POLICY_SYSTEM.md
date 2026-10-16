@@ -35,7 +35,7 @@ Dubai     Abu Dhabi
 (DXB001)   (AUH001)
 ```
 
-In code, `getAccessRegionContext()` in [`GAS/accessRegion.gs`](file:///f:/LITTLE%20LEAP/AQL/GAS/accessRegion.gs#L23) reads this sheet. It builds:
+In code, `getAccessRegionContext()` in [`GAS/accessRegion.gs`](file:///f:/AQL/GAS/accessRegion.gs#L23) reads this sheet. It builds:
 1. `rows`: A list of all regions.
 2. `byCode`: A map of regions by their code.
 3. `childMap`: A map showing all direct children of each parent code.
@@ -46,7 +46,7 @@ A blank region means **Universe**.
 - **Record with blank region**: This record is a Universe Record. Every user can see it, no matter what region the user has.
 
 ### 2.3 How a User Gets Their Region
-The system finds a user's region using `resolveUserAccessRegionCode(userRow)` in [`GAS/accessRegion.gs`](file:///f:/LITTLE%20LEAP/AQL/GAS/accessRegion.gs#L83):
+The system finds a user's region using `resolveUserAccessRegionCode(userRow)` in [`GAS/accessRegion.gs`](file:///f:/AQL/GAS/accessRegion.gs#L83):
 1. The user has a `DesignationID`.
 2. The system reads the user's designation from `APP.Designations`.
 3. If the designation has an `AccessRegion`, that code is used.
@@ -92,7 +92,7 @@ You add the values together:
 
 > [!IMPORTANT]
 > **Code Truth on Bit Weights**:
-> In [`GAS/accessRegion.gs`](file:///f:/LITTLE%20LEAP/AQL/GAS/accessRegion.gs#L189-L191):
+> In [`GAS/accessRegion.gs`](file:///f:/AQL/GAS/accessRegion.gs#L189-L191):
 > ```javascript
 > const r = parseInt(policy.charAt(0), 10) || 0;
 > return { same: (r & 1) === 1, down: (r & 2) === 2, up: (r & 4) === 4 };
@@ -120,7 +120,7 @@ Each of these digits uses:
 > **Current Codebase Implementation Status**:
 > The `O`, `P`, `D`, `U` digits of `AccessPolicy` are preserved in the 5-digit octal string for future upline/owner action privileges.
 > The legacy `RecordAccessPolicy` column (`ALL`, `OWNER`, `OWNER_AND_UPLINE`) has been retired from `APP.Resources` in favor of `AccessPolicy` and `AccessRegionSource`.
-> In the current backend engine, row read and write filtering in [`GAS/resourceApi.gs`](file:///f:/LITTLE%20LEAP/AQL/GAS/resourceApi.gs#L779-L784) checks `AccessRegion` and Digit 1 (`R`).
+> In the current backend engine, row read and write filtering in [`GAS/resourceApi.gs`](file:///f:/AQL/GAS/resourceApi.gs#L779-L784) checks `AccessRegion` and Digit 1 (`R`).
 
 ### 3.3 Default Policies by Scope
 When the `AccessPolicy` cell in `APP.Resources` is blank, the resource takes its default policy based on its `Scope`:
@@ -251,11 +251,11 @@ AQL uses a **Frontend-First** region assignment pattern:
 4. **Safety Net**: If an incoming row does not have a region set (e.g., from an external script or third-party write), `applyAccessRegionOnWrite()` runs `resolveAccessRegionOnWriteFallback()` to safely derive the region from `AccessRegionSource` or user designation.
 
 ### 5.2 Where Write Stamping Happens in Code
-In [`GAS/resourceApi.gs`](file:///f:/LITTLE%20LEAP/AQL/GAS/resourceApi.gs):
+In [`GAS/resourceApi.gs`](file:///f:/AQL/GAS/resourceApi.gs):
 - `handleCreateResource` calls `applyAccessRegionOnWrite()` at line 338.
 - `handleSaveCompositeResource` calls `applyAccessRegionOnWrite()` for parents (line 1703) and children (line 1811).
 - `handleBulkSaveResource` calls `applyAccessRegionOnWrite()` at line 2190.
-- `handleExecuteAction` calls `applyAccessRegionOnWrite()` for action targets at line 626 in [`GAS/actionTargets.gs`](file:///f:/LITTLE%20LEAP/AQL/GAS/actionTargets.gs#L626).
+- `handleExecuteAction` calls `applyAccessRegionOnWrite()` for action targets at line 626 in [`GAS/actionTargets.gs`](file:///f:/AQL/GAS/actionTargets.gs#L626).
 - `stockMovements.gs` calls it at line 98.
 - `warehouseTransfers.gs` calls it at line 199.
 
@@ -273,7 +273,7 @@ When an existing record is updated via `handleResourceUpdateRecord`:
 When data is read from Google Sheets, the server checks each row before sending it to the client.
 
 ### 6.1 Read Filtering Flow
-In [`GAS/resourceApi.gs`](file:///f:/LITTLE%20LEAP/AQL/GAS/resourceApi.gs#L709-L711):
+In [`GAS/resourceApi.gs`](file:///f:/AQL/GAS/resourceApi.gs#L709-L711):
 ```javascript
 const filteredRows = rows.filter(function (row) {
   return canAccessRowByPolicy(auth, resource.config, row, idx, nameToCodeMap, scope);
@@ -302,7 +302,7 @@ This check guards:
 - `handleSaveCompositeResource` (updating parent records).
 - `handleExecuteAction` (running workflow buttons).
 - `handleBulkSaveResource` (bulk updating rows).
-- Action targets in [`GAS/actionTargets.gs`](file:///f:/LITTLE%20LEAP/AQL/GAS/actionTargets.gs#L660).
+- Action targets in [`GAS/actionTargets.gs`](file:///f:/AQL/GAS/actionTargets.gs#L660).
 
 ---
 
@@ -336,7 +336,7 @@ When a user logs in, the backend sends their profile in the auth response:
 
 ### 7.2 Checking Region Access in Vue
 Frontend components must never inspect Pinia stores directly.
-Always use `useAuth()` from [`FRONTENT/src/composables/core/useAuth.js`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/core/useAuth.js#L62):
+Always use `useAuth()` from [`FRONTENT/src/composables/core/useAuth.js`](file:///f:/AQL/FRONTENT/src/composables/core/useAuth.js#L62):
 
 ```javascript
 import { useAuth } from 'src/composables/core/useAuth'
@@ -353,13 +353,13 @@ How `hasRegionAccess(regionCode, resourceName)` works:
 - Otherwise, it checks `user.accessRegion.regions[resourceName][regionCode] === true`.
 
 ### 7.3 List View Tokens
-List view filters in `APP.Resources.ListViews` can use dynamic region tokens evaluated by [`FRONTENT/src/utils/tokenEvaluator.js`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/utils/tokenEvaluator.js#L313-L329):
+List view filters in `APP.Resources.ListViews` can use dynamic region tokens evaluated by [`FRONTENT/src/utils/tokenEvaluator.js`](file:///f:/AQL/FRONTENT/src/utils/tokenEvaluator.js#L313-L329):
 - `$userRegion`: Resolves to the user's assigned region code string (e.g. `'UAE001'`).
 - `$userRegions`: Resolves to an array containing the user's region code (`['UAE001']`), meant for `in` / `not_in` operators.
 
 ### 7.4 Form Fields
 `AccessRegion` is an audit column.
-In [`FRONTENT/src/composables/resources/useFormFields.js`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/useFormFields.js#L23) and `useListStrategy.js`, `AccessRegion` is in `ignoredFields`. It is never shown as a text box in normal Add or Edit forms.
+In [`FRONTENT/src/composables/resources/useFormFields.js`](file:///f:/AQL/FRONTENT/src/composables/resources/useFormFields.js#L23) and `useListStrategy.js`, `AccessRegion` is in `ignoredFields`. It is never shown as a text box in normal Add or Edit forms.
 
 ---
 
@@ -383,10 +383,10 @@ Here is the exact truth comparing the codebase against older docs and dialogs:
 
 | Topic | Old Document or Dialog Statement | Codebase Ultimate Truth | Status |
 |---|---|---|---|
-| **R Bit Weights** | `accessPolicyManager.html` shows Up as `+2` and Down as `+4`. | [`GAS/accessRegion.gs:190`](file:///f:/LITTLE%20LEAP/AQL/GAS/accessRegion.gs#L190): `down: (r & 2) === 2`, `up: (r & 4) === 4`. | Code is truth. Bit 1 (`+2`) is Down; Bit 2 (`+4`) is Up. |
+| **R Bit Weights** | `accessPolicyManager.html` shows Up as `+2` and Down as `+4`. | [`GAS/accessRegion.gs:190`](file:///f:/AQL/GAS/accessRegion.gs#L190): `down: (r & 2) === 2`, `up: (r & 4) === 4`. | Code is truth. Bit 1 (`+2`) is Down; Bit 2 (`+4`) is Up. |
 | **ROPDU Letters** | `SHEET_TOOLBAR_MENU_GUIDE.md` had: "R: Read, O: Others read, P: Parent modify, D: Descendant modify, U: Universe modify". | Code and `accessPolicyManager.html`: `R`: Region, `O`: Owner, `P`: Peer, `D`: Downline, `U`: Upline. | Documentation error in old guide. Corrected and linked here. |
-| **Designation Region** | `SHEET_APP_STRUCTURE.md` said: "the column exists... but nothing reads it yet". | [`GAS/accessRegion.gs:87-89`](file:///f:/LITTLE%20LEAP/AQL/GAS/accessRegion.gs#L87-L89): `resolveUserAccessRegionCode()` explicitly reads `desig.accessRegion`. | Active and fully working in code. Old doc was outdated. |
-| **OPDU Row Filtering** | Some docs suggested row-level filtering by owner and upline on all operations. | [`GAS/resourceApi.gs:779-784`](file:///f:/LITTLE%20LEAP/AQL/GAS/resourceApi.gs#L779-L784): `canAccessRowByPolicy()` delegates only to `canAccessRowByAccessRegion()`. | Only region is enforced at row level today. Legacy `RecordAccessPolicy` column retired. |
+| **Designation Region** | `SHEET_APP_STRUCTURE.md` said: "the column exists... but nothing reads it yet". | [`GAS/accessRegion.gs:87-89`](file:///f:/AQL/GAS/accessRegion.gs#L87-L89): `resolveUserAccessRegionCode()` explicitly reads `desig.accessRegion`. | Active and fully working in code. Old doc was outdated. |
+| **OPDU Row Filtering** | Some docs suggested row-level filtering by owner and upline on all operations. | [`GAS/resourceApi.gs:779-784`](file:///f:/AQL/GAS/resourceApi.gs#L779-L784): `canAccessRowByPolicy()` delegates only to `canAccessRowByAccessRegion()`. | Only region is enforced at row level today. Legacy `RecordAccessPolicy` column retired. |
 | **AccessRegion on Write** | Older code had hardcoded `isRegionHeader('AccessRegion')` dropping incoming values. | `isRegionHeader` is removed. Incoming region in payloads is honored by `applyAccessRegionOnWrite()` (`existingVal !== ''`), skipping GAS fallback derivations. Fallback walk runs only when incoming region is blank. | Aligned with frontend-first architecture. |
 | **Place Name Resolution** | None / Unclear. | If `self.resolve === true`, place name is mapped to region code on read using `nameToCodeMap`, and write-time stamping is skipped. | Fully implemented in `resourceApi.gs`. |
 

@@ -1,7 +1,7 @@
 # Document Routing Guide
 
 ## Purpose
-This document is the canonical task-to-doc router for AQL. Use it to decide what to read after `AGENTS.md` and [MAP.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/MAP.md).
+This document is the canonical task-to-doc router for AQL. Use it to decide what to read after `AGENTS.md` and [MAP.md](file:///f:/AQL/References/Prompt%20Library/MAP.md).
 
 ## Core Routing Rule
 - Read only the docs required for the current task.
@@ -57,20 +57,20 @@ Every prop a caller might want to replace with their own markup has to route thr
 ### Discussion Only
 Use when the task is brainstorming, clarification, tradeoff analysis, or high-level thinking.
 - Read:
-  - [MAP.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/MAP.md)
+  - [MAP.md](file:///f:/AQL/References/Prompt%20Library/MAP.md)
 - Read more only if the discussion needs specific evidence from a canonical doc.
 
 ### Planning Work
 Use when the user asks for a plan or explicitly invokes Brain Agent behavior.
 - Read:
-  - [MAP.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/MAP.md)
+  - [MAP.md](file:///f:/AQL/References/Prompt%20Library/MAP.md)
   - `PLANS/_TEMPLATE.md`
 - Also read only the docs directly relevant to the task area.
 
 ### Execute A Named Plan
 Use when Build Agent is asked to execute a plan.
 - Read:
-  - [MAP.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/MAP.md)
+  - [MAP.md](file:///f:/AQL/References/Prompt%20Library/MAP.md)
   - the specific named plan file only
 - Do not read all files in `PLANS/`.
 
@@ -83,7 +83,7 @@ Use when an overview of the architecture, stack, runtime direction, or system co
 Use when editing files under `FRONTENT/`.
 - Read:
   - `Documents/CORE_ARCHITECTURE_RULES.md` — **mandatory, see Non-Negotiable Frontend Pre-Read above**
-  - [MAP.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/MAP.md)
+  - [MAP.md](file:///f:/AQL/References/Prompt%20Library/MAP.md)
   - `Documents/SHARED_UTILITIES_INDEX.md` — **read before adding ANY new utility/helper/core function** (canonical catalogue; enforces the Reuse-First policy in `AGENTS.md`)
   - `Documents/UI_PAGE_STATE.md` — **MUST be used for any resource page that collects input or submits data** (centralized form-state composable: API prep, Content/Action section contract, response handling). Split: start at the hub, then `UI_PAGE_STATE_NODES.md` for the Node transport, `UI_PAGE_STATE_API.md` to read/write one, `UI_PAGE_STATE_SUBMISSION.md` for the batch and Layer 2 payload rules, `UI_PAGE_STATE_LIFECYCLE.md` for drafts and the `ready(ctx)` hook.
 - Frontend work MUST comply with the Vue Reactivity Contract in `Documents/CORE_ARCHITECTURE_RULES.md`; manual synchronization that imitates Vue reactivity is a serious architecture violation.
@@ -99,7 +99,7 @@ Use when editing files under `FRONTENT/`.
 Use when defining architectural steps, planning refactors, or preparing frontend implementation tasks.
 - Read:
   - `Documents/CORE_ARCHITECTURE_RULES.md`
-  - [MAP.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/MAP.md)
+  - [MAP.md](file:///f:/AQL/References/Prompt%20Library/MAP.md)
   - task-specific module docs only when directly relevant
 
 ### Formal Frontend Architecture Review
@@ -107,7 +107,7 @@ Use ONLY when explicitly asked to perform a comprehensive code review against ar
 - Read:
   - `Documents/CORE_ARCHITECTURE_RULES.md`
   - `Documents/CORE_ARCHITECTURE_REVIEW.md`
-  - [MAP.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/MAP.md)
+  - [MAP.md](file:///f:/AQL/References/Prompt%20Library/MAP.md)
 
 ### Full Resource UI Module Generation
 Use when building, generating, or materially extending a whole resource UI module (Index + Add/Edit + View together) — not a single piece of an already-built module. Init prompt routing for this task type is owned by `AGENTS.md`'s Query Classification (Resource UI Module Generation takes precedence over single-category matching).
@@ -172,12 +172,12 @@ Use when overriding or creating custom action components, floating action button
 Use when designing new backend behavior, evaluating options, or checking whether existing GAS capabilities already support the request.
 - Read:
   - `Documents/GAS_API_CAPABILITIES.md`
-  - [MAP.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/MAP.md) only if the task is moving beyond discussion into planning/building.
+  - [MAP.md](file:///f:/AQL/References/Prompt%20Library/MAP.md) only if the task is moving beyond discussion into planning/building.
 
 ### Backend Implementation
 Use when editing GAS code.
 - Read:
-  - [MAP.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/MAP.md)
+  - [MAP.md](file:///f:/AQL/References/Prompt%20Library/MAP.md)
   - `Documents/GAS_API_CAPABILITIES.md`
   - `Documents/GAS_PATTERNS.md`
 - Prefer existing GAS files and patterns first.
@@ -194,21 +194,21 @@ Use when a documented business module is involved.
 ### Resource Metadata Or Sheet Schema Changes
 Use when changing `APP.Resources`, resource columns, sheet structure, or setup/sync behavior.
 - Read:
-  - [MAP.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/MAP.md)
+  - [MAP.md](file:///f:/AQL/References/Prompt%20Library/MAP.md)
   - `Documents/SCHEMA_RESOURCE_COLUMNS.md`
 - Also read the relevant structure doc section if needed.
 
 ### Menu Action Changes (Sheet Menu)
 Use when adding, removing, renaming, or behavior-changing `AQL 🚀` sheet menu actions (the Google Sheets toolbar menu).
 - Read:
-  - [MAP.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/MAP.md)
+  - [MAP.md](file:///f:/AQL/References/Prompt%20Library/MAP.md)
   - `Documents/SHEET_TOOLBAR_MENU_GUIDE.md`
 
 ### Sidebar Menu Configuration (Frontend)
 Use when adding, removing, reordering, or changing permission gates for the web application's sidebar menu (Menu JSON in `APP.Resources`).
 - Read:
   - `Documents/UI_SIDEBAR_MENU_SYSTEM.md` — **single canonical doc** covering schema, data flow, permission gating, tree building, route guard, and admin operation
-  - [MAP.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/MAP.md)
+  - [MAP.md](file:///f:/AQL/References/Prompt%20Library/MAP.md)
 
 ### Access Regions & Access Policy System
 Use when inspecting, designing, or modifying access regions, access policies, region inheritance sources, or row-level access enforcement.
@@ -218,7 +218,7 @@ Use when inspecting, designing, or modifying access regions, access policies, re
 ### Login Payload Or Auth Response Changes
 Use when changing `handleLogin()` response shape, field sources, or frontend storage of login data.
 - Read:
-  - [MAP.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/MAP.md)
+  - [MAP.md](file:///f:/AQL/References/Prompt%20Library/MAP.md)
   - `Documents/API_LOGIN_RESPONSE.md`
 
 ### Application Configuration & System Keys
@@ -260,7 +260,7 @@ Use when inspecting, designing, or changing Google Sheets printable report templ
 - Read:
   - `Sheet Formulas/Reports/INDEX.md`
   - and the specific report file under `Sheet Formulas/Reports/`
-  - [FEATURE_REPORTS_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/FEATURE_REPORTS_SYSTEM.md) (specifically Section 2 and 3)
+  - [FEATURE_REPORTS_SYSTEM.md](file:///f:/AQL/Documents/FEATURE_REPORTS_SYSTEM.md) (specifically Section 2 and 3)
 
 ## Maintenance Rule
 Update this file when any of the following changes:

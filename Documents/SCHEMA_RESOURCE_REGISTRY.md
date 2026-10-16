@@ -30,9 +30,9 @@ Resolution order is:
 - region and record rules are evaluated separately from raw CRUD permission
 
 ## Canonical Detail Owners
-- Column-level semantics: [SCHEMA_RESOURCE_COLUMNS.md](F:/LITTLE%20LEAP/AQL/Documents/SCHEMA_RESOURCE_COLUMNS.md)
-- APP control-plane structure: [SHEET_APP_STRUCTURE.md](F:/LITTLE%20LEAP/AQL/Documents/SHEET_APP_STRUCTURE.md)
-- Current technical/runtime conventions: [CORE_OVERVIEW.md](F:/LITTLE%20LEAP/AQL/Documents/CORE_OVERVIEW.md)
+- Column-level semantics: [SCHEMA_RESOURCE_COLUMNS.md](F:/AQL/Documents/SCHEMA_RESOURCE_COLUMNS.md)
+- APP control-plane structure: [SHEET_APP_STRUCTURE.md](F:/AQL/Documents/SHEET_APP_STRUCTURE.md)
+- Current technical/runtime conventions: [CORE_OVERVIEW.md](F:/AQL/Documents/CORE_OVERVIEW.md)
 
 ## Maintenance Rule
 Update this file when:

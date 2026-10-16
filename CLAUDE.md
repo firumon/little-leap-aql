@@ -1,7 +1,7 @@
 # AQL Agent Startup
 
 > [!IMPORTANT]
-> **STOP. Read [AGENTS.md](file:///f:/LITTLE%20LEAP/AQL/AGENTS.md) in full before your first action in this session.**
+> **STOP. Read [AGENTS.md](file:///f:/AQL/AGENTS.md) in full before your first action in this session.**
 >
 > This is not a reference link. It is a hard rule.
 >
@@ -14,7 +14,7 @@
 > It holds the startup sequence, the MACP protocol check, initialization prompt routing, the skills hierarchy, and the verification rules.
 
 > [!IMPORTANT]
-> **Protocol check before anything else**: If the request mentions **MACP**, the Multi-Agent Collaborative Protocol, the Architect/Builder relay workflow, or asks you to act as the **Architect Agent**, read [MACP.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/MACP.md) in full and operate strictly under that protocol for the rest of the session — two-turn handshake (capability tier, then task), bare Directive Prompts with no surrounding commentary, pasted messages treated as Builder output, and a hard halt after every question, directive, or proposal. See the MACP section in AGENTS.md.
+> **Protocol check before anything else**: If the request mentions **MACP**, the Multi-Agent Collaborative Protocol, the Architect/Builder relay workflow, or asks you to act as the **Architect Agent**, read [MACP.md](file:///f:/AQL/References/Prompt%20Library/MACP.md) in full and operate strictly under that protocol for the rest of the session — two-turn handshake (capability tier, then task), bare Directive Prompts with no surrounding commentary, pasted messages treated as Builder output, and a hard halt after every question, directive, or proposal. See the MACP section in AGENTS.md.
 
 ## Language and Communication Rule (STRICT)
 - Always speak and write in very simple, easy English.
@@ -55,7 +55,7 @@ A file named with a leading `_` is a helper and needs no block.
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **little-leap-aql** (25848 symbols, 44788 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **aql** (25486 symbols, 44441 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
@@ -78,10 +78,10 @@ This project is indexed by GitNexus as **little-leap-aql** (25848 symbols, 44788
 
 | Resource | Use for |
 |----------|---------|
-| `gitnexus://repo/little-leap-aql/context` | Codebase overview, check index freshness |
-| `gitnexus://repo/little-leap-aql/clusters` | All functional areas |
-| `gitnexus://repo/little-leap-aql/processes` | All execution flows |
-| `gitnexus://repo/little-leap-aql/process/{name}` | Step-by-step execution trace |
+| `gitnexus://repo/aql/context` | Codebase overview, check index freshness |
+| `gitnexus://repo/aql/clusters` | All functional areas |
+| `gitnexus://repo/aql/processes` | All execution flows |
+| `gitnexus://repo/aql/process/{name}` | Step-by-step execution trace |
 
 ## CLI
 

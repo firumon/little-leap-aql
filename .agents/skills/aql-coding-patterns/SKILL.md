@@ -1,11 +1,11 @@
-﻿---
+---
 name: aql-coding-patterns
 description: Enforce consistent coding styles and formatting patterns across JS, Vue, and GS (Google Apps Script) files in the AQL repository. Use whenever creating or editing JS, Vue, or GS files to strictly align with the user's styling rules.
 ---
 
 # AQL Coding Patterns Skill
 
-This skill enforces strict, clean formatting, code style, and file-type conventions across all JavaScript (`.js`), Vue (`.vue`), and Google Apps Script (`.gs`) files in the `little-leap-aql` repository.
+This skill enforces strict, clean formatting, code style, and file-type conventions across all JavaScript (`.js`), Vue (`.vue`), and Google Apps Script (`.gs`) files in the `aql` repository.
 
 ## 1. Strict Formatting & EditorConfig Rules
 

@@ -23,7 +23,7 @@ Write code that explains itself. Do not narrate it.
 - When truly warranted: **1 line, 2 at the very most.** Never a paragraph.
 - Clean up as you go: delete long comments and docblocks in files you edit.
 - **One exception**: Data files (DJS) and dashboard items (DBI) require a descriptive JSDoc block.
-- Full specification: [CORE_ARCHITECTURE_RULES.md §8](file:///f:/LITTLE%20LEAP/AQL/Documents/CORE_ARCHITECTURE_RULES.md).
+- Full specification: [CORE_ARCHITECTURE_RULES.md §8](file:///f:/AQL/Documents/CORE_ARCHITECTURE_RULES.md).
 
 ## Strict Truthfulness & Evidence-First Rule (STRICT)
 - Never speak from memory, assumptions, or guesses.
@@ -51,8 +51,8 @@ Write code that explains itself. Do not narrate it.
 ## Startup Sequence
 - Read this file.
 - **Protocol check first**:
-  - If the request mentions **MACP**, the Multi-Agent Collaborative Protocol, the Architect/Builder relay workflow, or asks you to act as the **Architect Agent**, read [MACP.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/MACP.md) in full first.
-  - If the request explicitly invokes an AQL role mode (**Guide**, **Solo**, **Brain**, or **Build**), read [MAP.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/MAP.md) and execute its role handshake:
+  - If the request mentions **MACP**, the Multi-Agent Collaborative Protocol, the Architect/Builder relay workflow, or asks you to act as the **Architect Agent**, read [MACP.md](file:///f:/AQL/References/Prompt%20Library/MACP.md) in full first.
+  - If the request explicitly invokes an AQL role mode (**Guide**, **Solo**, **Brain**, or **Build**), read [MAP.md](file:///f:/AQL/References/Prompt%20Library/MAP.md) and execute its role handshake:
     - **Guide / Solo**: Ask directly what task is being discussed or implemented.
     - **Brain**: Prompt for the Building Agent's Capability Tier first, then prompt for the task to plan.
     - **Build**: Prompt for the plan file under `PLANS/` to execute.
@@ -65,50 +65,50 @@ Classify the user's request into one of these categories:
 
 | Category | Rule | Action |
 |---|---|---|
-| **MACP / Protocol Session (takes precedence)** | The query mentions MACP, role modes (Guide, Brain, Build, Solo), or asks you to act under a protocol | Read [MACP.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/MACP.md) or [MAP.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/MAP.md) and follow its handshake and execution boundaries. |
-| **Resource UI Module Generation / 3-Layer UI (takes precedence over Single-category)** | Any request to build, generate, create, extend, or change a resource's UI or module under the 3-Layer UI Architecture | Load [resource_ui_module_developer.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/resource_ui_module_developer.md) FIRST. |
+| **MACP / Protocol Session (takes precedence)** | The query mentions MACP, role modes (Guide, Brain, Build, Solo), or asks you to act under a protocol | Read [MACP.md](file:///f:/AQL/References/Prompt%20Library/MACP.md) or [MAP.md](file:///f:/AQL/References/Prompt%20Library/MAP.md) and follow its handshake and execution boundaries. |
+| **Resource UI Module Generation / 3-Layer UI (takes precedence over Single-category)** | Any request to build, generate, create, extend, or change a resource's UI or module under the 3-Layer UI Architecture | Load [resource_ui_module_developer.md](file:///f:/AQL/References/Prompt%20Library/Initialization/resource_ui_module_developer.md) FIRST. |
 | **Single-category match** | The query maps cleanly to exactly ONE routing category below | Load ONLY that one init prompt. Do NOT load related prompts speculatively. |
 | **Multi-category match** | The query explicitly spans multiple distinct domains | Load ONLY the prompts that match the explicit scope. Do NOT load transitive dependencies. |
-| **Unclear / Concept Search** | General investigation, or locating a specific codebase feature/file | Load [general_query.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/general_query.md) and FIRST read [CODEBASE_INDEX.md](file:///f:/LITTLE%20LEAP/AQL/References/CODEBASE_INDEX.md). |
+| **Unclear / Concept Search** | General investigation, or locating a specific codebase feature/file | Load [general_query.md](file:///f:/AQL/References/Prompt%20Library/Initialization/general_query.md) and FIRST read [CODEBASE_INDEX.md](file:///f:/AQL/References/CODEBASE_INDEX.md). |
 
 When in doubt, prefer single-prompt loading.
 
 > [!IMPORTANT]
-> **Additive prompt — the one exception to single-category loading.** If the task creates or materially restructures a component under `FRONTENT/src/components/{abstract,app,contents,sections}/`, ALSO load [renderable_contract.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/renderable_contract.md) on top of the matching domain prompt.
+> **Additive prompt — the one exception to single-category loading.** If the task creates or materially restructures a component under `FRONTENT/src/components/{abstract,app,contents,sections}/`, ALSO load [renderable_contract.md](file:///f:/AQL/References/Prompt%20Library/Initialization/renderable_contract.md) on top of the matching domain prompt.
 
 ## Initialization Prompt Routing
 
-Load the matching initialization document from [References/Prompt Library/Initialization/](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/):
+Load the matching initialization document from [References/Prompt Library/Initialization/](file:///f:/AQL/References/Prompt%20Library/Initialization/):
 
-* **Resource UI Module Generation / 3-Layer UI**: Read [resource_ui_module_developer.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/resource_ui_module_developer.md). Backed by [UI_MODULE_DEVELOPER_GUIDE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_MODULE_DEVELOPER_GUIDE.md) and [UI_RESOURCE_DOMAIN_LOGIC.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_RESOURCE_DOMAIN_LOGIC.md).
-* **Database Schema Alteration**: Read [database_schema_alteration.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/database_schema_alteration.md).
-* **Frontend Modification**: Read [frontend_modification.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/frontend_modification.md).
-* **Page & Section Customization & Creation**: Read [page_and_section_system.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/page_and_section_system.md). Backed by [UI_PAGE_AND_SECTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_PAGE_AND_SECTION_SYSTEM.md).
-* **Sidebar Menu & Access Control**: Read [frontend_menu_system.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/frontend_menu_system.md). Backed by [UI_SIDEBAR_MENU_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_SIDEBAR_MENU_SYSTEM.md).
-* **Report Template & Aggregations**: Read [report_formula_generation.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/report_formula_generation.md).
-* **Report UI & Feature Development**: Read [report_ui_development.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/report_ui_development.md). Backed by [FEATURE_REPORTS_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/FEATURE_REPORTS_SYSTEM.md).
-* **Writing/Editing Plans**: Read [plan_writing.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/plan_writing.md).
-* **Git Actions (Commit, Push)**: Read [git_operations.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/git_operations.md).
-* **General Investigatory Query**: Read [general_query.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/general_query.md).
-* **AQL-Specific Codebase Investigation**: Read [codebase_investigation.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/codebase_investigation.md).
-* **Dashboard Items (Widgets, Cards, Tiles, Charts, KPIs)**: Read [dashboard_implementation.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/dashboard_implementation.md). Backed by [FEATURE_DASHBOARD_ENGINE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/FEATURE_DASHBOARD_ENGINE.md).
-* **Backend GAS Implementation**: Read [backend_gas_implementation.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/backend_gas_implementation.md). Backed by [GAS_PATTERNS.md](file:///f:/LITTLE%20LEAP/AQL/Documents/GAS_PATTERNS.md).
-* **Tax / Currency System Changes**: Read [tax_currency_system.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/tax_currency_system.md). Backed by [FEATURE_TAX_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/FEATURE_TAX_SYSTEM.md).
-* **Resource Archive System**: Read [resource_archive_system.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/resource_archive_system.md). Backed by [FEATURE_ARCHIVE_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/FEATURE_ARCHIVE_SYSTEM.md).
-* **Sheet Views / Reports Formulation**: Read [sheet_views_formulation.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/sheet_views_formulation.md) or [report_formula_generation.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/report_formula_generation.md).
-* **Prompt & Instruction Creation**: Read [create_prompt_instruction.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/create_prompt_instruction.md).
-* **API Related Query**: Read [api_related_query.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/api_related_query.md). Backed by [GAS_API_CAPABILITIES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/GAS_API_CAPABILITIES.md).
-* **Multi-Tenant System, Routing & New Client Setup**: Read [multi_tenant_system.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/multi_tenant_system.md). Backed by [TENANT_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/TENANT_SYSTEM.md).
-* **AQL Sheet Menu Actions & Setup Scripts**: Read [sheet_menu_actions.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/sheet_menu_actions.md). Backed by [SHEET_TOOLBAR_MENU_GUIDE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/SHEET_TOOLBAR_MENU_GUIDE.md).
-* **Header Customization & Overrides**: Read [header_customization.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/header_customization.md).
-* **List Switcher Customization**: Read [list_switcher_customization.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/list_switcher_customization.md). Backed by [UI_LIST_SWITCHER.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_LIST_SWITCHER.md).
-* **List View Filters & Dynamic Tokens**: Read [list_view_tokens.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/list_view_tokens.md).
-* **Content Page & Form Customization**: Read [content_customization.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/content_customization.md). Backed by [UI_CONTENT_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_CONTENT_SYSTEM.md).
-* **Create & Update Content & Child Entry Customization**: Read [content_create_and_update_customization.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/content_create_and_update_customization.md). Backed by [UI_CREATE_AND_UPDATE_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_CREATE_AND_UPDATE_SYSTEM.md).
-* **View Content Customization**: Read [view_customization.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/view_customization.md). Backed by [UI_VIEW_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_VIEW_SYSTEM.md).
-* **Reusable Render Component Creation (`abstract/`, `app/`, `contents/`, `sections/`)**: Read [renderable_contract.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/renderable_contract.md) (additive prompt). Backed by [UI_RENDERABLE_CONTRACT.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_RENDERABLE_CONTRACT.md).
-* **Refactoring & Code Cleanup**: Read [refactoring_and_code_cleanup.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/refactoring_and_code_cleanup.md).
-* **Action & FAB Customization**: Read [action_customization.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/action_customization.md). Backed by [UI_ACTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_ACTION_SYSTEM.md).
+* **Resource UI Module Generation / 3-Layer UI**: Read [resource_ui_module_developer.md](file:///f:/AQL/References/Prompt%20Library/Initialization/resource_ui_module_developer.md). Backed by [UI_MODULE_DEVELOPER_GUIDE.md](file:///f:/AQL/Documents/UI_MODULE_DEVELOPER_GUIDE.md) and [UI_RESOURCE_DOMAIN_LOGIC.md](file:///f:/AQL/Documents/UI_RESOURCE_DOMAIN_LOGIC.md).
+* **Database Schema Alteration**: Read [database_schema_alteration.md](file:///f:/AQL/References/Prompt%20Library/Initialization/database_schema_alteration.md).
+* **Frontend Modification**: Read [frontend_modification.md](file:///f:/AQL/References/Prompt%20Library/Initialization/frontend_modification.md).
+* **Page & Section Customization & Creation**: Read [page_and_section_system.md](file:///f:/AQL/References/Prompt%20Library/Initialization/page_and_section_system.md). Backed by [UI_PAGE_AND_SECTION_SYSTEM.md](file:///f:/AQL/Documents/UI_PAGE_AND_SECTION_SYSTEM.md).
+* **Sidebar Menu & Access Control**: Read [frontend_menu_system.md](file:///f:/AQL/References/Prompt%20Library/Initialization/frontend_menu_system.md). Backed by [UI_SIDEBAR_MENU_SYSTEM.md](file:///f:/AQL/Documents/UI_SIDEBAR_MENU_SYSTEM.md).
+* **Report Template & Aggregations**: Read [report_formula_generation.md](file:///f:/AQL/References/Prompt%20Library/Initialization/report_formula_generation.md).
+* **Report UI & Feature Development**: Read [report_ui_development.md](file:///f:/AQL/References/Prompt%20Library/Initialization/report_ui_development.md). Backed by [FEATURE_REPORTS_SYSTEM.md](file:///f:/AQL/Documents/FEATURE_REPORTS_SYSTEM.md).
+* **Writing/Editing Plans**: Read [plan_writing.md](file:///f:/AQL/References/Prompt%20Library/Initialization/plan_writing.md).
+* **Git Actions (Commit, Push)**: Read [git_operations.md](file:///f:/AQL/References/Prompt%20Library/Initialization/git_operations.md).
+* **General Investigatory Query**: Read [general_query.md](file:///f:/AQL/References/Prompt%20Library/Initialization/general_query.md).
+* **AQL-Specific Codebase Investigation**: Read [codebase_investigation.md](file:///f:/AQL/References/Prompt%20Library/Initialization/codebase_investigation.md).
+* **Dashboard Items (Widgets, Cards, Tiles, Charts, KPIs)**: Read [dashboard_implementation.md](file:///f:/AQL/References/Prompt%20Library/Initialization/dashboard_implementation.md). Backed by [FEATURE_DASHBOARD_ENGINE.md](file:///f:/AQL/Documents/FEATURE_DASHBOARD_ENGINE.md).
+* **Backend GAS Implementation**: Read [backend_gas_implementation.md](file:///f:/AQL/References/Prompt%20Library/Initialization/backend_gas_implementation.md). Backed by [GAS_PATTERNS.md](file:///f:/AQL/Documents/GAS_PATTERNS.md).
+* **Tax / Currency System Changes**: Read [tax_currency_system.md](file:///f:/AQL/References/Prompt%20Library/Initialization/tax_currency_system.md). Backed by [FEATURE_TAX_SYSTEM.md](file:///f:/AQL/Documents/FEATURE_TAX_SYSTEM.md).
+* **Resource Archive System**: Read [resource_archive_system.md](file:///f:/AQL/References/Prompt%20Library/Initialization/resource_archive_system.md). Backed by [FEATURE_ARCHIVE_SYSTEM.md](file:///f:/AQL/Documents/FEATURE_ARCHIVE_SYSTEM.md).
+* **Sheet Views / Reports Formulation**: Read [sheet_views_formulation.md](file:///f:/AQL/References/Prompt%20Library/Initialization/sheet_views_formulation.md) or [report_formula_generation.md](file:///f:/AQL/References/Prompt%20Library/Initialization/report_formula_generation.md).
+* **Prompt & Instruction Creation**: Read [create_prompt_instruction.md](file:///f:/AQL/References/Prompt%20Library/Initialization/create_prompt_instruction.md).
+* **API Related Query**: Read [api_related_query.md](file:///f:/AQL/References/Prompt%20Library/Initialization/api_related_query.md). Backed by [GAS_API_CAPABILITIES.md](file:///f:/AQL/Documents/GAS_API_CAPABILITIES.md).
+* **Multi-Tenant System, Routing & New Client Setup**: Read [multi_tenant_system.md](file:///f:/AQL/References/Prompt%20Library/Initialization/multi_tenant_system.md). Backed by [TENANT_SYSTEM.md](file:///f:/AQL/Documents/TENANT_SYSTEM.md).
+* **AQL Sheet Menu Actions & Setup Scripts**: Read [sheet_menu_actions.md](file:///f:/AQL/References/Prompt%20Library/Initialization/sheet_menu_actions.md). Backed by [SHEET_TOOLBAR_MENU_GUIDE.md](file:///f:/AQL/Documents/SHEET_TOOLBAR_MENU_GUIDE.md).
+* **Header Customization & Overrides**: Read [header_customization.md](file:///f:/AQL/References/Prompt%20Library/Initialization/header_customization.md).
+* **List Switcher Customization**: Read [list_switcher_customization.md](file:///f:/AQL/References/Prompt%20Library/Initialization/list_switcher_customization.md). Backed by [UI_LIST_SWITCHER.md](file:///f:/AQL/Documents/UI_LIST_SWITCHER.md).
+* **List View Filters & Dynamic Tokens**: Read [list_view_tokens.md](file:///f:/AQL/References/Prompt%20Library/Initialization/list_view_tokens.md).
+* **Content Page & Form Customization**: Read [content_customization.md](file:///f:/AQL/References/Prompt%20Library/Initialization/content_customization.md). Backed by [UI_CONTENT_SYSTEM.md](file:///f:/AQL/Documents/UI_CONTENT_SYSTEM.md).
+* **Create & Update Content & Child Entry Customization**: Read [content_create_and_update_customization.md](file:///f:/AQL/References/Prompt%20Library/Initialization/content_create_and_update_customization.md). Backed by [UI_CREATE_AND_UPDATE_SYSTEM.md](file:///f:/AQL/Documents/UI_CREATE_AND_UPDATE_SYSTEM.md).
+* **View Content Customization**: Read [view_customization.md](file:///f:/AQL/References/Prompt%20Library/Initialization/view_customization.md). Backed by [UI_VIEW_SYSTEM.md](file:///f:/AQL/Documents/UI_VIEW_SYSTEM.md).
+* **Reusable Render Component Creation (`abstract/`, `app/`, `contents/`, `sections/`)**: Read [renderable_contract.md](file:///f:/AQL/References/Prompt%20Library/Initialization/renderable_contract.md) (additive prompt). Backed by [UI_RENDERABLE_CONTRACT.md](file:///f:/AQL/Documents/UI_RENDERABLE_CONTRACT.md).
+* **Refactoring & Code Cleanup**: Read [refactoring_and_code_cleanup.md](file:///f:/AQL/References/Prompt%20Library/Initialization/refactoring_and_code_cleanup.md).
+* **Action & FAB Customization**: Read [action_customization.md](file:///f:/AQL/References/Prompt%20Library/Initialization/action_customization.md). Backed by [UI_ACTION_SYSTEM.md](file:///f:/AQL/Documents/UI_ACTION_SYSTEM.md).
 
 > [!IMPORTANT]
 > **Single-category rule**: If the query maps cleanly to exactly ONE routing category above, load ONLY that one initialization prompt. Do NOT load related prompts speculatively.
@@ -116,11 +116,11 @@ Load the matching initialization document from [References/Prompt Library/Initia
 > **Multi-category rule**: Only when the query explicitly spans multiple domains, load only the matching prompts — do NOT load transitive dependencies.
 
 > [!NOTE]
-> If the user's request doesn't cleanly match any category above, consult [CORE_DOC_ROUTING.md](file:///f:/LITTLE%20LEAP/AQL/Documents/CORE_DOC_ROUTING.md) to identify the correct canonical documents for the task.
+> If the user's request doesn't cleanly match any category above, consult [CORE_DOC_ROUTING.md](file:///f:/AQL/Documents/CORE_DOC_ROUTING.md) to identify the correct canonical documents for the task.
 
 ## Multi-Agent Collaboration Frameworks
-- **Multi-Agent Collaborative Protocol (MACP)**: Canonical doc at [MACP.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/MACP.md).
-- **AQL Multi-Agent Protocol (Guide, Solo, Brain, Build)**: Canonical doc at [MAP.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/MAP.md).
+- **Multi-Agent Collaborative Protocol (MACP)**: Canonical doc at [MACP.md](file:///f:/AQL/References/Prompt%20Library/MACP.md).
+- **AQL Multi-Agent Protocol (Guide, Solo, Brain, Build)**: Canonical doc at [MAP.md](file:///f:/AQL/References/Prompt%20Library/MAP.md).
 - Protocol rules govern conversation and execution flow. Repository knowledge comes from Query Classification and the initialization prompts above.
 
 ## Repo-Local Skills
@@ -128,7 +128,7 @@ Load the matching initialization document from [References/Prompt Library/Initia
 - `aql-expert`: AQL domain work across frontend, GAS, sheet metadata, resources, permissions, and workflows.
 - `aql-frontend-design`: AQL-specific Quasar UI design, prototypes, and frontend visual refinement.
 - `aql-coding-patterns`: Maintaining consistent formatting, syntax, and styling across JS, Vue, and GS files.
-- These skills must defer to this file, [MAP.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/MAP.md), and [CORE_DOC_ROUTING.md](file:///f:/LITTLE%20LEAP/AQL/Documents/CORE_DOC_ROUTING.md).
+- These skills must defer to this file, [MAP.md](file:///f:/AQL/References/Prompt%20Library/MAP.md), and [CORE_DOC_ROUTING.md](file:///f:/AQL/Documents/CORE_DOC_ROUTING.md).
 - If a skill conflicts with canonical docs, follow the canonical docs and update the skill.
 
 ## Split Canonical Docs (read this before citing a §)
@@ -140,19 +140,19 @@ Read the hub first, then open only the part your task needs.
 Split hubs: `FEATURE_DASHBOARD_ENGINE.md`, `UI_MODULE_DEVELOPER_GUIDE.md`, `UI_PAGE_STATE.md`, `UI_ACTION_SYSTEM.md`, `UI_CREATE_AND_UPDATE_SYSTEM.md`, `UI_PAGE_AND_SECTION_SYSTEM.md`, `UI_RESOURCE_DOMAIN_LOGIC.md`, `UI_LIST_SWITCHER.md`, `UI_CONTENT_SYSTEM.md`.
 
 ## Architecture & Implementation Rules (STRICT)
-- **Frontend Architecture Spec**: Before touching any file under `FRONTENT/`, read [CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/CORE_ARCHITECTURE_RULES.md) without exception — this includes small fixes and one-liners.
-- **Layer 2 Unified Node Transport**: Every function exported from `FRONTENT/src/_resource/` across a layer boundary returns a pure Node Object, or an array of Node Objects. No envelopes. Pages mount live nodes at ready, and submit handlers only validate. Full spec: [UI_PAGE_STATE_NODES.md §5](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_PAGE_STATE_NODES.md) and [UI_PAGE_STATE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_PAGE_STATE.md).
-- **Single Domain Source of Truth**: Every resource domain (`src/_resource/{Scope}/{Resource}/`) must have exactly ONE calculation path for each domain concept. Never create parallel builders or functions. Full spec: [UI_RESOURCE_DOMAIN_LOGIC.md §6](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_RESOURCE_DOMAIN_LOGIC.md).
+- **Frontend Architecture Spec**: Before touching any file under `FRONTENT/`, read [CORE_ARCHITECTURE_RULES.md](file:///f:/AQL/Documents/CORE_ARCHITECTURE_RULES.md) without exception — this includes small fixes and one-liners.
+- **Layer 2 Unified Node Transport**: Every function exported from `FRONTENT/src/_resource/` across a layer boundary returns a pure Node Object, or an array of Node Objects. No envelopes. Pages mount live nodes at ready, and submit handlers only validate. Full spec: [UI_PAGE_STATE_NODES.md §5](file:///f:/AQL/Documents/UI_PAGE_STATE_NODES.md) and [UI_PAGE_STATE.md](file:///f:/AQL/Documents/UI_PAGE_STATE.md).
+- **Single Domain Source of Truth**: Every resource domain (`src/_resource/{Scope}/{Resource}/`) must have exactly ONE calculation path for each domain concept. Never create parallel builders or functions. Full spec: [UI_RESOURCE_DOMAIN_LOGIC.md §6](file:///f:/AQL/Documents/UI_RESOURCE_DOMAIN_LOGIC.md).
 - **Thin Frontend Pages**: Keep Vue pages thin. Orchestrate layout with child components. No business logic, stores, services, API calls, or IDB operations inside components.
 - **Backend GAS**: Prefer existing GAS files and patterns. Create a new file only when existing structure cannot support the task cleanly.
 
 ## Reuse First & Anti-Duplication Policy (STRICT)
 - **Never create a new utility, helper, or core function without first checking existing implementations.**
-- **Check the canonical index first**: Read [SHARED_UTILITIES_INDEX.md](file:///f:/LITTLE%20LEAP/AQL/Documents/SHARED_UTILITIES_INDEX.md) and the relevant files under `FRONTENT/src/utils/`, `FRONTENT/src/composables/`, and `FRONTENT/src/_resource/` before writing any helper.
+- **Check the canonical index first**: Read [SHARED_UTILITIES_INDEX.md](file:///f:/AQL/Documents/SHARED_UTILITIES_INDEX.md) and the relevant files under `FRONTENT/src/utils/`, `FRONTENT/src/composables/`, and `FRONTENT/src/_resource/` before writing any helper.
 - **Prefer extension over new files**: Add clean, pure functions to existing utility files rather than creating new files.
 - **Layer 1 / core files are READ-ONLY unless the user explicitly asks**: Never add module-specific helpers into core infrastructure.
-- **Ask BEFORE creating any new file or function — never after**: Post the audit report from [SHARED_UTILITIES_INDEX.md](file:///f:/LITTLE%20LEAP/AQL/Documents/SHARED_UTILITIES_INDEX.md) and wait for user approval.
-- Full catalogue, concrete homes, audit templates, and mandatory exhaustion quotes live in [SHARED_UTILITIES_INDEX.md](file:///f:/LITTLE%20LEAP/AQL/Documents/SHARED_UTILITIES_INDEX.md).
+- **Ask BEFORE creating any new file or function — never after**: Post the audit report from [SHARED_UTILITIES_INDEX.md](file:///f:/AQL/Documents/SHARED_UTILITIES_INDEX.md) and wait for user approval.
+- Full catalogue, concrete homes, audit templates, and mandatory exhaustion quotes live in [SHARED_UTILITIES_INDEX.md](file:///f:/AQL/Documents/SHARED_UTILITIES_INDEX.md).
 
 ## Remote Updates & External Sync Policy (STRICT)
 - **Do not update remote files, repositories, or services automatically.**
@@ -178,7 +178,7 @@ Split hubs: `FEATURE_DASHBOARD_ENGINE.md`, `UI_MODULE_DEVELOPER_GUIDE.md`, `UI_P
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **little-leap-aql** (25848 symbols, 44788 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **aql** (25486 symbols, 44441 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
@@ -201,10 +201,10 @@ This project is indexed by GitNexus as **little-leap-aql** (25848 symbols, 44788
 
 | Resource | Use for |
 |----------|---------|
-| `gitnexus://repo/little-leap-aql/context` | Codebase overview, check index freshness |
-| `gitnexus://repo/little-leap-aql/clusters` | All functional areas |
-| `gitnexus://repo/little-leap-aql/processes` | All execution flows |
-| `gitnexus://repo/little-leap-aql/process/{name}` | Step-by-step execution trace |
+| `gitnexus://repo/aql/context` | Codebase overview, check index freshness |
+| `gitnexus://repo/aql/clusters` | All functional areas |
+| `gitnexus://repo/aql/processes` | All execution flows |
+| `gitnexus://repo/aql/process/{name}` | Step-by-step execution trace |
 
 ## CLI
 
